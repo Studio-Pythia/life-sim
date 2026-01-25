@@ -87,8 +87,32 @@ function nonce() {
  * Structured Output Schemas
  * ---------------------------
  */
+const EFFECTS_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    money: { type: "number" },
+    stability: { type: "number" },
+    status: { type: "number" },
+    health: { type: "number" },
+    stress: { type: "number" },
+    freedom: { type: "number" },
+    exposure: { type: "number" },
+  },
+  required: ["money", "stability", "status", "health", "stress", "freedom", "exposure"],
+};
 
-const TurnJSONSchema = {
+const OPTION_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    label: { type: "string" },
+    effects: EFFECTS_SCHEMA,
+  },
+  required: ["label", "effects"],
+};
+
+ const TurnJSONSchema = {
   name: "LifeTurn",
   strict: true,
   schema: {
@@ -100,27 +124,7 @@ const TurnJSONSchema = {
         type: "array",
         minItems: 2,
         maxItems: 2,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            label: { type: "string" },
-            effects: {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                money: { type: "number" },
-                stability: { type: "number" },
-                status: { type: "number" },
-                health: { type: "number" },
-                stress: { type: "number" },
-                freedom: { type: "number" },
-                exposure: { type: "number" },
-              },
-            },
-          },
-          required: ["label", "effects"],
-        },
+        items: OPTION_SCHEMA,
       },
       relationship_changes: {
         type: "object",
@@ -163,7 +167,12 @@ const BirthJSONSchema = {
     additionalProperties: false,
     properties: {
       text: { type: "string" },
-      options: TurnJSONSchema.schema.properties.options,
+      options: {
+        type: "array",
+        minItems: 2,
+        maxItems: 2,
+        items: OPTION_SCHEMA,
+      },
       relationships: {
         type: "array",
         minItems: 3,
