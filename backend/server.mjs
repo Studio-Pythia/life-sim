@@ -310,7 +310,41 @@ EFFECTS RULES:
 - Each effect value must be between -0.25 and +0.25.
 - death_cause_hint only if the moment is plausibly lethal.
 `;
+ const tokenA = "tok_" + crypto.randomUUID();
+const tokenB = "tok_" + crypto.randomUUID();
 
+// projected stats
+const statsA = applyEffectsToStats(state.stats, scenario.options[0].effects);
+const statsB = applyEffectsToStats(state.stats, scenario.options[1].effects);
+
+// projected ages (next turn age jump happens AFTER choice)
+const nextYearsA = jumpYears();
+const nextYearsB = jumpYears();
+
+const branchStateA = {
+  ...state,
+  age: Math.min(112, age_to + nextYearsA),
+  stats: statsA,
+  history: [...state.history, scenario.options[0].label].slice(-60),
+  relationships: scenario.relationships
+};
+
+const branchStateB = {
+  ...state,
+  age: Math.min(112, age_to + nextYearsB),
+  stats: statsB,
+  history: [...state.history, scenario.options[1].label].slice(-60),
+  relationships: scenario.relationships
+};
+
+// Generate BOTH next scenarios in parallel
+const [nextA, nextB] = await Promise.all([
+  generateTurnFromState(branchStateA),
+  generateTurnFromState(branchStateB)
+]);
+
+putPrefetch(tokenA, nextA);
+putPrefetch(tokenB, nextB);
     const user = {
       nonce,
       session_id: state.session_id || null,
