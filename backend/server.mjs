@@ -250,6 +250,8 @@ Return JSON matching schema exactly.
 app.get("/health", (req, res) => res.json({ ok: true }));
 
 app.post("/api/turn", async (req, res) => {
+  const t0 = Date.now();
+
   try {
     const state = req.body?.state;
     if (!state) {
@@ -259,7 +261,7 @@ app.post("/api/turn", async (req, res) => {
     const isBirth = state.age === 0 && (!state.history || state.history.length === 0);
 
     const years = isBirth ? 0 : jumpYears();
-    const newAge = Math.min(112, state.age + years);
+    const newAge = Math.min(112, (state.age ?? 0) + years);
 
     const payload = {
       nonce: nonce(),
@@ -275,14 +277,12 @@ app.post("/api/turn", async (req, res) => {
       history: (state.history || []).slice(-18),
     };
 
+    // 🔥 THIS is where latency would happen if OpenAI is being called
     const response = await client.responses.create({
-      model: "gpt-4.1", // ✅ reliable + high quality + structured outputs support
+      model: "gpt-4.1",
       input: [
         { role: "system", content: systemPrompt() },
-        {
-          role: "user",
-          content: isBirth ? birthPrompt() : "Generate the next pivotal moment.",
-        },
+        { role: "user", content: isBirth ? birthPrompt() : "Generate the next pivotal moment." },
         { role: "user", content: JSON.stringify(payload) },
       ],
       max_output_tokens: 900,
@@ -294,31 +294,27 @@ app.post("/api/turn", async (req, res) => {
       },
     });
 
-    const raw = response.output_text; // ✅ official helper
+    const raw = response.output_text;
+
     if (!raw) {
       return res.status(500).json({
-        error: "model_no_output",
-        message: "Model returned no output_text",
-        request_id: response._request_id || null,
+        error: "no_output_text",
+        message: "OpenAI returned no output_text",
+        elapsed_ms: Date.now() - t0,
+        request_id: response?._request_id || null,
       });
     }
 
-    const out = JSON.parse(raw);
-
-    // clamp effects safety
-    if (out?.options?.length === 2) {
-      for (const opt of out.options) {
-        for (const k of Object.keys(opt.effects || {})) {
-          opt.effects[k] = Math.max(-0.25, Math.min(0.25, opt.effects[k]));
-        }
-      }
-    }
-
-    // birth stats clamp
-    if (out.birth_stats) {
-      for (const k of Object.keys(out.birth_stats)) {
-        out.birth_stats[k] = clamp01(out.birth_stats[k]);
-      }
+    let out;
+    try {
+      out = JSON.parse(raw);
+    } catch (e) {
+      return res.status(500).json({
+        error: "json_parse_failed",
+        message: "Model output was not JSON",
+        elapsed_ms: Date.now() - t0,
+        raw_preview: raw.slice(0, 600),
+      });
     }
 
     return res.json({
@@ -331,19 +327,22 @@ app.post("/api/turn", async (req, res) => {
         death_cause_hint: out.death_cause_hint || "",
       },
       ...(isBirth
-        ? {
-            birth_stats: out.birth_stats,
-            relationships: out.relationships,
-          }
+        ? { birth_stats: out.birth_stats, relationships: out.relationships }
         : {}),
-      request_id: response._request_id || null,
+      elapsed_ms: Date.now() - t0,
+      request_id: response?._request_id || null,
     });
   } catch (err) {
-    console.error("TURN ERROR:", err?.message || err);
+    console.error("TURN FAILED:", err);
 
     return res.status(500).json({
       error: "turn_failed",
-      message: "Model failed to return valid JSON. Retry.",
+      elapsed_ms: Date.now() - t0,
+      message: err?.message || String(err),
+      name: err?.name || "UnknownError",
+      // These two are the most useful when OpenAI rejects quickly:
+      status: err?.status || null,
+      code: err?.code || null,
     });
   }
 });
