@@ -7,7 +7,10 @@ import OpenAI from "openai";
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
-app.use(cors({ origin: true, methods: ["POST", "GET"] }));
+app.use(cors({
+  origin: ["https://life-sim-chi.vercel.app"],
+  methods: ["POST", "GET"]
+}));
 
 app.use(
   rateLimit({
