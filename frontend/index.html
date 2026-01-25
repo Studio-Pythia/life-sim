@@ -192,6 +192,10 @@
       pointer-events:none !important;
     }
 
+    .hiddenBtn{
+  display:none !important;
+}
+
     .loaderRow{
       display:flex;
       align-items:center;
@@ -411,7 +415,19 @@
       loadTimer = null;
     }
   }
+  function setRIP(age){
+  el.age.textContent = `RIP AGE: ${age}`;
+}
 
+function showChoices(on){
+  if(on){
+    el.a.classList.remove("hiddenBtn");
+    el.b.classList.remove("hiddenBtn");
+  }else{
+    el.a.classList.add("hiddenBtn");
+    el.b.classList.add("hiddenBtn");
+  }
+}
   function setButtonsDisabled(disabled){
     el.a.disabled = disabled;
     el.b.disabled = disabled;
@@ -440,27 +456,29 @@
   }
 
   function resetGameUI(){
-    currentScenario = null;
-    locked = false;
+  currentScenario = null;
+  locked = false;
 
-    state.run_id = newRunId();
-    state.age = 0;
-    state.history = [];
-    state.relationships = [];
-    state.stats = { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 };
+  state.run_id = newRunId();
+  state.age = 0;
+  state.history = [];
+  state.relationships = [];
+  state.stats = { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 };
 
-    el.age.textContent = "Age: 0";
-    el.meta.textContent = "CHOOSE WISELY";
-    el.story.innerHTML = `Fill in info and Press Start Life above.<span class="cursor">█</span>`;
+  el.age.textContent = "Age: 0";
+  el.meta.textContent = "CHOOSE WISELY";
+  el.story.innerHTML = `Fill in info and Press Start Life above.<span class="cursor">█</span>`;
 
-    el.a.textContent = "A";
-    el.b.textContent = "B";
-    setButtonsDisabled(true);
+  el.a.textContent = "A";
+  el.b.textContent = "B";
 
-    showPlayAgain(false);
-    setError("");
-    setLoading(false);
-  }
+  showChoices(true);        // ✅ bring A/B back
+  setButtonsDisabled(true); // still disabled until start
+
+  showPlayAgain(false);
+  setError("");
+  setLoading(false);
+}
 
   // ---- API ----
   async function apiTurn(){
@@ -522,6 +540,7 @@
   async function startGame(){
     setError("");
     showPlayAgain(false);
+    showChoices(true);
 
     // New run every start attempt
     state.run_id = newRunId();
@@ -580,17 +599,23 @@
       state.stats = applied.next_stats;
 
       if(applied.died){
-        setLoading(false);
+  setLoading(false);
 
-        const cause = (currentScenario.death_cause_hint || "complications").trim() || "complications";
-        const ep = await apiEpilogue(cause);
+  // ✅ Hide A/B forever on death screen
+  showChoices(false);
 
-        setButtonsDisabled(true);
-        await typewriter(ep.text || `You die at ${state.age}. Cause: ${cause}.`, 14);
+  // ✅ RIP headline
+  setRIP(state.age);
 
-        showPlayAgain(true);
-        return;
-      }
+  const cause = (currentScenario.death_cause_hint || "complications").trim() || "complications";
+  const ep = await apiEpilogue(cause);
+
+  setButtonsDisabled(true);
+  await typewriter(ep.text || `You die at ${state.age}. Cause: ${cause}.`, 14);
+
+  showPlayAgain(true);
+  return;
+}
 
       const next = await apiTurn();
 
