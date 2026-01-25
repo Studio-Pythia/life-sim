@@ -1,15 +1,15 @@
 // server.mjs
 // Life Sim Backend (Express + OpenAI Structured Outputs)
+//
+// ✅ No name pools
+// ✅ No hard-coded narrative outputs (only rules)
 // ✅ JSON-safe output via json_schema (no "invalid JSON" drift)
 // ✅ Birth turn generates initial stats + 3 relationships
-// ✅ Subsequent turns generate pivotal moments + 2 choices
-// ✅ Hidden mortality (only reveals death when it happens)
+// ✅ Subsequent turns generate moments + 2 choices
+// ✅ Hidden mortality (very low at Age 0)
 // ✅ Prefetches next turn for A and B to reduce wait time
-// ✅ Enforces: every person mentioned must be "Name (role)"
+// ✅ Enforces: every person mentioned must be "Name (role)" (role AFTER name)
 
-// ----------------------
-// Setup
-// ----------------------
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
@@ -17,15 +17,12 @@ import rateLimit from "express-rate-limit";
 import OpenAI from "openai";
 
 const app = express();
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "2mb" }));
 
 const PORT = process.env.PORT || 8787;
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// In prod, replace origin:true with your frontend domain
 app.use(
   cors({
     origin: true,
@@ -36,7 +33,7 @@ app.use(
 app.use(
   rateLimit({
     windowMs: 60_000,
-    max: 60,
+    max: 90,
   })
 );
 
@@ -57,7 +54,7 @@ function randomInt(min, maxInclusive) {
   return Math.floor(min + Math.random() * (maxInclusive - min + 1));
 }
 
-// 5–15 years as requested
+// 5–15 years jumps
 function jumpYears() {
   return randomInt(5, 15);
 }
@@ -77,8 +74,7 @@ function normalizeStats(stats) {
 }
 
 function normalizeEffects(effects) {
-  // Effects must include ALL keys for schema stability.
-  // If model ever misses, we fill.
+  // Schema stability: ALWAYS include all keys
   const out = {};
   for (const k of STAT_KEYS) out[k] = Number(effects?.[k] ?? 0);
   return out;
@@ -89,49 +85,45 @@ function applyEffects(stats, effects) {
   const eff = normalizeEffects(effects);
 
   const next = {};
-  for (const k of STAT_KEYS) {
-    next[k] = clamp01(base[k] + eff[k]);
-  }
+  for (const k of STAT_KEYS) next[k] = clamp01(base[k] + eff[k]);
   return next;
 }
 
-// Make sure relationships are always returned with display = "Name (role)"
+// Always return relationships with display = "Name (role)"
 function withDisplayRelationships(rels) {
   const arr = Array.isArray(rels) ? rels : [];
   return arr.slice(0, 3).map((p) => {
     const name = String(p?.name || "").trim();
     const role = String(p?.role || "").trim();
-    const display = name && role ? `${name} (${role})` : name || role || "";
+    const display = name && role ? `${name} (${role})` : "";
     return { name, role, display };
   });
 }
 
 /**
- * Hidden mortality:
- * - extremely low in early childhood (you should not be dying at 0 routinely)
- * - rises with age + low health + high stress + high exposure
+ * Mortality: VERY low early, increases later + low health + high stress + exposure
  */
 function computeMortalityChance(age, stats) {
   const a = Math.max(0, Math.min(112, Number(age) || 0));
   const s = normalizeStats(stats);
 
-  // newborn/infancy: very small baseline
+  // Infant: tiny (should not die at 0 constantly)
   if (a < 2) {
-    const base = 0.00015;
-    const exposure = s.exposure * 0.0006;
-    const health = (1 - s.health) * 0.0009;
+    const base = 0.00012;
+    const exposure = s.exposure * 0.0005;
+    const health = (1 - s.health) * 0.0008;
     return Math.min(0.01, base + exposure + health);
   }
 
-  // childhood: still low
+  // Child: still low
   if (a < 12) {
-    const base = 0.00035;
-    const exposure = s.exposure * 0.0012;
-    const health = (1 - s.health) * 0.0016;
+    const base = 0.00030;
+    const exposure = s.exposure * 0.0010;
+    const health = (1 - s.health) * 0.0014;
     return Math.min(0.02, base + exposure + health);
   }
 
-  // adulthood: nonlinear rise
+  // Adult: nonlinear rise
   const base = Math.min(0.65, Math.pow(a / 112, 3) * 0.55);
   const healthPenalty = (1 - s.health) * 0.22;
   const stressPenalty = s.stress * 0.14;
@@ -145,7 +137,7 @@ function computeMortalityChance(age, stats) {
 }
 
 // ----------------------
-// Prefetch cache (MVP in-memory)
+// Prefetch cache (in-memory MVP)
 // ----------------------
 const PREFETCH = new Map();
 const PREFETCH_TTL_MS = 1000 * 60 * 10;
@@ -170,7 +162,6 @@ function getPrefetch(k) {
 
 // ----------------------
 // Structured Outputs Schemas (STRICT)
-// NOTE: required must contain all keys in "properties"
 // ----------------------
 const EFFECTS_SCHEMA = {
   type: "object",
@@ -201,9 +192,11 @@ const REL_CHANGE_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
+    // If a key relationship changes, choose index 0..2, otherwise null
     replace_index: {
       anyOf: [{ type: "integer", minimum: 0, maximum: 2 }, { type: "null" }],
     },
+    // If replaced, return new person OR null (null means the person dies / is removed)
     new_person: {
       anyOf: [
         {
@@ -230,12 +223,7 @@ const TurnJSONSchema = {
     additionalProperties: false,
     properties: {
       text: { type: "string" },
-      options: {
-        type: "array",
-        minItems: 2,
-        maxItems: 2,
-        items: OPTION_SCHEMA,
-      },
+      options: { type: "array", minItems: 2, maxItems: 2, items: OPTION_SCHEMA },
       relationship_changes: REL_CHANGE_SCHEMA,
       death_cause_hint: { type: "string" },
     },
@@ -251,12 +239,7 @@ const BirthJSONSchema = {
     additionalProperties: false,
     properties: {
       text: { type: "string" },
-      options: {
-        type: "array",
-        minItems: 2,
-        maxItems: 2,
-        items: OPTION_SCHEMA,
-      },
+      options: { type: "array", minItems: 2, maxItems: 2, items: OPTION_SCHEMA },
       relationships: {
         type: "array",
         minItems: 3,
@@ -292,28 +275,27 @@ const BirthJSONSchema = {
 };
 
 // ----------------------
-// Prompts (NO prewritten narrative)
-// Only rules. Model creates everything.
+// Prompts (NO hardcoded narrative)
 // ----------------------
 function systemPrompt() {
   return `
-You generate pivotal life moments for a binary-choice life simulator.
+You generate volatile life moments for a binary-choice simulator.
 
 Hard rules:
 - Always address the player as "you".
 - First names only.
-- Any time you mention a person in prose, you MUST format as: Name (role).
-  Example: "Maya (mother)", "Sam (friend)".
-- No headings, no lists, no tables, no section labels.
-- No odds, no "life report", never use the word "pivot".
-- 1 paragraph of fast prose, max ~900 characters.
+- Every time you mention a person in prose, format exactly: Name (role).
+  Example: "Maya (mother)", "Sam (friend)". Role must come AFTER name.
+- No headings, no lists, no tables, no labels.
+- Never use the word "pivot".
+- One paragraph of prose, max ~900 characters.
 - Prose must include: living situation, source of income, lifestyle, and what happens next.
-- Moment must be critical and volatile.
-- Exactly 2 choices labeled A and B (short, explicit actions).
-- Effects must be realistic; each between -0.25 and +0.25.
-- Each option.effects MUST include ALL keys:
+- Moment must be critical and time-sensitive.
+- Exactly 2 choices labeled A and B as explicit actions.
+- Each option.effects must include ALL keys:
   money, stability, status, health, stress, freedom, exposure.
-- Output must be valid JSON matching the given schema exactly.
+- Effects must be realistic and each value between -0.25 and +0.25.
+- Output must be valid JSON matching the schema exactly.
 `.trim();
 }
 
@@ -321,13 +303,14 @@ function birthInstruction() {
   return `
 This is the birth turn (Age 0).
 You must:
-- Infer plausible starting life context from: city, gender, desire.
-- Generate 3 relationships (first name + role). Roles must be believable at birth.
-- Compute birth_stats (0..1) for: money, stability, status, health, stress, freedom, exposure.
-- Write prose describing birth context and the first defining decision.
-- Provide 2 choices (A/B) as an early-life fork shaping the entire trajectory.
+- Infer plausible starting context from city + gender + desire (free text).
+- Generate 3 relationships (first name + role) that make sense at birth.
+  Example roles: mother, father, guardian, older sibling, grandparent.
+- Compute birth_stats (0..1) for all 7 stats.
+- Write prose describing the birth context and the first defining decision.
+- Provide 2 choices (A/B) that shape the entire trajectory.
 
-Remember: any person mentioned in prose must be "Name (role)".
+Remember: any person mentioned must be "Name (role)".
 `.trim();
 }
 
@@ -348,7 +331,9 @@ async function generateTurn({ isBirth, payload }) {
     text: {
       format: {
         type: "json_schema",
-        ...schema,
+        name: schema.name,
+        strict: true,
+        schema: schema.schema,
       },
     },
   });
@@ -384,7 +369,7 @@ app.post("/api/turn", async (req, res) => {
     const age_from = Number(state.age ?? 0);
     const isBirth = age_from === 0 && (!state.history || state.history.length === 0);
 
-    // If not birth, try serve prefetched result based on last choice letter
+    // Serve prefetched turn if available (for the last A/B choice)
     if (!isBirth && Array.isArray(state.history) && state.history.length > 0) {
       const last = String(state.history[state.history.length - 1] || "").trim();
       const letter = last.startsWith("A") ? "A" : last.startsWith("B") ? "B" : null;
@@ -423,33 +408,58 @@ app.post("/api/turn", async (req, res) => {
 
     const out = await generateTurn({ isBirth, payload });
 
-    // Normalize scenario (effects must contain all keys)
     const scenario = {
       text: String(out.text || ""),
       options: [
-        { label: String(out.options?.[0]?.label || "A"), effects: normalizeEffects(out.options?.[0]?.effects) },
-        { label: String(out.options?.[1]?.label || "B"), effects: normalizeEffects(out.options?.[1]?.effects) },
+        {
+          label: String(out.options?.[0]?.label || "A"),
+          effects: normalizeEffects(out.options?.[0]?.effects),
+        },
+        {
+          label: String(out.options?.[1]?.label || "B"),
+          effects: normalizeEffects(out.options?.[1]?.effects),
+        },
       ],
       relationship_changes: out.relationship_changes || { replace_index: null, new_person: null },
       death_cause_hint: String(out.death_cause_hint || ""),
     };
 
-    // Relationships returned to client:
+    // Start with current relationships from state
     let relationships = payload.relationships;
 
-    // Apply model-driven relationship change (if any)
+    // Apply model-driven relationship change (replace / add / death)
     const rc = scenario.relationship_changes;
-    if (rc && rc.replace_index !== null && rc.new_person) {
+    if (rc && rc.replace_index !== null) {
       const idx = Number(rc.replace_index);
       if (idx >= 0 && idx <= 2 && relationships.length === 3) {
-        const np = { name: String(rc.new_person.name || ""), role: String(rc.new_person.role || "") };
         const updated = [...relationships];
-        updated[idx] = { ...np, display: `${np.name} (${np.role})` };
+
+        // If new_person is null => relationship dies / disappears (we mark as deceased)
+        if (rc.new_person === null) {
+          const old = updated[idx];
+          if (old?.name && old?.role) {
+            const deceasedRole = `${old.role}, deceased`;
+            updated[idx] = {
+              name: old.name,
+              role: deceasedRole,
+              display: `${old.name} (${deceasedRole})`,
+            };
+          } else {
+            updated[idx] = { name: "", role: "", display: "" };
+          }
+        } else {
+          const np = {
+            name: String(rc.new_person?.name || "").trim(),
+            role: String(rc.new_person?.role || "").trim(),
+          };
+          updated[idx] = { ...np, display: `${np.name} (${np.role})` };
+        }
+
         relationships = updated;
       }
     }
 
-    // Background prefetch next A and B (to make the next click instant)
+    // Prefetch next A + B in background (makes next click faster)
     (async () => {
       try {
         const baseStats = payload.stats;
@@ -457,8 +467,8 @@ app.post("/api/turn", async (req, res) => {
         const nextStatsA = applyEffects(baseStats, scenario.options[0].effects);
         const nextStatsB = applyEffects(baseStats, scenario.options[1].effects);
 
-        const preYearsA = jumpYears();
-        const preYearsB = jumpYears();
+        const yearsA = jumpYears();
+        const yearsB = jumpYears();
 
         const payloadA = {
           ...payload,
@@ -467,7 +477,7 @@ app.post("/api/turn", async (req, res) => {
           relationships,
           history: [...payload.history, scenario.options[0].label].slice(-18),
           age_from,
-          age_to: Math.min(112, age_from + preYearsA),
+          age_to: Math.min(112, age_from + yearsA),
         };
 
         const payloadB = {
@@ -477,7 +487,7 @@ app.post("/api/turn", async (req, res) => {
           relationships,
           history: [...payload.history, scenario.options[1].label].slice(-18),
           age_from,
-          age_to: Math.min(112, age_from + preYearsB),
+          age_to: Math.min(112, age_from + yearsB),
         };
 
         const outA = await generateTurn({ isBirth: false, payload: payloadA });
@@ -515,11 +525,11 @@ app.post("/api/turn", async (req, res) => {
           relationships,
         });
       } catch {
-        // prefetch silently fails; main turn remains fine
+        // silently ignore prefetch failures
       }
     })();
 
-    // Birth response includes initial stats + relationships for frontend state
+    // Birth: return birth_stats + relationships
     if (isBirth) {
       return res.json({
         age_from,
@@ -552,6 +562,7 @@ app.post("/api/turn", async (req, res) => {
   }
 });
 
+// Apply effects + decide death (hidden)
 app.post("/api/apply", (req, res) => {
   try {
     const age = Number(req.body?.age ?? 0);
@@ -566,7 +577,6 @@ app.post("/api/apply", (req, res) => {
     }
 
     const next_stats = applyEffects(stats, effects);
-
     const pDeath = computeMortalityChance(age, next_stats);
     const died = Math.random() < pDeath;
 
@@ -579,6 +589,7 @@ app.post("/api/apply", (req, res) => {
   }
 });
 
+// Death epilogue
 app.post("/api/epilogue", async (req, res) => {
   try {
     const age = Number(req.body?.age ?? 0);
@@ -595,7 +606,7 @@ Write a short death epilogue (1 paragraph).
 
 Rules:
 - Address the player as "you".
-- Any person mentioned must be formatted: Name (role).
+- Any person mentioned must be formatted: Name (role). Role after name.
 - No headings, no lists, no odds.
 - Max ~700 characters.
 `.trim();
@@ -617,7 +628,7 @@ Rules:
         { role: "system", content: sys },
         { role: "user", content: user },
       ],
-      max_output_tokens: 240,
+      max_output_tokens: 260,
     });
 
     const text = (r.output_text || "").trim() || `You die at ${age}. Cause: ${cause}.`;
