@@ -1,4 +1,5 @@
 // server.mjs
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
@@ -10,10 +11,9 @@ const app = express();
 app.use(express.json({ limit: "1mb" }));
 
 /**
- * CORS
- * ✅ In production: lock this to your Vercel domain(s)
- * Example:
- * origin: ["https://life-sim-chi.vercel.app"]
+ * ✅ CORS
+ * In production, lock this to your frontend domains:
+ * origin: ["https://your-vercel-app.vercel.app"]
  */
 app.use(
   cors({
@@ -24,70 +24,42 @@ app.use(
 );
 
 /**
- * Rate limit (basic abuse protection)
+ * ✅ Rate limit
+ * Prefetch increases requests, so allow more.
  */
 app.use(
   rateLimit({
     windowMs: 60_000,
-    max: 30, // 30 requests/minute/IP
+    max: 120,
     standardHeaders: true,
     legacyHeaders: false,
   })
 );
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-if (!OPENAI_API_KEY) {
-  console.error("❌ Missing OPENAI_API_KEY environment variable.");
-}
-
-const client = new OpenAI({ apiKey: OPENAI_API_KEY });
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // -----------------------------
 // Schemas
 // -----------------------------
 
-const StatsSchema = z.object({
-  money: z.number().min(0).max(1),
-  stability: z.number().min(0).max(1),
-  status: z.number().min(0).max(1),
-  health: z.number().min(0).max(1),
-  stress: z.number().min(0).max(1),
-  freedom: z.number().min(0).max(1),
-  exposure: z.number().min(0).max(1),
-});
+const StatsSchema = z
+  .object({
+    money: z.number().min(0).max(1),
+    stability: z.number().min(0).max(1),
+    status: z.number().min(0).max(1),
+    health: z.number().min(0).max(1),
+    stress: z.number().min(0).max(1),
+    freedom: z.number().min(0).max(1),
+    exposure: z.number().min(0).max(1),
+  })
+  .strict();
 
-const RelationshipSchema = z.object({
-  name: z.string().min(1).max(24),
-  role: z.string().min(1).max(40),
-});
-
-const IncomingStateSchema = z.object({
-  session_id: z.string().optional(),
-  run_id: z.string().optional(),
-
-  age: z.number().min(0).max(112),
-  gender: z.string().min(1).max(24),
-  city: z.string().min(1).max(60),
-  desire: z.string().min(1).max(80),
-
-  stats: StatsSchema,
-  relationships: z.array(RelationshipSchema).max(3),
-  history: z.array(z.string()).max(80),
-});
-
-const TurnRequestSchema = z.object({
-  state: IncomingStateSchema,
-});
-
-const EffectKeys = [
-  "money",
-  "stability",
-  "status",
-  "health",
-  "stress",
-  "freedom",
-  "exposure",
-];
+const RelationshipSchema = z
+  .object({
+    name: z.string().min(1).max(24),
+    role: z.string().min(1).max(40),
+  })
+  .strict();
 
 const EffectsSchema = z
   .object({
@@ -101,55 +73,124 @@ const EffectsSchema = z
   })
   .strict();
 
-const ModelScenarioSchema = z.object({
-  text: z.string().min(1),
-  options: z
-    .array(
-      z.object({
-        label: z.string().min(3),
-        effects: EffectsSchema,
-      })
-    )
-    .length(2),
+const IncomingStateSchema = z
+  .object({
+    session_id: z.string().optional(),
+    run_id: z.string().optional(),
 
-  // Always return 3 relationships (new or updated)
-  relationships: z.array(RelationshipSchema).length(3),
+    age: z.number().min(0).max(112),
+    gender: z.string().min(1).max(24),
+    city: z.string().min(1).max(60),
+    desire: z.string().min(1).max(80),
 
-  // Birth stats only (return always; frontend uses it only at birth)
-  birth_stats: StatsSchema.optional(),
+    stats: StatsSchema,
+    relationships: z.array(RelationshipSchema).max(3),
+    history: z.array(z.string()).max(120),
+  })
+  .strict();
 
-  // Optional hint only used on death
-  death_cause_hint: z.string().optional(),
-});
+const TurnRequestSchema = z
+  .object({
+    state: IncomingStateSchema,
+  })
+  .strict();
+
+const ModelScenarioSchema = z
+  .object({
+    text: z.string().min(1),
+    options: z
+      .array(
+        z
+          .object({
+            label: z.string().min(3),
+            effects: EffectsSchema,
+          })
+          .strict()
+      )
+      .length(2),
+
+    relationships: z.array(RelationshipSchema).length(3),
+
+    birth_stats: StatsSchema.optional(),
+    death_cause_hint: z.string().optional(),
+  })
+  .strict();
+
+// -----------------------------
+// Prefetch cache (in-memory)
+// Swap this to Redis later.
+// -----------------------------
+
+const PREFETCH = new Map(); // token -> { data, expiresAt }
+
+function putPrefetch(token, data, ttlMs = 2 * 60_000) {
+  PREFETCH.set(token, { data, expiresAt: Date.now() + ttlMs });
+}
+
+function getPrefetch(token) {
+  const hit = PREFETCH.get(token);
+  if (!hit) return null;
+  if (Date.now() > hit.expiresAt) {
+    PREFETCH.delete(token);
+    return null;
+  }
+  return hit.data;
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of PREFETCH.entries()) {
+    if (now > v.expiresAt) PREFETCH.delete(k);
+  }
+}, 30_000);
 
 // -----------------------------
 // Helpers
 // -----------------------------
 
+const EFFECT_KEYS = [
+  "money",
+  "stability",
+  "status",
+  "health",
+  "stress",
+  "freedom",
+  "exposure",
+];
+
 function clamp01(x) {
   return Math.max(0, Math.min(1, x));
 }
 
-function jumpYears() {
-  // 5–15 year jumps
-  return Math.floor(5 + Math.random() * 11); // 5..15
+function applyEffectsToStats(stats, effects) {
+  const next = { ...stats };
+  for (const k of EFFECT_KEYS) {
+    if (typeof effects?.[k] === "number") {
+      next[k] = clamp01(next[k] + effects[k]);
+    }
+  }
+  return next;
 }
 
+function jumpYears() {
+  // 5–15 years
+  return Math.floor(5 + Math.random() * 11);
+}
+
+/**
+ * Hidden mortality chance
+ * - Age 0 death is effectively impossible unless narrative is explicitly lethal.
+ */
 function computeMortalityChance(age, stats, lethalHint = "") {
-  // If the narrative isn't plausibly lethal, reduce risk massively while young.
   const isLethalMoment = Boolean(lethalHint && lethalHint.trim().length > 0);
 
-  // Hard protections: early death should be ultra rare unless explicitly lethal.
-  if (age === 0 && !isLethalMoment) return 0.0001; // effectively never
-  if (age > 0 && age < 6 && !isLethalMoment) return 0.001;
+  if (age === 0 && !isLethalMoment) return 0.000001;
+  if (age > 0 && age < 6 && !isLethalMoment) return 0.00001;
 
-  // Base rises with age (non-linear)
   let base = Math.min(0.85, Math.pow(age / 112, 3) * 0.55);
 
-  // Youth protection (still allows freak accidents later)
   if (age < 18 && !isLethalMoment) base *= 0.15;
 
-  // Score modifiers
   const healthPenalty = (1 - stats.health) * 0.35;
   const stressPenalty = stats.stress * 0.20;
   const exposurePenalty = stats.exposure * 0.22;
@@ -157,15 +198,11 @@ function computeMortalityChance(age, stats, lethalHint = "") {
 
   let p = base + healthPenalty + stressPenalty + exposurePenalty - freedomBuffer;
 
-  // If the moment IS lethal, let the risk be meaningfully higher
   if (isLethalMoment) p *= 1.35;
 
   return Math.max(0.000001, Math.min(0.92, p));
 }
 
-/**
- * Attempt to extract the first valid JSON object substring from a model output
- */
 function extractJSONObject(text) {
   if (!text) return null;
   const start = text.indexOf("{");
@@ -177,7 +214,7 @@ function extractJSONObject(text) {
 async function callModelJSON({ system, user, model = "gpt-5" }) {
   const r = await client.responses.create({
     model,
-    reasoning: { effort: "low" }, // keep quality; not "minimal"
+    reasoning: { effort: "low" },
     input: [
       { role: "system", content: system },
       { role: "user", content: JSON.stringify(user) },
@@ -190,8 +227,8 @@ async function callModelJSON({ system, user, model = "gpt-5" }) {
 
   try {
     return JSON.parse(maybe);
-  } catch (e) {
-    // Fallback: repair pass (same model, strict JSON)
+  } catch {
+    // Repair pass
     const repair = await client.responses.create({
       model,
       reasoning: { effort: "low" },
@@ -199,7 +236,7 @@ async function callModelJSON({ system, user, model = "gpt-5" }) {
         {
           role: "system",
           content:
-            "You repair invalid JSON into valid JSON. Output ONLY valid JSON. No markdown. No commentary.",
+            "Repair the following into VALID JSON ONLY. No markdown. No commentary.",
         },
         { role: "user", content: raw.slice(0, 8000) },
       ],
@@ -215,8 +252,7 @@ async function callModelJSONWithRetries(payload, tries = 3) {
   let lastErr = null;
   for (let i = 0; i < tries; i++) {
     try {
-      const out = await callModelJSON(payload);
-      return out;
+      return await callModelJSON(payload);
     } catch (e) {
       lastErr = e;
     }
@@ -224,72 +260,50 @@ async function callModelJSONWithRetries(payload, tries = 3) {
   throw lastErr;
 }
 
-// -----------------------------
-// Routes
-// -----------------------------
+/**
+ * Build a "moment" (scenario) for a given state & age jump.
+ * Returns:
+ * { age_from, age_to, scenario, relationships, birth_stats? }
+ */
+async function generateMoment({
+  state,
+  age_from,
+  age_to,
+  is_birth,
+  introducedNames = [],
+}) {
+  const nonce = crypto.randomUUID();
 
-app.get("/health", (req, res) => {
-  res.set("Cache-Control", "no-store");
-  res.json({ ok: true, time: Date.now() });
-});
+  const system = `
+You generate the next moment in a binary-choice life simulator.
 
-app.post("/api/turn", async (req, res) => {
-  res.set("Cache-Control", "no-store");
-
-  try {
-    const { state } = TurnRequestSchema.parse(req.body);
-
-    const is_birth =
-      state.age === 0 &&
-      (state.history?.length ?? 0) === 0 &&
-      (state.relationships?.length ?? 0) === 0;
-
-    // Age progression:
-    // - Birth turn stays at age 0
-    // - After birth, jump 5–15 years each turn
-    const years = is_birth ? 0 : jumpYears();
-    const age_from = state.age;
-    const age_to = Math.min(112, age_from + years);
-
-    const introducedNames = (state.relationships || []).map((r) => r.name);
-
-    const nonce = crypto.randomUUID();
-
-    const system = `
-You generate the next pivotal life moment in a binary-choice life simulator.
-
-ABSOLUTE RULES:
-- Address the player as "you" only.
-- One paragraph only. No headings. No lists. No sections. No tables.
-- Fast, factual, concrete prose. No soft reassurance.
-- Always include living situation, income source, lifestyle, and the immediate crisis/next step.
-- Present EXACTLY two choices, labelled A and B, with explicit actions.
+Hard rules:
+- Address the player as "you"
+- One paragraph only. No headings. No sections. No lists.
+- Concrete, factual, fast prose. No soft reassurance.
+- Always include: living situation, income source, lifestyle, the immediate crisis/next step.
+- Present EXACTLY two choices, labelled A and B, as explicit actions.
 - Do NOT show odds, probabilities, stats, scores, or internal calculations.
-- The moment must feel life-defining. Volatile, consequential, believable.
+- No mention of the word "pivot".
 
-UNIQUENESS (STRICT):
-- Use nonce + run_id + session_id to make each run distinct, even if city/desire match.
-- Avoid reusing the same names/roles/phrasing across different runs.
+Uniqueness:
+- Use nonce + run_id + session_id to make each run distinct.
 - Never mention nonce/run_id/session_id.
 
-RELATIONSHIPS (STRICT):
+Relationships:
 - Always output exactly 3 relationships in relationships[].
-- Roles must be realistic for the current age.
-- At Age 0, do NOT use "guardian" unless the story explicitly justifies custody/legal supervision.
-- Prefer realistic Age 0 roles like: mother, father, midwife, grandparent, older_sibling, aunt, uncle, social_worker (only if justified).
-- Only include "(role)" in the prose the FIRST time a person appears in the whole life.
-  If a person is already known, mention name only.
+- Roles must be realistic for the age.
 - Known names already introduced: ${introducedNames.join(", ") || "(none)"}.
+- Only include "(role)" in the prose the FIRST time a person appears in the whole life.
+  If name already introduced, mention name only.
 
-BIRTH TURN (IF age_to is 0):
-- You must create the starting state from the player's inputs.
-- Generate birth_stats (0..1 values) informed by city/desire/gender + implied context.
+Birth turn (if age_to === 0):
+- Create starting state from city/gender/desire.
+- Generate birth_stats (0..1).
 - Generate 3 relationships that make sense at birth.
-- The two choices must be about a fundamental early-life fork that shapes trajectory.
+- Two choices must be a fundamental early fork.
 
-OUTPUT FORMAT:
-Return VALID JSON ONLY. No markdown.
-Schema:
+Output JSON only:
 {
   "text": "string",
   "options": [
@@ -305,85 +319,173 @@ Schema:
   "death_cause_hint": "string"
 }
 
-EFFECTS RULES:
-- effects keys limited to: money, stability, status, health, stress, freedom, exposure.
-- Each effect value must be between -0.25 and +0.25.
-- death_cause_hint only if the moment is plausibly lethal.
+Effects keys limited to: money, stability, status, health, stress, freedom, exposure.
+Each effect must be between -0.25 and +0.25.
 `;
- const tokenA = "tok_" + crypto.randomUUID();
-const tokenB = "tok_" + crypto.randomUUID();
 
-// projected stats
-const statsA = applyEffectsToStats(state.stats, scenario.options[0].effects);
-const statsB = applyEffectsToStats(state.stats, scenario.options[1].effects);
+  const user = {
+    nonce,
+    session_id: state.session_id || null,
+    run_id: state.run_id || null,
 
-// projected ages (next turn age jump happens AFTER choice)
-const nextYearsA = jumpYears();
-const nextYearsB = jumpYears();
+    is_birth,
+    age_from,
+    age_to,
 
-const branchStateA = {
-  ...state,
-  age: Math.min(112, age_to + nextYearsA),
-  stats: statsA,
-  history: [...state.history, scenario.options[0].label].slice(-60),
-  relationships: scenario.relationships
-};
+    gender: state.gender,
+    city: state.city,
+    desire: state.desire,
 
-const branchStateB = {
-  ...state,
-  age: Math.min(112, age_to + nextYearsB),
-  stats: statsB,
-  history: [...state.history, scenario.options[1].label].slice(-60),
-  relationships: scenario.relationships
-};
+    stats: state.stats,
+    relationships: state.relationships,
+    history: (state.history || []).slice(-25),
+  };
 
-// Generate BOTH next scenarios in parallel
-const [nextA, nextB] = await Promise.all([
-  generateTurnFromState(branchStateA),
-  generateTurnFromState(branchStateB)
-]);
+  const raw = await callModelJSONWithRetries(
+    { system, user, model: "gpt-5" },
+    3
+  );
 
-putPrefetch(tokenA, nextA);
-putPrefetch(tokenB, nextB);
-    const user = {
-      nonce,
-      session_id: state.session_id || null,
-      run_id: state.run_id || null,
+  const parsed = ModelScenarioSchema.parse(raw);
 
+  return {
+    age_from,
+    age_to,
+    scenario: {
+      text: parsed.text,
+      options: parsed.options,
+      death_cause_hint: parsed.death_cause_hint || "",
+    },
+    relationships: parsed.relationships,
+    birth_stats: parsed.birth_stats || null,
+  };
+}
+
+/**
+ * Prefetch next moments for option A and B and store them in cache.
+ * Returns tokens { A, B }.
+ */
+async function prefetchBranches({ baseState, currentAge, currentOut }) {
+  const tokenA = "tok_" + crypto.randomUUID();
+  const tokenB = "tok_" + crypto.randomUUID();
+
+  // Use relationships returned by the model (canonical)
+  const rels = currentOut.relationships;
+
+  const optA = currentOut.scenario.options[0];
+  const optB = currentOut.scenario.options[1];
+
+  // Project stats if user picks A/B
+  const statsA = applyEffectsToStats(baseState.stats, optA.effects || {});
+  const statsB = applyEffectsToStats(baseState.stats, optB.effects || {});
+
+  const age_from_A = currentAge;
+  const age_from_B = currentAge;
+
+  const age_to_A = Math.min(112, currentAge + jumpYears());
+  const age_to_B = Math.min(112, currentAge + jumpYears());
+
+  const introducedNames = (baseState.relationships || []).map((r) => r.name);
+
+  const branchStateA = {
+    ...baseState,
+    age: age_from_A,
+    stats: statsA,
+    relationships: rels,
+    history: [...(baseState.history || []), optA.label].slice(-60),
+  };
+
+  const branchStateB = {
+    ...baseState,
+    age: age_from_B,
+    stats: statsB,
+    relationships: rels,
+    history: [...(baseState.history || []), optB.label].slice(-60),
+  };
+
+  // Generate both in parallel
+  const [nextA, nextB] = await Promise.all([
+    generateMoment({
+      state: branchStateA,
+      age_from: age_from_A,
+      age_to: age_to_A,
+      is_birth: false,
+      introducedNames,
+    }),
+    generateMoment({
+      state: branchStateB,
+      age_from: age_from_B,
+      age_to: age_to_B,
+      is_birth: false,
+      introducedNames,
+    }),
+  ]);
+
+  // Store cached next moments
+  putPrefetch(tokenA, nextA);
+  putPrefetch(tokenB, nextB);
+
+  return { A: tokenA, B: tokenB };
+}
+
+// -----------------------------
+// Routes
+// -----------------------------
+
+app.get("/health", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, time: Date.now() });
+});
+
+/**
+ * /api/turn
+ * - Generates the current moment
+ * - Prefetches next moments for A and B
+ */
+app.post("/api/turn", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+
+  try {
+    const { state } = TurnRequestSchema.parse(req.body);
+
+    const is_birth =
+      state.age === 0 &&
+      (state.history?.length ?? 0) === 0 &&
+      (state.relationships?.length ?? 0) === 0;
+
+    const age_from = state.age;
+    const age_to = is_birth ? 0 : Math.min(112, age_from + jumpYears());
+
+    const introducedNames = (state.relationships || []).map((r) => r.name);
+
+    // Generate current moment
+    const out = await generateMoment({
+      state,
       age_from,
       age_to,
       is_birth,
+      introducedNames,
+    });
 
-      gender: state.gender,
-      city: state.city,
-      desire: state.desire,
-
-      stats: state.stats,
-      relationships: state.relationships,
-      history: (state.history || []).slice(-20),
-    };
-
-    const rawOut = await callModelJSONWithRetries(
-      { system, user, model: "gpt-5" },
-      3
-    );
-
-    // Validate shape strictly
-    const scenario = ModelScenarioSchema.parse(rawOut);
-
-    // If not birth, ensure we do NOT accidentally return birth_stats
-    if (!is_birth) delete scenario.birth_stats;
+    // Prefetch branches (this is the expensive bit that makes it feel instant)
+    const prefetch = await prefetchBranches({
+      baseState: {
+        ...state,
+        // important: carry forward birth_stats if this was birth
+        stats: out.birth_stats || state.stats,
+        relationships: out.relationships,
+      },
+      currentAge: out.age_to,
+      currentOut: out,
+    });
 
     return res.json({
-      age_from,
-      age_to,
-      scenario: {
-        text: scenario.text,
-        options: scenario.options,
-        death_cause_hint: scenario.death_cause_hint || "",
-      },
-      relationships: scenario.relationships,
-      birth_stats: scenario.birth_stats || null,
+      age_from: out.age_from,
+      age_to: out.age_to,
+      scenario: out.scenario,
+      relationships: out.relationships,
+      birth_stats: out.birth_stats,
+      prefetch,
     });
   } catch (err) {
     console.error("❌ /api/turn failed:", err);
@@ -394,56 +496,127 @@ putPrefetch(tokenB, nextB);
   }
 });
 
-app.post("/api/apply", (req, res) => {
+/**
+ * /api/next
+ * - Apply chosen effects
+ * - Check mortality
+ * - Serve cached next moment instantly if token exists
+ * - If cache miss, generate on-demand
+ */
+app.post("/api/next", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+
+  try {
+    const schema = z
+      .object({
+        token: z.string().min(1),
+        // state snapshot
+        state: IncomingStateSchema,
+        // chosen option effects
+        effects: EffectsSchema,
+        death_cause_hint: z.string().optional(),
+      })
+      .strict();
+
+    const { token, state, effects, death_cause_hint } = schema.parse(req.body);
+
+    // Apply effects
+    const nextStats = applyEffectsToStats(state.stats, effects);
+
+    // Mortality check (hidden)
+    const deathChance = computeMortalityChance(
+      state.age,
+      nextStats,
+      death_cause_hint || ""
+    );
+    const died = Math.random() < deathChance;
+
+    if (died) {
+      return res.json({ died: true, next_stats: nextStats });
+    }
+
+    // Try cache
+    const cached = getPrefetch(token);
+
+    if (cached) {
+      // ✅ cached already includes scenario + relationships + ages
+      // Prefetch from the cached node (so next click is also instant)
+      // NOTE: this adds cost but keeps the feeling "instant every time".
+      const prefetch = await prefetchBranches({
+        baseState: {
+          ...state,
+          age: cached.age_to,
+          stats: nextStats,
+          relationships: cached.relationships,
+          history: (state.history || []).slice(-60),
+        },
+        currentAge: cached.age_to,
+        currentOut: cached,
+      });
+
+      return res.json({
+        died: false,
+        next_stats: nextStats,
+        age_from: cached.age_from,
+        age_to: cached.age_to,
+        scenario: cached.scenario,
+        relationships: cached.relationships,
+        prefetch,
+      });
+    }
+
+    // Cache miss fallback (rare)
+    const age_from = state.age;
+    const age_to = Math.min(112, age_from + jumpYears());
+
+    const out = await generateMoment({
+      state: { ...state, stats: nextStats },
+      age_from,
+      age_to,
+      is_birth: false,
+      introducedNames: (state.relationships || []).map((r) => r.name),
+    });
+
+    const prefetch = await prefetchBranches({
+      baseState: { ...state, stats: nextStats, relationships: out.relationships },
+      currentAge: out.age_to,
+      currentOut: out,
+    });
+
+    return res.json({
+      died: false,
+      next_stats: nextStats,
+      age_from: out.age_from,
+      age_to: out.age_to,
+      scenario: out.scenario,
+      relationships: out.relationships,
+      prefetch,
+      cache_miss: true,
+    });
+  } catch (err) {
+    console.error("❌ /api/next failed:", err);
+    return res.status(400).json({ error: "bad_request" });
+  }
+});
+
+/**
+ * Optional: death epilogue (full ending)
+ */
+app.post("/api/epilogue", async (req, res) => {
   res.set("Cache-Control", "no-store");
 
   try {
     const schema = z
       .object({
         age: z.number().min(0).max(112),
-        stats: StatsSchema,
-        effects: EffectsSchema,
-        death_cause_hint: z.string().optional()
+        gender: z.string(),
+        city: z.string(),
+        desire: z.string(),
+        relationships: z.array(RelationshipSchema).max(3),
+        history: z.array(z.string()).max(60),
+        cause: z.string().min(1),
       })
       .strict();
-
-    const { age, stats, effects, death_cause_hint } = schema.parse(req.body);
-
-    const next = { ...stats };
-    for (const k of EffectKeys) {
-      if (typeof effects[k] === "number") {
-        next[k] = clamp01(next[k] + effects[k]);
-      }
-    }
-
-    const deathChance = computeMortalityChance(age, next, death_cause_hint || "");
-    const roll = Math.random();
-    const died = roll < deathChance;
-
-    return res.json({
-      next_stats: next,
-      died,
-      // Do NOT expose deathChance to client (keep hidden)
-    });
-  } catch (err) {
-    console.error("❌ /api/apply failed:", err);
-    return res.status(400).json({ error: "bad_request" });
-  }
-});
-
-app.post("/api/epilogue", async (req, res) => {
-  res.set("Cache-Control", "no-store");
-
-  try {
-    const schema = z.object({
-      age: z.number().min(0).max(112),
-      gender: z.string(),
-      city: z.string(),
-      desire: z.string(),
-      relationships: z.array(RelationshipSchema).max(3),
-      history: z.array(z.string()).max(60),
-      cause: z.string().min(1)
-    }).strict();
 
     const payload = schema.parse(req.body);
 
@@ -463,68 +636,20 @@ Return JSON only:
 { "text": "..." }
 `;
 
-    const user = {
-      ...payload,
-      note: "Make it feel complete. Give closure without sentimentality."
-    };
-
-    const out = await client.responses.create({
+    const r = await client.responses.create({
       model: "gpt-5",
       reasoning: { effort: "low" },
       input: [
         { role: "system", content: system },
-        { role: "user", content: JSON.stringify(user) }
+        { role: "user", content: JSON.stringify(payload) },
       ],
-      text: { format: { type: "json_object" } }
+      text: { format: { type: "json_object" } },
     });
 
-    const json = JSON.parse(out.output_text);
-    return res.json({ text: json.text || `You die. Cause: ${payload.cause}.` });
-
+    const out = JSON.parse(extractJSONObject(r.output_text) || r.output_text);
+    return res.json({ text: out.text || `You die. Cause: ${payload.cause}.` });
   } catch (err) {
     console.error("❌ /api/epilogue failed:", err);
-    return res.status(400).json({ error: "bad_request" });
-  }
-});
-
-app.post("/api/next", async (req, res) => {
-  res.set("Cache-Control", "no-store");
-  try {
-    const schema = z.object({
-      token: z.string(),
-      age: z.number().min(0).max(112),
-      stats: StatsSchema,
-      effects: EffectsSchema,
-      death_cause_hint: z.string().optional()
-    }).strict();
-
-    const { token, age, stats, effects, death_cause_hint } = schema.parse(req.body);
-
-    // Apply effects + mortality
-    const nextStats = applyEffectsToStats(stats, effects);
-    const deathChance = computeMortalityChance(age, nextStats, death_cause_hint || "");
-    const died = Math.random() < deathChance;
-
-    if (died) {
-      return res.json({ died: true, next_stats: nextStats });
-    }
-
-    // Serve cached next scenario instantly
-    const cached = getPrefetch(token);
-
-    if (cached) {
-      return res.json({
-        died: false,
-        next_stats: nextStats,
-        ...cached // { age_from, age_to, scenario, relationships }
-      });
-    }
-
-    // Fallback: cache miss -> regenerate (rare)
-    return res.status(410).json({ error: "cache_miss" });
-
-  } catch (e) {
-    console.error(e);
     return res.status(400).json({ error: "bad_request" });
   }
 });
