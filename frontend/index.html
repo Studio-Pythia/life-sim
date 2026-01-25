@@ -282,7 +282,7 @@
         <input id="desire" placeholder="e.g. famous / rich / free / a basketball player" />
       </div>
 
-      <button class="startBtn" id="start">Start Life</button>
+      <button class="startBtn" id="start" type="button">Start Life</button>
     </div>
 
     <div class="hud">
@@ -572,7 +572,10 @@
     }
   }
 
-  el.start.addEventListener("click", startGame);
+  el.start.addEventListener("click", (e) => {
+  e.preventDefault();
+  startGame();
+});
   el.a.addEventListener("click", () => choose(0));
   el.b.addEventListener("click", () => choose(1));
 </script>
