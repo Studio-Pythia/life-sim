@@ -369,10 +369,11 @@ app.post("/api/apply", (req, res) => {
         age: z.number().min(0).max(112),
         stats: StatsSchema,
         effects: EffectsSchema,
+        death_cause_hint: z.string().optional()
       })
       .strict();
 
-    const { age, stats, effects } = schema.parse(req.body);
+    const { age, stats, effects, death_cause_hint } = schema.parse(req.body);
 
     const next = { ...stats };
     for (const k of EffectKeys) {
@@ -381,7 +382,7 @@ app.post("/api/apply", (req, res) => {
       }
     }
 
-    const deathChance = computeMortalityChance(age, next);
+    const deathChance = computeMortalityChance(age, next, death_cause_hint || "");
     const roll = Math.random();
     const died = roll < deathChance;
 
@@ -392,6 +393,62 @@ app.post("/api/apply", (req, res) => {
     });
   } catch (err) {
     console.error("❌ /api/apply failed:", err);
+    return res.status(400).json({ error: "bad_request" });
+  }
+});
+
+app.post("/api/epilogue", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+
+  try {
+    const schema = z.object({
+      age: z.number().min(0).max(112),
+      gender: z.string(),
+      city: z.string(),
+      desire: z.string(),
+      relationships: z.array(RelationshipSchema).max(3),
+      history: z.array(z.string()).max(60),
+      cause: z.string().min(1)
+    }).strict();
+
+    const payload = schema.parse(req.body);
+
+    const system = `
+You write a death ending for a life simulator.
+
+Rules:
+- Address the player as "you"
+- 2 short paragraphs max
+- Concrete, factual, unsentimental
+- Explain what happened and why it mattered
+- Mention 1–2 relationships by first name (no full names)
+- No odds, no stats, no moral lesson
+- No headings, no lists
+
+Return JSON only:
+{ "text": "..." }
+`;
+
+    const user = {
+      ...payload,
+      note: "Make it feel complete. Give closure without sentimentality."
+    };
+
+    const out = await client.responses.create({
+      model: "gpt-5",
+      reasoning: { effort: "low" },
+      input: [
+        { role: "system", content: system },
+        { role: "user", content: JSON.stringify(user) }
+      ],
+      text: { format: { type: "json_object" } }
+    });
+
+    const json = JSON.parse(out.output_text);
+    return res.json({ text: json.text || `You die. Cause: ${payload.cause}.` });
+
+  } catch (err) {
+    console.error("❌ /api/epilogue failed:", err);
     return res.status(400).json({ error: "bad_request" });
   }
 });
