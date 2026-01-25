@@ -15,13 +15,15 @@ app.use(express.json({ limit: "1mb" }));
  * In production, lock this to your frontend domains:
  * origin: ["https://your-vercel-app.vercel.app"]
  */
-app.use(
-  cors({
-    origin: true,
-    methods: ["POST", "GET"],
-    allowedHeaders: ["Content-Type"],
-  })
-);
+app.use(cors({
+  origin: [
+    "https://life-sim-chi.vercel.app",   // your Vercel domain
+    "http://localhost:3000"
+  ],
+  methods: ["POST", "GET", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+}));
+app.options("*", cors());
 
 /**
  * ✅ Rate limit
