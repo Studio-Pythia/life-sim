@@ -320,7 +320,27 @@
 <script>
   // ✅ Your Railway backend
   const API_BASE = "https://life-sim-production.up.railway.app";
+  
+  function resetGameUI(){
+  currentScenario = null;
+  locked = false;
 
+  el.age.textContent = "Age: 0";
+  el.meta.textContent = "CHOOSE WISELY";
+  el.story.innerHTML = `Fill in info and Press Start Life above.<span class="cursor">█</span>`;
+
+  el.a.textContent = "A";
+  el.b.textContent = "B";
+  setButtonsDisabled(true);
+
+  showPlayAgain(false);
+
+  // show onboarding again (optional)
+  // el.onboarding.style.display = "flex";
+}
+  el.playAgain.addEventListener("click", () => {
+  resetGameUI();
+});
   function newRunId(){
     // Safari-safe fallback
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
