@@ -453,6 +453,48 @@ Return JSON only:
   }
 });
 
+app.post("/api/next", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const schema = z.object({
+      token: z.string(),
+      age: z.number().min(0).max(112),
+      stats: StatsSchema,
+      effects: EffectsSchema,
+      death_cause_hint: z.string().optional()
+    }).strict();
+
+    const { token, age, stats, effects, death_cause_hint } = schema.parse(req.body);
+
+    // Apply effects + mortality
+    const nextStats = applyEffectsToStats(stats, effects);
+    const deathChance = computeMortalityChance(age, nextStats, death_cause_hint || "");
+    const died = Math.random() < deathChance;
+
+    if (died) {
+      return res.json({ died: true, next_stats: nextStats });
+    }
+
+    // Serve cached next scenario instantly
+    const cached = getPrefetch(token);
+
+    if (cached) {
+      return res.json({
+        died: false,
+        next_stats: nextStats,
+        ...cached // { age_from, age_to, scenario, relationships }
+      });
+    }
+
+    // Fallback: cache miss -> regenerate (rare)
+    return res.status(410).json({ error: "cache_miss" });
+
+  } catch (e) {
+    console.error(e);
+    return res.status(400).json({ error: "bad_request" });
+  }
+});
+
 const port = process.env.PORT || 8787;
 app.listen(port, () => {
   console.log(`✅ Server running on http://localhost:${port}`);
