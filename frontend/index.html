@@ -252,11 +252,12 @@
         min-height:160px;
       }
     }
+
     #playAgain{
-  text-align:center;
-  font-weight:700;
-  letter-spacing:0.5px;
-}
+      text-align:center;
+      font-weight:700;
+      letter-spacing:0.5px;
+    }
   </style>
 </head>
 
@@ -298,10 +299,7 @@
     <div class="choices">
       <button class="choiceBtn" id="a" disabled>A</button>
       <button class="choiceBtn" id="b" disabled>B</button>
-      <button class="choiceBtn hidden" id="playAgain" type="button">
-  PLAY AGAIN
-</button>
-    
+      <button class="choiceBtn hidden" id="playAgain" type="button">PLAY AGAIN</button>
     </div>
 
     <div class="error" id="error" style="display:none;"></div>
@@ -320,58 +318,8 @@
 <script>
   // ✅ Your Railway backend
   const API_BASE = "https://life-sim-production.up.railway.app";
-  
-  function resetGameUI(){
-  currentScenario = null;
-  locked = false;
 
-  el.age.textContent = "Age: 0";
-  el.meta.textContent = "CHOOSE WISELY";
-  el.story.innerHTML = `Fill in info and Press Start Life above.<span class="cursor">█</span>`;
-
-  el.a.textContent = "A";
-  el.b.textContent = "B";
-  setButtonsDisabled(true);
-
-  showPlayAgain(false);
-
-  // show onboarding again (optional)
-  // el.onboarding.style.display = "flex";
-}
-  el.playAgain.addEventListener("click", () => {
-  resetGameUI();
-});
-  function newRunId(){
-    // Safari-safe fallback
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    return String(Date.now()) + "-" + Math.random().toString(16).slice(2);
-  }
-
-  function getSessionId(){
-    const key = "lifeSimSessionId";
-    let id = localStorage.getItem(key);
-    if(!id){
-      id = newRunId();
-      localStorage.setItem(key, id);
-    }
-    return id;
-  }
-
-  const state = {
-    session_id: getSessionId(),
-    run_id: newRunId(),
-    age: 0,
-    gender: "unspecified",
-    city: "",
-    desire: "",
-    stats: { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 },
-    relationships: [],
-    history: []
-  };
-
-  let currentScenario = null;
-  let locked = false;
-
+  // ---- DOM ----
   const el = {
     gender: document.getElementById("gender"),
     city: document.getElementById("city"),
@@ -389,6 +337,39 @@
     onboarding: document.getElementById("onboarding")
   };
 
+  // ---- IDs ----
+  function newRunId(){
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return String(Date.now()) + "-" + Math.random().toString(16).slice(2);
+  }
+
+  function getSessionId(){
+    const key = "lifeSimSessionId";
+    let id = localStorage.getItem(key);
+    if(!id){
+      id = newRunId();
+      localStorage.setItem(key, id);
+    }
+    return id;
+  }
+
+  // ---- State ----
+  const state = {
+    session_id: getSessionId(),
+    run_id: newRunId(),
+    age: 0,
+    gender: "unspecified",
+    city: "",
+    desire: "",
+    stats: { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 },
+    relationships: [],
+    history: []
+  };
+
+  let currentScenario = null;
+  let locked = false;
+
+  // ---- Loader lines ----
   const loadLines = [
     "Generating next life moment…",
     "Calculating consequences…",
@@ -397,12 +378,13 @@
     "Loading the moment…"
   ];
   let loadTimer = null;
- 
+
+  // ---- UI helpers ----
   function showPlayAgain(on){
-  if(on) el.playAgain.classList.remove("hidden");
-  else el.playAgain.classList.add("hidden");
-}
-  
+    if(on) el.playAgain.classList.remove("hidden");
+    else el.playAgain.classList.add("hidden");
+  }
+
   function setError(msg){
     if(!msg){
       el.error.style.display = "none";
@@ -437,10 +419,8 @@
 
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-  // Typewriter render
   async function typewriter(text, speed=14){
     setButtonsDisabled(true);
-
     const cursor = `<span class="cursor">█</span>`;
     el.story.innerHTML = cursor;
 
@@ -450,11 +430,39 @@
       el.story.innerHTML = out.replaceAll("\n", "<br>") + cursor;
       await sleep(speed);
     }
-
     el.story.innerHTML = out.replaceAll("\n", "<br>") + cursor;
     setButtonsDisabled(false);
   }
 
+  function renderChoices(scenario){
+    el.a.textContent = scenario.options[0].label;
+    el.b.textContent = scenario.options[1].label;
+  }
+
+  function resetGameUI(){
+    currentScenario = null;
+    locked = false;
+
+    state.run_id = newRunId();
+    state.age = 0;
+    state.history = [];
+    state.relationships = [];
+    state.stats = { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 };
+
+    el.age.textContent = "Age: 0";
+    el.meta.textContent = "CHOOSE WISELY";
+    el.story.innerHTML = `Fill in info and Press Start Life above.<span class="cursor">█</span>`;
+
+    el.a.textContent = "A";
+    el.b.textContent = "B";
+    setButtonsDisabled(true);
+
+    showPlayAgain(false);
+    setError("");
+    setLoading(false);
+  }
+
+  // ---- API ----
   async function apiTurn(){
     const r = await fetch(API_BASE + "/api/turn", {
       method:"POST",
@@ -464,12 +472,11 @@
 
     const json = await r.json().catch(()=> null);
     if(!r.ok){
-      throw new Error(json?.message || "turn_failed");
+      throw new Error(json?.message || json?.error || "turn_failed");
     }
     return json;
   }
 
-  // ✅ FIXED: only ONE apiApply function (your old code had duplicate + broken braces)
   async function apiApply(effects){
     const r = await fetch(API_BASE + "/api/apply", {
       method:"POST",
@@ -489,15 +496,32 @@
     return json;
   }
 
-  function renderChoices(scenario){
-    el.a.textContent = scenario.options[0].label;
-    el.b.textContent = scenario.options[1].label;
+  async function apiEpilogue(cause){
+    const r = await fetch(API_BASE + "/api/epilogue", {
+      method: "POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({
+        age: state.age,
+        gender: state.gender,
+        city: state.city,
+        desire: state.desire,
+        relationships: state.relationships || [],
+        history: state.history.slice(-30),
+        cause
+      })
+    });
+
+    const json = await r.json().catch(()=> null);
+    if(!r.ok){
+      return { text: `You die at ${state.age}. Cause: ${cause}.` };
+    }
+    return json;
   }
 
+  // ---- Game ----
   async function startGame(){
-  showPlayAgain(false);
-  ...
-}setError("");
+    setError("");
+    showPlayAgain(false);
 
     // New run every start attempt
     state.run_id = newRunId();
@@ -532,35 +556,15 @@
       el.age.textContent = `Age: ${state.age}`;
       renderChoices(currentScenario);
 
-      // Stop loader before typing
-      setLoading(false);
+      setLoading(false); // stop loader before typing
       await typewriter(currentScenario.text, 14);
-
     }catch(e){
       setLoading(false);
       setError("Start failed: " + (e.message || "Model error"));
       setButtonsDisabled(true);
     }
   }
-  
-  async function apiNext(token, effects){
-  const r = await fetch(API_BASE + "/api/next", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      token,
-      age: state.age,
-      stats: state.stats,
-      effects,
-      death_cause_hint: currentScenario?.death_cause_hint || ""
-    })
-  });
 
-  const json = await r.json().catch(()=> null);
-  if(!r.ok) throw new Error(json?.error || "next_failed");
-  return json;
-}
-  
   async function choose(index){
     if(locked || !currentScenario) return;
 
@@ -576,40 +580,16 @@
       state.stats = applied.next_stats;
 
       if(applied.died){
-  setLoading(false);
+        setLoading(false);
 
-  const cause = (currentScenario.death_cause_hint || "complications").trim() || "complications";
+        const cause = (currentScenario.death_cause_hint || "complications").trim() || "complications";
+        const ep = await apiEpilogue(cause);
 
-  const r = await fetch(API_BASE + "/api/epilogue", {
-    method: "POST",
-    headers: { "Content-Type":"application/json" },
-    body: JSON.stringify({
-      age: state.age,
-      gender: state.gender,
-      city: state.city,
-      desire: state.desire,
-      relationships: state.relationships || [],
-      history: state.history.slice(-30),
-      cause
-    })
-  });
+        setButtonsDisabled(true);
+        await typewriter(ep.text || `You die at ${state.age}. Cause: ${cause}.`, 14);
 
-  const ep = await r.json().catch(()=> null);
-  const endingText = ep?.text || `You die at ${state.age}. Cause: ${cause}.`;
-
-  setButtonsDisabled(true);
-  await typewriter(endingText, 14);
-
-  showPlayAgain(true);
-  return;
-}
-
-        catch(_){
-          // fallback if epilogue endpoint isn't deployed yet
-          setButtonsDisabled(true);
-          await typewriter(`You die at ${state.age}. Cause: ${cause}.`, 14);
-          return;
-        }
+        showPlayAgain(true);
+        return;
       }
 
       const next = await apiTurn();
@@ -632,14 +612,17 @@
     }
   }
 
-  // ✅ attach handlers safely
-  window.addEventListener("DOMContentLoaded", () => {
-    el.start.addEventListener("click", (e) => {
-      e.preventDefault();
-      startGame();
-    });
-    el.a.addEventListener("click", () => choose(0));
-    el.b.addEventListener("click", () => choose(1));
+  // ---- Events ----
+  el.start.addEventListener("click", (e) => {
+    e.preventDefault();
+    startGame();
+  });
+
+  el.a.addEventListener("click", () => choose(0));
+  el.b.addEventListener("click", () => choose(1));
+
+  el.playAgain.addEventListener("click", () => {
+    resetGameUI();
   });
 </script>
 </body>
