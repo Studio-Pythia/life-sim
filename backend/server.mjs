@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import OpenAI from "openai";
+import crypto from "crypto";
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -175,6 +176,11 @@ STATS:
   based on city, gender, desire, and plausible family circumstance.
 - Stats must be floats in [0,1].
 
+UNIQUENESS (strict):
+- Use nonce + session_id to make each run distinct, even if inputs match.
+- Never mention nonce or session_id in the text.
+- Avoid reusing the same names, places, or phrasing across different lives.
+
 OUTPUT JSON SCHEMA (must match exactly):
 {
   "birth_stats": { "money":0-1,"stability":0-1,"status":0-1,"health":0-1,"stress":0-1,"freedom":0-1,"exposure":0-1 } | null,
@@ -199,21 +205,20 @@ Effects MUST exist on both options (can be {}).
 `;
 
   const user = {
-    is_birth,
-    age_from,
-    age_to,
-    player: {
-      gender: String(state.gender ?? "unspecified"),
-      city: String(state.city ?? "London"),
-      desire: String(state.desire ?? "free"),
-    },
-    current_stats: state.stats ?? null,
-    current_relationships: state.relationships ?? [],
-    recent_history: Array.isArray(state.history) ? state.history.slice(-20) : [],
-    instruction: is_birth
-      ? "This is the start of life. scenario.text MUST begin with: 'You are born'. Provide the first life-defining decision."
-      : "Generate the next life-defining decision based on trajectory.",
-  };
+  nonce,
+  session_id: state.session_id || null,
+  is_birth,
+  age_from,
+  age_to,
+  player: {
+    gender: String(state.gender ?? "unspecified"),
+    city: String(state.city ?? "London"),
+    desire: String(state.desire ?? "free"),
+  },
+  current_stats: state.stats ?? null,
+  current_relationships: state.relationships ?? [],
+  recent_history: Array.isArray(state.history) ? state.history.slice(-20) : [],
+};
 
   const r = await client.responses.create({
     model: "gpt-5",
@@ -238,6 +243,7 @@ app.get("/health", (req, res) => {
 
 app.post("/api/turn", async (req, res) => {
   try {
+    const nonce = crypto.randomUUID();
     const state = req?.body?.state || {};
     const age_from = Number(state.age ?? 0);
     const history = Array.isArray(state.history) ? state.history : [];
