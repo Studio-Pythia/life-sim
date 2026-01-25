@@ -252,6 +252,11 @@
         min-height:160px;
       }
     }
+    #playAgain{
+  text-align:center;
+  font-weight:700;
+  letter-spacing:0.5px;
+}
   </style>
 </head>
 
@@ -293,6 +298,10 @@
     <div class="choices">
       <button class="choiceBtn" id="a" disabled>A</button>
       <button class="choiceBtn" id="b" disabled>B</button>
+      <button class="choiceBtn hidden" id="playAgain" type="button">
+  PLAY AGAIN
+</button>
+    
     </div>
 
     <div class="error" id="error" style="display:none;"></div>
@@ -353,6 +362,7 @@
     story: document.getElementById("story"),
     a: document.getElementById("a"),
     b: document.getElementById("b"),
+    playAgain: document.getElementById("playAgain"),
     error: document.getElementById("error"),
     loading: document.getElementById("loading"),
     loadingMsg: document.querySelector(".loaderMsg"),
@@ -367,7 +377,12 @@
     "Loading the moment…"
   ];
   let loadTimer = null;
-
+ 
+  function showPlayAgain(on){
+  if(on) el.playAgain.classList.remove("hidden");
+  else el.playAgain.classList.add("hidden");
+}
+  
   function setError(msg){
     if(!msg){
       el.error.style.display = "none";
@@ -460,7 +475,9 @@
   }
 
   async function startGame(){
-    setError("");
+  showPlayAgain(false);
+  ...
+}setError("");
 
     // New run every start attempt
     state.run_id = newRunId();
@@ -539,33 +556,35 @@
       state.stats = applied.next_stats;
 
       if(applied.died){
-        setLoading(false);
+  setLoading(false);
 
-        const cause = (currentScenario.death_cause_hint || "complications").trim() || "complications";
+  const cause = (currentScenario.death_cause_hint || "complications").trim() || "complications";
 
-        // Fetch a proper ending (optional endpoint)
-        try{
-          const r = await fetch(API_BASE + "/api/epilogue", {
-            method: "POST",
-            headers: { "Content-Type":"application/json" },
-            body: JSON.stringify({
-              age: state.age,
-              gender: state.gender,
-              city: state.city,
-              desire: state.desire,
-              relationships: state.relationships || [],
-              history: state.history.slice(-30),
-              cause
-            })
-          });
+  const r = await fetch(API_BASE + "/api/epilogue", {
+    method: "POST",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify({
+      age: state.age,
+      gender: state.gender,
+      city: state.city,
+      desire: state.desire,
+      relationships: state.relationships || [],
+      history: state.history.slice(-30),
+      cause
+    })
+  });
 
-          const ep = await r.json().catch(()=> null);
-          const endingText = ep?.text || `You die at ${state.age}. Cause: ${cause}.`;
-          setButtonsDisabled(true);
-          await typewriter(endingText, 14);
-          return;
+  const ep = await r.json().catch(()=> null);
+  const endingText = ep?.text || `You die at ${state.age}. Cause: ${cause}.`;
 
-        }catch(_){
+  setButtonsDisabled(true);
+  await typewriter(endingText, 14);
+
+  showPlayAgain(true);
+  return;
+}
+
+        catch(_){
           // fallback if epilogue endpoint isn't deployed yet
           setButtonsDisabled(true);
           await typewriter(`You die at ${state.age}. Cause: ${cause}.`, 14);
