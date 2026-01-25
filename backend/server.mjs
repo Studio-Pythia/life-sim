@@ -3,102 +3,99 @@ import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import OpenAI from "openai";
-import { z } from "zod";
+import crypto from "crypto";
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
 /**
- * CORS
- * For now: allow all origins (fastest to stop "Failed to fetch" headaches)
- * Lock it down later to your Vercel domain(s).
+ * ✅ CORS
+ * In production, lock this down to your Vercel domain:
+ * origin: ["https://life-sim-chi.vercel.app"]
  */
 app.use(
   cors({
     origin: true,
-    methods: ["POST", "GET", "OPTIONS"],
+    methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"],
   })
 );
-app.options("*", cors());
 
 /**
- * Basic abuse protection
+ * ✅ Rate limit to avoid abuse
  */
 app.use(
   rateLimit({
     windowMs: 60_000,
-    max: 120,
+    max: 60,
   })
 );
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 if (!process.env.OPENAI_API_KEY) {
-  console.error("❌ OPENAI_API_KEY missing. Set it in Railway Variables.");
+  console.error("❌ OPENAI_API_KEY is missing. Add it in Railway Variables.");
 }
 
-app.get("/health", (req, res) => {
-  res.json({ ok: true, time: Date.now() });
-});
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /**
+ * ---------------------------
  * Helpers
+ * ---------------------------
  */
+
 function clamp01(x) {
   return Math.max(0, Math.min(1, x));
 }
 
-function clampEffect(x) {
-  // effects must stay within [-0.25, +0.25]
-  return Math.max(-0.25, Math.min(0.25, x));
-}
-
 function jumpYears() {
-  // 5–15 inclusive
+  // 5–15 years
   return Math.floor(5 + Math.random() * 11);
 }
 
-/**
- * Mortality: intentionally low at birth/childhood.
- * We never show deathChance to user; only apply it.
- */
+// Much lower chance of dying at age 0–10.
+// Mortality rises gradually and responds to stats.
 function computeMortalityChance(age, stats) {
-  // Very low early life
-  if (age <= 1) return 0.0006;
-  if (age <= 5) return 0.0003;
-  if (age <= 12) return 0.0002;
-  if (age <= 18) return 0.0006;
+  // base curve: tiny for kids, ramps later
+  let base;
+  if (age <= 1) base = 0.0002;
+  else if (age <= 10) base = 0.0005;
+  else if (age <= 25) base = 0.002;
+  else if (age <= 45) base = 0.006;
+  else if (age <= 65) base = 0.02;
+  else if (age <= 80) base = 0.06;
+  else base = 0.12 + Math.pow((age - 80) / 32, 2) * 0.35;
 
-  // base rises with age
-  const base = Math.min(0.85, Math.pow(age / 112, 3) * 0.55);
+  const healthPenalty = (1 - (stats.health ?? 0.5)) * 0.18;
+  const stressPenalty = (stats.stress ?? 0.5) * 0.08;
+  const exposurePenalty = (stats.exposure ?? 0.5) * 0.10;
 
-  const healthPenalty = (1 - stats.health) * 0.30;
-  const stressPenalty = stats.stress * 0.20;
-  const exposurePenalty = stats.exposure * 0.20;
-
-  // freedom buffer slight
-  const freedomBuffer = (stats.freedom - 0.5) * 0.05;
+  // freedom gives a tiny buffer (agency/escape choices)
+  const freedomBuffer = ((stats.freedom ?? 0.5) - 0.5) * 0.03;
 
   const p = base + healthPenalty + stressPenalty + exposurePenalty - freedomBuffer;
-  return Math.max(0.0002, Math.min(0.92, p));
+
+  // keep sane limits
+  return Math.max(0.0001, Math.min(0.85, p));
+}
+
+function nonce() {
+  return crypto.randomBytes(8).toString("hex");
 }
 
 /**
- * STRICT Structured Output Schema
- * This is the fix for your "Model failed to return valid JSON"
+ * ---------------------------
+ * Structured Output Schemas
+ * ---------------------------
  */
-const ScenarioSchema = {
-  name: "life_turn",
+
+const TurnJSONSchema = {
+  name: "LifeTurn",
   strict: true,
   schema: {
     type: "object",
     additionalProperties: false,
     properties: {
       text: { type: "string" },
-
       options: {
         type: "array",
         minItems: 2,
@@ -120,22 +117,53 @@ const ScenarioSchema = {
                 freedom: { type: "number" },
                 exposure: { type: "number" },
               },
-              required: [
-                "money",
-                "stability",
-                "status",
-                "health",
-                "stress",
-                "freedom",
-                "exposure",
-              ],
             },
           },
           required: ["label", "effects"],
         },
       },
+      relationship_changes: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          replace_index: {
+            anyOf: [
+              { type: "integer", minimum: 0, maximum: 2 },
+              { type: "null" },
+            ],
+          },
+          new_person: {
+            anyOf: [
+              {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  name: { type: "string" },
+                  role: { type: "string" },
+                },
+                required: ["name", "role"],
+              },
+              { type: "null" },
+            ],
+          },
+        },
+        required: ["replace_index", "new_person"],
+      },
+      death_cause_hint: { type: "string" },
+    },
+    required: ["text", "options", "relationship_changes", "death_cause_hint"],
+  },
+};
 
-      // always 3 people
+const BirthJSONSchema = {
+  name: "BirthTurn",
+  strict: true,
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      text: { type: "string" },
+      options: TurnJSONSchema.schema.properties.options,
       relationships: {
         type: "array",
         minItems: 3,
@@ -150,8 +178,6 @@ const ScenarioSchema = {
           required: ["name", "role"],
         },
       },
-
-      // computed from start condition, but always returned
       birth_stats: {
         type: "object",
         additionalProperties: false,
@@ -164,18 +190,8 @@ const ScenarioSchema = {
           freedom: { type: "number" },
           exposure: { type: "number" },
         },
-        required: [
-          "money",
-          "stability",
-          "status",
-          "health",
-          "stress",
-          "freedom",
-          "exposure",
-        ],
+        required: ["money", "stability", "status", "health", "stress", "freedom", "exposure"],
       },
-
-      // only used if plausibly lethal; otherwise empty string
       death_cause_hint: { type: "string" },
     },
     required: ["text", "options", "relationships", "birth_stats", "death_cause_hint"],
@@ -183,139 +199,148 @@ const ScenarioSchema = {
 };
 
 /**
- * Validate incoming turn request
- * Keep it permissive enough to not brick your frontend.
+ * ---------------------------
+ * Prompt Builders
+ * ---------------------------
  */
-const TurnSchema = z.object({
-  state: z.object({
-    session_id: z.string().optional(),
-    run_id: z.string().optional(),
-    age: z.number().min(0).max(112),
-    gender: z.string().min(1),
-    city: z.string().min(1),
-    desire: z.string().min(1),
 
-    stats: z.object({
-      money: z.number().min(0).max(1),
-      stability: z.number().min(0).max(1),
-      status: z.number().min(0).max(1),
-      health: z.number().min(0).max(1),
-      stress: z.number().min(0).max(1),
-      freedom: z.number().min(0).max(1),
-      exposure: z.number().min(0).max(1),
-    }),
-
-    relationships: z.array(
-      z.object({
-        name: z.string(),
-        role: z.string(),
-      })
-    ),
-
-    history: z.array(z.string()).max(120),
-  }),
-});
-
-/**
- * /api/turn
- * Generates the next scenario + returns age_to, birth_stats and relationships.
- */
-app.post("/api/turn", async (req, res) => {
-  try {
-    const { state } = TurnSchema.parse(req.body);
-
-    // Determine new age (5–15 years jump)
-    const years = jumpYears();
-    const age_to = Math.min(112, state.age + years);
-
-    // Random nonce reduces chances of repeat across sessions
-    const nonce = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-    const system = `
-You are generating the next pivotal life moment in a binary-choice life simulator.
+function systemPrompt() {
+  return `
+You are generating a pivotal life moment in a binary-choice life simulator.
 
 Hard rules:
 - Address the player as "you"
-- One paragraph only. Prose. No headings. No lists. No odds. No stats tables.
-- Short, fast. High stakes. Volatile.
-- Include: living situation + source of income + lifestyle + next step crisis.
-- Present exactly TWO options labeled A and B with explicit actions.
-- Maintain exactly 3 relationships in the "relationships" array.
-- First names only.
-- When a person appears in the narrative for the first time, include role in parentheses: "Maya (mother)".
-  After first appearance, you may refer without parentheses.
-- The roles must fit the age (at age 0: caregivers; at adult ages: friends/partners/bosses etc).
-- Effects must be between -0.25 and +0.25 for each stat.
+- Short, fast prose. 1 paragraph only.
+- No headings, no lists, no odds, no "life report"
+- Must imply: living situation, source of income, lifestyle, next step crisis
+- Make it difficult. Volatile. Consequences are real.
+- Present exactly two choices A and B as explicit actions.
+- Names must be FIRST NAMES ONLY.
+- When a character appears for the FIRST TIME, write them as: Name (role)
+- After first appearance, do NOT repeat (role) again for that same person.
+- Return VALID JSON ONLY, matching the schema exactly.
 
-Gameplay:
-- Age jumps are always 5–15 years.
-- Age 0 must generate the starting state based on city + gender + desire and include a decision.
+Effects rules:
+- effects can only use keys: money, stability, status, health, stress, freedom, exposure
+- Each effect must be between -0.25 and +0.25 (inclusive)
+`.trim();
+}
 
-Return VALID JSON ONLY matching the schema.
-`;
+function birthPrompt() {
+  return `
+You are generating the birth + infancy start-state.
 
-    const user = JSON.stringify({
-      nonce,
-      fromAge: state.age,
-      toAge: age_to,
+Rules:
+- Must use the provided city, gender, desire.
+- You MUST produce 3 relationships, realistic for the context (avoid nonsense like "guardian" unless it makes sense).
+- You MUST set birth_stats realistically (0..1 floats, not all 0.5).
+- The prose must be specific, factual-feeling, and grounded.
+- Provide two options that genuinely shape the next 5–15 years.
+
+Return JSON matching schema exactly.
+`.trim();
+}
+
+/**
+ * ---------------------------
+ * Routes
+ * ---------------------------
+ */
+
+app.get("/health", (req, res) => res.json({ ok: true }));
+
+app.post("/api/turn", async (req, res) => {
+  try {
+    const state = req.body?.state;
+    if (!state) {
+      return res.status(400).json({ error: "bad_request", message: "Missing state" });
+    }
+
+    const isBirth = state.age === 0 && (!state.history || state.history.length === 0);
+
+    const years = isBirth ? 0 : jumpYears();
+    const newAge = Math.min(112, state.age + years);
+
+    const payload = {
+      nonce: nonce(),
+      session_id: state.session_id || "",
+      run_id: state.run_id || "",
+      age_from: state.age,
+      age_to: newAge,
       gender: state.gender,
       city: state.city,
       desire: state.desire,
-      currentStats: state.stats,
-      relationships: state.relationships,
-      recentHistory: state.history.slice(-25),
-      instruction:
-        state.age === 0
-          ? "This is the start of life. Generate birth_stats and 3 caregiver relationships and an Age 0 pivotal decision."
-          : "Generate the next pivotal life moment based on trajectory. Keep relationships coherent.",
-    });
+      stats: state.stats,
+      relationships: state.relationships || [],
+      history: (state.history || []).slice(-18),
+    };
 
     const response = await client.responses.create({
-      model: "gpt-5",
+      model: "gpt-4.1", // ✅ reliable + high quality + structured outputs support
       input: [
-        { role: "system", content: system },
-        { role: "user", content: user },
+        { role: "system", content: systemPrompt() },
+        {
+          role: "user",
+          content: isBirth ? birthPrompt() : "Generate the next pivotal moment.",
+        },
+        { role: "user", content: JSON.stringify(payload) },
       ],
-      reasoning: { effort: "low" },
-      temperature: 1.0,
+      max_output_tokens: 900,
       text: {
         format: {
           type: "json_schema",
-          json_schema: ScenarioSchema,
+          ...(isBirth ? BirthJSONSchema : TurnJSONSchema),
         },
       },
     });
 
-    // This WILL be valid JSON if the model succeeded
-    const out = JSON.parse(response.output_text);
-
-    // Clamp birth stats [0..1]
-    for (const k of Object.keys(out.birth_stats)) {
-      out.birth_stats[k] = clamp01(out.birth_stats[k]);
+    const raw = response.output_text; // ✅ official helper
+    if (!raw) {
+      return res.status(500).json({
+        error: "model_no_output",
+        message: "Model returned no output_text",
+        request_id: response._request_id || null,
+      });
     }
 
-    // Clamp effects
-    out.options = out.options.map((opt) => {
-      const e = opt.effects;
-      for (const k of Object.keys(e)) {
-        e[k] = clampEffect(e[k]);
+    const out = JSON.parse(raw);
+
+    // clamp effects safety
+    if (out?.options?.length === 2) {
+      for (const opt of out.options) {
+        for (const k of Object.keys(opt.effects || {})) {
+          opt.effects[k] = Math.max(-0.25, Math.min(0.25, opt.effects[k]));
+        }
       }
-      return opt;
-    });
+    }
+
+    // birth stats clamp
+    if (out.birth_stats) {
+      for (const k of Object.keys(out.birth_stats)) {
+        out.birth_stats[k] = clamp01(out.birth_stats[k]);
+      }
+    }
 
     return res.json({
       age_from: state.age,
-      age_to,
+      age_to: newAge,
       scenario: {
         text: out.text,
         options: out.options,
-        death_cause_hint: (out.death_cause_hint || "").trim(),
+        relationship_changes: out.relationship_changes || { replace_index: null, new_person: null },
+        death_cause_hint: out.death_cause_hint || "",
       },
-      birth_stats: out.birth_stats,
-      relationships: out.relationships,
+      ...(isBirth
+        ? {
+            birth_stats: out.birth_stats,
+            relationships: out.relationships,
+          }
+        : {}),
+      request_id: response._request_id || null,
     });
   } catch (err) {
-    console.error("❌ /api/turn error:", err?.message || err);
+    console.error("TURN ERROR:", err?.message || err);
+
     return res.status(500).json({
       error: "turn_failed",
       message: "Model failed to return valid JSON. Retry.",
@@ -323,109 +348,66 @@ Return VALID JSON ONLY matching the schema.
   }
 });
 
-/**
- * /api/apply
- * Applies option effects + performs mortality check.
- * Returns next_stats and died boolean.
- */
 app.post("/api/apply", (req, res) => {
   try {
-    const schema = z.object({
-      age: z.number().min(0).max(112),
-      stats: z.object({
-        money: z.number(),
-        stability: z.number(),
-        status: z.number(),
-        health: z.number(),
-        stress: z.number(),
-        freedom: z.number(),
-        exposure: z.number(),
-      }),
-      effects: z.object({
-        money: z.number(),
-        stability: z.number(),
-        status: z.number(),
-        health: z.number(),
-        stress: z.number(),
-        freedom: z.number(),
-        exposure: z.number(),
-      }),
-      death_cause_hint: z.string().optional(),
-    });
-
-    const { age, stats, effects } = schema.parse(req.body);
-
-    const next = { ...stats };
-    for (const k of Object.keys(effects)) {
-      next[k] = clamp01((next[k] ?? 0.5) + clampEffect(effects[k]));
+    const { age, stats, effects, death_cause_hint } = req.body || {};
+    if (typeof age !== "number" || !stats || !effects) {
+      return res.status(400).json({ error: "bad_request", message: "Invalid apply payload" });
     }
 
-    const deathChance = computeMortalityChance(age, next);
+    const next = { ...stats };
+
+    for (const k of Object.keys(effects)) {
+      next[k] = clamp01((next[k] ?? 0.5) + effects[k]);
+    }
+
+    // Infant protection (unless story strongly implies lethal)
+    let deathChance = computeMortalityChance(age, next);
+    if (age <= 1) deathChance = Math.min(deathChance, 0.001);
+
     const roll = Math.random();
     const died = roll < deathChance;
 
     return res.json({
       next_stats: next,
       died,
+      cause_hint: died ? (death_cause_hint || "complications") : "",
     });
   } catch (err) {
-    console.error("❌ /api/apply error:", err?.message || err);
-    return res.status(400).json({ error: "bad_request" });
+    console.error("APPLY ERROR:", err?.message || err);
+    return res.status(400).json({ error: "bad_request", message: "Apply failed" });
   }
 });
 
-/**
- * /api/epilogue
- * Generates a death explanation paragraph.
- */
 app.post("/api/epilogue", async (req, res) => {
   try {
-    const schema = z.object({
-      age: z.number().min(0).max(112),
-      gender: z.string(),
-      city: z.string(),
-      desire: z.string(),
-      relationships: z.array(z.object({ name: z.string(), role: z.string() })).max(3),
-      history: z.array(z.string()).max(80),
-      cause: z.string(),
-    });
+    const body = req.body || {};
+    const prompt = `
+Write a final short epilogue as 1 paragraph.
+Address "you".
+Explain what happened and why (grounded, factual-feeling).
+Include cause of death as the final beat.
+No headings. No lists. No sentimentality.
+`.trim();
 
-    const payload = schema.parse(req.body);
-
-    const system = `
-Write a single-paragraph ending for a life simulator.
-
-Rules:
-- Address as "you"
-- One paragraph only, prose
-- Mention 1–2 relationships by first name
-- Explain the cause with believable context
-- No headings, no odds, no lists
-`;
-
-    const user = JSON.stringify(payload);
-
-    const r = await client.responses.create({
-      model: "gpt-5",
+    const response = await client.responses.create({
+      model: "gpt-4.1",
       input: [
-        { role: "system", content: system },
-        { role: "user", content: user },
+        { role: "system", content: "You write hard, grounded endings." },
+        { role: "user", content: prompt },
+        { role: "user", content: JSON.stringify({ nonce: nonce(), ...body }) },
       ],
-      reasoning: { effort: "low" },
-      temperature: 1.0,
+      max_output_tokens: 300,
     });
 
-    return res.json({ text: r.output_text.trim() });
-  } catch (err) {
-    console.error("❌ /api/epilogue error:", err?.message || err);
-    return res.status(500).json({
-      error: "epilogue_failed",
-      message: "Could not generate epilogue.",
+    return res.json({
+      text: response.output_text || `You die at ${body.age}. Cause: ${body.cause || "complications"}.`,
     });
+  } catch (err) {
+    console.error("EPILOGUE ERROR:", err?.message || err);
+    return res.status(500).json({ error: "epilogue_failed" });
   }
 });
 
 const port = process.env.PORT || 8787;
-app.listen(port, () => {
-  console.log(`✅ Server running on port ${port}`);
-});
+app.listen(port, () => console.log(`✅ Server running on http://localhost:${port}`));
