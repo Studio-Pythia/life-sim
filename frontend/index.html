@@ -517,9 +517,31 @@
 
       if(applied.died){
         setLoading(false);
-        el.story.innerHTML = `You die at ${state.age}. Cause: ${(currentScenario.death_cause_hint || "complications")}.<span class="cursor">█</span>`;
-        return;
-      }
+
+          const cause = (currentScenario.death_cause_hint || "complications").trim() || "complications";
+
+  // Fetch a proper ending
+  const r = await fetch(API_BASE + "/api/epilogue", {
+    method: "POST",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify({
+      age: state.age,
+      gender: state.gender,
+      city: state.city,
+      desire: state.desire,
+      relationships: state.relationships || [],
+      history: state.history.slice(-30),
+      cause
+    })
+  });
+
+  const ep = await r.json().catch(()=> null);
+  const endingText = ep?.text || `You die at ${state.age}. Cause: ${cause}.`;
+
+  setButtonsDisabled(true);
+  await typewriter(endingText, 14);
+  return;
+}
 
       const { age_to, scenario, relationships } = await apiTurn();
 
