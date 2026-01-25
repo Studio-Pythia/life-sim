@@ -125,9 +125,9 @@ function computeMortalityChance(age, stats) {
 
   // Adult: nonlinear rise
   const base = Math.min(0.65, Math.pow(a / 112, 3) * 0.55);
-  const healthPenalty = (1 - s.health) * 0.22;
-  const stressPenalty = s.stress * 0.14;
-  const exposurePenalty = s.exposure * 0.11;
+  const healthPenalty = (1 - s.health) * 0.12;
+  const stressPenalty = s.stress * 0.08;
+  const exposurePenalty = s.exposure * 0.06;
 
   const stabilityBuffer = (s.stability - 0.5) * 0.04;
   const freedomBuffer = (s.freedom - 0.5) * 0.03;
