@@ -221,6 +221,155 @@
     }
 
     .hidden{ display:none !important; }
+
+	  /* ---------- Mobile-first improvements ---------- */
+
+body{
+  padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
+           max(18px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+}
+
+/* Make the "window" behave like an app screen */
+.window{
+  width: 100%;
+  max-width: 980px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 14px;
+  min-height: min(92vh, 860px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Onboarding looks like a form, not a toolbar */
+.top{
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+  margin-bottom: 0;
+}
+
+/* Improve readability + spacing */
+.story{
+  margin-top: 0;
+  padding-top: 14px;
+  min-height: 180px;
+  font-size: 18px;
+  line-height: 1.65;
+  letter-spacing: .1px;
+  border-top: 1px solid var(--border);
+}
+
+/* Choices feel like tappable mobile buttons */
+.choiceBtn{
+  padding: 18px 16px;
+  font-size: 16px;
+  line-height: 1.3;
+  border-width: 1px;
+  touch-action: manipulation;
+}
+
+/* Bigger cursor, slightly less aggressive */
+.cursor{
+  width: 8px;
+}
+
+/* Make the Age header responsive */
+.age{
+  font-size: clamp(34px, 8vw, 52px);
+  font-weight: 800;
+}
+
+/* Meta text should never dominate on small screens */
+.meta{
+  max-width: 100%;
+  font-size: 12px;
+  opacity: .75;
+}
+
+/* Loading overlay becomes a bottom sheet (mobile-native) */
+.overlay{
+  background: rgba(255,255,255,.85);
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 14px max(14px, env(safe-area-inset-bottom)) 14px;
+}
+
+.overlayBox{
+  width: 100%;
+  max-width: 980px;
+  border: 1px solid var(--border);
+  background: #fff;
+  padding: 14px 14px;
+  font-size: 14px;
+}
+
+/* Make spinner + dots line up nicely */
+.loaderRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:8px;
+}
+
+/* ---------- Small screens ---------- */
+@media (max-width: 640px){
+
+  .window{
+    padding: 12px;
+    min-height: 92vh;
+  }
+
+  /* Stack inputs cleanly */
+  .top{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .field{
+    min-width: 0;
+  }
+
+  input, select{
+    font-size: 16px; /* stops iOS zoom-on-focus */
+    padding: 12px 12px;
+  }
+
+  .startBtn{
+    width: 100%;
+    padding: 14px 12px;
+    font-size: 16px;
+  }
+
+  .hud{
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .meta{
+    text-align: left;
+  }
+
+  /* Keep story readable and avoid huge empty space */
+  .story{
+    font-size: 17px;
+    min-height: 160px;
+  	max-height: 44vh;
+	overflow: auto;
+  }
+
+  .choices{
+    gap: 10px;
+  }
+
+  .choiceBtn{
+    padding: 18px 14px;
+    font-size: 16px;
+  }
+}
   </style>
 </head>
 
@@ -281,6 +430,15 @@
   // Backend base URL
   const API_BASE = "https://life-sim-production.up.railway.app";
 
+	function getSessionId(){
+  const key = "lifeSimSessionId";
+  let id = localStorage.getItem(key);
+  if(!id){
+    id = (crypto?.randomUUID?.() || String(Date.now()) + "-" + Math.random().toString(16).slice(2));
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
   // Random relationship names per new game (changes each time)
   const NAME_POOL = {
     mother: ["Clara","Amira","Leah","Maya","Jo","Ruth","Sofia","Nadia","Tess","Imani","Farah","Elena","Siobhan","Yasmin"],
@@ -305,7 +463,8 @@
   }
 
   const state = {
-    age: 0,
+    session_id: getSessionId(),
+	age: 0,
     gender: "female",
     city: "London",
     desire: "free",
