@@ -305,6 +305,65 @@
 </head>
 
 <body>
+  <!-- ✅ Add this modal HTML right after <body> opens (above .window) -->
+<div class="overlay" id="intro">
+  <div class="overlayBox">
+    <div class="overlayTitle">LIFE SIMULATOR</div>
+    <div style="line-height:1.55; color: var(--muted);">
+      This is a life simulator.<br><br>
+      Enter anything you want at the top (gender, city, what you want to become).<br><br>
+      Then simulate your life through key moments — every screen gives you two choices that can redirect your timeline.<br><br>
+      Play as many times as you want. Different inputs create different lives.
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+      <button class="choiceBtn" id="introStart" type="button" style="text-align:center; font-weight:800;">
+        OK — LET ME IN
+      </button>
+      <button class="choiceBtn" id="introClose" type="button" style="text-align:center; opacity:.9;">
+        CLOSE
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* ✅ add this to your CSS (keeps intro modal centered not bottom-sheet) */
+  #intro{
+    align-items:center !important;
+  }
+  #intro .overlayBox{
+    max-width:720px !important;
+  }
+</style>
+
+<script>
+  // ✅ Add this inside your <script> block (near DOMContentLoaded)
+
+  function hideIntro(){
+    const intro = document.getElementById("intro");
+    if(intro) intro.classList.add("hidden");
+    localStorage.setItem("lifeSimIntroSeen", "1");
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    const seen = localStorage.getItem("lifeSimIntroSeen");
+    const intro = document.getElementById("intro");
+    const introStart = document.getElementById("introStart");
+    const introClose = document.getElementById("introClose");
+
+    // show every time (remove this if you only want it once)
+    if(intro) intro.classList.remove("hidden");
+
+    introStart?.addEventListener("click", () => {
+      hideIntro();
+      // optional: focus first input
+      document.getElementById("city")?.focus();
+    });
+
+    introClose?.addEventListener("click", hideIntro);
+  });
+</script>
   <div class="window" id="window">
 
     <div class="top" id="onboarding">
