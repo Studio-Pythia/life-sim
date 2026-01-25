@@ -7,13 +7,14 @@
 
   <style>
     :root{
-      --bg:#f6f6f6;
-      --ink:#111;
-      --muted:#444;
-      --border:#111;
-      --panel:#fff;
-      --accent:#0000ee; /* classic link blue */
-      --danger:#b00020;
+      --bg:#000000;
+      --panel:#000000;
+      --ink:#00ff66;         /* terminal green */
+      --muted:#00cc55;       /* softer green */
+      --border:#00ff66;      /* green border */
+      --accent:#66ff99;      /* link-ish green */
+      --danger:#ff4d4d;      /* red error */
+      --shadow: rgba(0,255,102,0.15);
     }
 
     *{ box-sizing:border-box; }
@@ -31,6 +32,25 @@
               max(18px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
     }
 
+    /* subtle CRT glow */
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(0,255,102,0.08), transparent 55%),
+        repeating-linear-gradient(
+          0deg,
+          rgba(0,255,102,0.035) 0px,
+          rgba(0,255,102,0.035) 1px,
+          transparent 2px,
+          transparent 5px
+        );
+      mix-blend-mode: screen;
+      opacity: .55;
+    }
+
     .window{
       width: 100%;
       max-width: 980px;
@@ -41,6 +61,7 @@
       display:flex;
       flex-direction:column;
       gap:12px;
+      box-shadow: 0 0 0 1px rgba(0,255,102,0.25), 0 0 30px var(--shadow);
     }
 
     .top{
@@ -64,28 +85,42 @@
     label{
       font-size:12px;
       color:var(--muted);
+      letter-spacing:0.4px;
+      text-transform:uppercase;
     }
 
     input, select{
       padding:12px;
       border:1px solid var(--border);
-      background:#fff;
+      background:#000;
+      color:var(--ink);
       font-family: inherit;
       font-size:16px; /* prevents iOS zoom */
+      outline:none;
+      box-shadow: inset 0 0 0 1px rgba(0,255,102,0.10);
+    }
+
+    input::placeholder{
+      color: rgba(0,255,102,0.45);
+    }
+
+    input:focus, select:focus{
+      box-shadow: 0 0 0 2px rgba(0,255,102,0.25);
     }
 
     .startBtn{
       padding:14px 12px;
       border:1px solid var(--border);
-      background:#fff;
+      background:#000;
       cursor:pointer;
       font-family: inherit;
       text-decoration:underline;
+      color:var(--ink);
       width: min(220px, 100%);
     }
 
     .startBtn:hover{
-      background:#f0f0f0;
+      background: rgba(0,255,102,0.06);
     }
 
     .hud{
@@ -100,6 +135,7 @@
     .age{
       font-size: clamp(34px, 8vw, 52px);
       font-weight:800;
+      text-shadow: 0 0 12px rgba(0,255,102,0.18);
     }
 
     .meta{
@@ -107,7 +143,9 @@
       color:var(--muted);
       text-align:right;
       max-width:100%;
-      opacity:.75;
+      opacity:.85;
+      text-transform:uppercase;
+      letter-spacing:.5px;
     }
 
     .story{
@@ -115,7 +153,7 @@
       padding-top:14px;
       min-height:180px;
       font-size:18px;
-      line-height:1.65;
+      line-height:1.75;
       letter-spacing:.1px;
       white-space:pre-wrap;
     }
@@ -125,6 +163,7 @@
       width:8px;
       margin-left:3px;
       animation: blink 0.9s steps(1) infinite;
+      color:var(--ink);
     }
 
     @keyframes blink{
@@ -142,16 +181,17 @@
       width:100%;
       padding:18px 16px;
       border:1px solid var(--border);
-      background:#fff;
+      background:#000;
       cursor:pointer;
       font-family: inherit;
       text-align:left;
       font-size:16px;
       line-height:1.3;
       touch-action: manipulation;
+      color:var(--ink);
     }
 
-    .choiceBtn:hover{ background:#f0f0f0; }
+    .choiceBtn:hover{ background: rgba(0,255,102,0.06); }
     .choiceBtn:disabled{ opacity:.35; cursor:not-allowed; }
 
     .error{
@@ -164,7 +204,7 @@
     .overlay{
       position:fixed;
       inset:0;
-      background:rgba(255,255,255,.85);
+      background:rgba(0,0,0,.78);
       display:flex;
       align-items:flex-end;
       justify-content:center;
@@ -174,17 +214,19 @@
 
     .overlayBox{
       border:1px solid var(--border);
-      background:#fff;
+      background:#000;
       padding:14px 16px;
       font-size:14px;
       width:100%;
       max-width:980px;
+      box-shadow: 0 0 18px rgba(0,255,102,0.18);
     }
 
     .overlayTitle{
       font-weight:700;
       margin-bottom:8px;
       text-decoration:underline;
+      color:var(--ink);
     }
 
     .hidden{
@@ -192,21 +234,18 @@
       pointer-events:none !important;
     }
 
-    .hiddenBtn{
-  display:none !important;
-}
-
     .loaderRow{
       display:flex;
       align-items:center;
       gap:10px;
       margin-top:6px;
+      color:var(--muted);
     }
 
     .spinner{
       width:14px;
       height:14px;
-      border:2px solid #111;
+      border:2px solid var(--ink);
       border-top-color: transparent;
       border-radius:999px;
       animation: spin .8s linear infinite;
@@ -232,6 +271,14 @@
       100%{ content:""; }
     }
 
+    #playAgain{
+      text-align:center;
+      font-weight:800;
+      letter-spacing:1.2px;
+      text-transform:uppercase;
+    }
+
+    /* Mobile */
     @media (max-width: 640px){
       .top{
         display:grid;
@@ -239,7 +286,6 @@
         gap:10px;
         align-items:stretch;
       }
-
       .field{ min-width:0; }
       .startBtn{ width:100%; }
 
@@ -248,19 +294,12 @@
         align-items:flex-start;
         gap:6px;
       }
-
       .meta{ text-align:left; }
 
       .story{
         font-size:17px;
         min-height:160px;
       }
-    }
-
-    #playAgain{
-      text-align:center;
-      font-weight:700;
-      letter-spacing:0.5px;
     }
   </style>
 </head>
@@ -274,6 +313,7 @@
         <select id="gender">
           <option value="female">female</option>
           <option value="male">male</option>
+          <option value="unspecified">unspecified</option>
         </select>
       </div>
 
@@ -319,10 +359,39 @@
   </div>
 
 <script>
-  // ✅ Your Railway backend
+  // ✅ Your backend URL
   const API_BASE = "https://life-sim-production.up.railway.app";
 
-  // ---- DOM ----
+  function newRunId(){
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return String(Date.now()) + "-" + Math.random().toString(16).slice(2);
+  }
+
+  function getSessionId(){
+    const key = "lifeSimSessionId";
+    let id = localStorage.getItem(key);
+    if(!id){
+      id = newRunId();
+      localStorage.setItem(key, id);
+    }
+    return id;
+  }
+
+  const state = {
+    session_id: getSessionId(),
+    run_id: newRunId(),
+    age: 0,
+    gender: "unspecified",
+    city: "",
+    desire: "",
+    stats: { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 },
+    relationships: [],
+    history: []
+  };
+
+  let currentScenario = null;
+  let locked = false;
+
   const el = {
     gender: document.getElementById("gender"),
     city: document.getElementById("city"),
@@ -340,39 +409,6 @@
     onboarding: document.getElementById("onboarding")
   };
 
-  // ---- IDs ----
-  function newRunId(){
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    return String(Date.now()) + "-" + Math.random().toString(16).slice(2);
-  }
-
-  function getSessionId(){
-    const key = "lifeSimSessionId";
-    let id = localStorage.getItem(key);
-    if(!id){
-      id = newRunId();
-      localStorage.setItem(key, id);
-    }
-    return id;
-  }
-
-  // ---- State ----
-  const state = {
-    session_id: getSessionId(),
-    run_id: newRunId(),
-    age: 0,
-    gender: "unspecified",
-    city: "",
-    desire: "",
-    stats: { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 },
-    relationships: [],
-    history: []
-  };
-
-  let currentScenario = null;
-  let locked = false;
-
-  // ---- Loader lines ----
   const loadLines = [
     "Generating next life moment…",
     "Calculating consequences…",
@@ -382,7 +418,6 @@
   ];
   let loadTimer = null;
 
-  // ---- UI helpers ----
   function showPlayAgain(on){
     if(on) el.playAgain.classList.remove("hidden");
     else el.playAgain.classList.add("hidden");
@@ -414,19 +449,7 @@
       loadTimer = null;
     }
   }
-  function setRIP(age){
-  el.age.textContent = `RIP AGE: ${age}`;
-}
 
-function showChoices(on){
-  if(on){
-    el.a.classList.remove("hiddenBtn");
-    el.b.classList.remove("hiddenBtn");
-  }else{
-    el.a.classList.add("hiddenBtn");
-    el.b.classList.add("hiddenBtn");
-  }
-}
   function setButtonsDisabled(disabled){
     el.a.disabled = disabled;
     el.b.disabled = disabled;
@@ -436,6 +459,7 @@ function showChoices(on){
 
   async function typewriter(text, speed=14){
     setButtonsDisabled(true);
+
     const cursor = `<span class="cursor">█</span>`;
     el.story.innerHTML = cursor;
 
@@ -445,41 +469,11 @@ function showChoices(on){
       el.story.innerHTML = out.replaceAll("\n", "<br>") + cursor;
       await sleep(speed);
     }
+
     el.story.innerHTML = out.replaceAll("\n", "<br>") + cursor;
     setButtonsDisabled(false);
   }
 
-  function renderChoices(scenario){
-    el.a.textContent = scenario.options[0].label;
-    el.b.textContent = scenario.options[1].label;
-  }
-
-  function resetGameUI(){
-  currentScenario = null;
-  locked = false;
-
-  state.run_id = newRunId();
-  state.age = 0;
-  state.history = [];
-  state.relationships = [];
-  state.stats = { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 };
-
-  el.age.textContent = "Age: 0";
-  el.meta.textContent = "CHOOSE WISELY";
-  el.story.innerHTML = `Fill in info and Press Start Life above.<span class="cursor">█</span>`;
-
-  el.a.textContent = "A";
-  el.b.textContent = "B";
-
-  showChoices(true);        // ✅ bring A/B back
-  setButtonsDisabled(true); // still disabled until start
-
-  showPlayAgain(false);
-  setError("");
-  setLoading(false);
-}
-
-  // ---- API ----
   async function apiTurn(){
     const r = await fetch(API_BASE + "/api/turn", {
       method:"POST",
@@ -489,7 +483,7 @@ function showChoices(on){
 
     const json = await r.json().catch(()=> null);
     if(!r.ok){
-      throw new Error(json?.message || json?.error || "turn_failed");
+      throw new Error(json?.message || "turn_failed");
     }
     return json;
   }
@@ -507,9 +501,7 @@ function showChoices(on){
     });
 
     const json = await r.json().catch(()=> null);
-    if(!r.ok){
-      throw new Error(json?.error || "apply_failed");
-    }
+    if(!r.ok) throw new Error(json?.error || "apply_failed");
     return json;
   }
 
@@ -529,19 +521,42 @@ function showChoices(on){
     });
 
     const json = await r.json().catch(()=> null);
-    if(!r.ok){
-      return { text: `You die at ${state.age}. Cause: ${cause}.` };
-    }
+    if(!r.ok) throw new Error(json?.error || "epilogue_failed");
     return json;
   }
 
-  // ---- Game ----
-  async function startGame(){
-    setError("");
-    showPlayAgain(false);
-    showChoices(true);
+  function renderChoices(scenario){
+    el.a.textContent = scenario.options[0].label;
+    el.b.textContent = scenario.options[1].label;
+  }
 
-    // New run every start attempt
+  function resetGameUI(){
+    currentScenario = null;
+    locked = false;
+
+    state.run_id = newRunId();
+    state.age = 0;
+    state.history = [];
+    state.relationships = [];
+    state.stats = { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 };
+
+    el.age.textContent = "Age: 0";
+    el.meta.textContent = "CHOOSE WISELY";
+    el.story.innerHTML = `Fill in info and Press Start Life above.<span class="cursor">█</span>`;
+
+    el.a.textContent = "A";
+    el.b.textContent = "B";
+
+    setButtonsDisabled(true);
+    showPlayAgain(false);
+    setError("");
+    setLoading(false);
+  }
+
+  async function startGame(){
+    showPlayAgain(false);
+    setError("");
+
     state.run_id = newRunId();
     state.age = 0;
     state.history = [];
@@ -557,7 +572,7 @@ function showChoices(on){
       return;
     }
 
-    el.meta.textContent = `${state.city.toUpperCase()} • I WANT TO BECOME ${state.desire.toUpperCase()}`;
+    el.meta.textContent = `${state.city.toUpperCase()} • I WANT TO BE ${state.desire.toUpperCase()}`;
 
     setLoading(true);
     setButtonsDisabled(true);
@@ -574,8 +589,9 @@ function showChoices(on){
       el.age.textContent = `Age: ${state.age}`;
       renderChoices(currentScenario);
 
-      setLoading(false); // stop loader before typing
+      setLoading(false);
       await typewriter(currentScenario.text, 14);
+
     }catch(e){
       setLoading(false);
       setError("Start failed: " + (e.message || "Model error"));
@@ -598,23 +614,27 @@ function showChoices(on){
       state.stats = applied.next_stats;
 
       if(applied.died){
-  setLoading(false);
+        setLoading(false);
 
-  // ✅ Hide A/B forever on death screen
-  showChoices(false);
+        const cause = (currentScenario.death_cause_hint || "complications").trim() || "complications";
+        let endingText = `You die at ${state.age}. Cause: ${cause}.`;
 
-  // ✅ RIP headline
-  setRIP(state.age);
+        try{
+          const ep = await apiEpilogue(cause);
+          endingText = ep?.text || endingText;
+        }catch(_){}
 
-  const cause = (currentScenario.death_cause_hint || "complications").trim() || "complications";
-  const ep = await apiEpilogue(cause);
+        // ✅ death screen changes are FRONTEND-only:
+        // - Age header becomes RIP AGE: X
+        // - choice buttons vanish
+        el.age.textContent = `RIP AGE: ${state.age}`;
+        el.a.classList.add("hidden");
+        el.b.classList.add("hidden");
 
-  setButtonsDisabled(true);
-  await typewriter(ep.text || `You die at ${state.age}. Cause: ${cause}.`, 14);
-
-  showPlayAgain(true);
-  return;
-}
+        await typewriter(endingText, 14);
+        showPlayAgain(true);
+        return;
+      }
 
       const next = await apiTurn();
 
@@ -636,17 +656,22 @@ function showChoices(on){
     }
   }
 
-  // ---- Events ----
-  el.start.addEventListener("click", (e) => {
-    e.preventDefault();
-    startGame();
-  });
+  // handlers
+  window.addEventListener("DOMContentLoaded", () => {
+    el.start.addEventListener("click", (e) => {
+      e.preventDefault();
+      startGame();
+    });
 
-  el.a.addEventListener("click", () => choose(0));
-  el.b.addEventListener("click", () => choose(1));
+    el.a.addEventListener("click", () => choose(0));
+    el.b.addEventListener("click", () => choose(1));
 
-  el.playAgain.addEventListener("click", () => {
-    resetGameUI();
+    el.playAgain.addEventListener("click", () => {
+      // bring choice buttons back for next run
+      el.a.classList.remove("hidden");
+      el.b.classList.remove("hidden");
+      resetGameUI();
+    });
   });
 </script>
 </body>
