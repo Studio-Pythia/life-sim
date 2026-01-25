@@ -135,22 +135,32 @@ function jumpYears() {
   return Math.floor(5 + Math.random() * 11); // 5..15
 }
 
-function computeMortalityChance(age, stats) {
-  // base rises with age (non-linear)
-  const base = Math.min(0.85, Math.pow(age / 112, 3) * 0.55);
+function computeMortalityChance(age, stats, lethalHint = "") {
+  // If the narrative isn't plausibly lethal, reduce risk massively while young.
+  const isLethalMoment = Boolean(lethalHint && lethalHint.trim().length > 0);
 
-  // modifiers
+  // Hard protections: early death should be ultra rare unless explicitly lethal.
+  if (age === 0 && !isLethalMoment) return 0.0001; // effectively never
+  if (age > 0 && age < 6 && !isLethalMoment) return 0.001;
+
+  // Base rises with age (non-linear)
+  let base = Math.min(0.85, Math.pow(age / 112, 3) * 0.55);
+
+  // Youth protection (still allows freak accidents later)
+  if (age < 18 && !isLethalMoment) base *= 0.15;
+
+  // Score modifiers
   const healthPenalty = (1 - stats.health) * 0.35;
   const stressPenalty = stats.stress * 0.20;
   const exposurePenalty = stats.exposure * 0.22;
-
-  // freedom slightly reduces risk (agency/escape)
   const freedomBuffer = (stats.freedom - 0.5) * 0.05;
 
-  const p =
-    base + healthPenalty + stressPenalty + exposurePenalty - freedomBuffer;
+  let p = base + healthPenalty + stressPenalty + exposurePenalty - freedomBuffer;
 
-  return Math.max(0.001, Math.min(0.92, p));
+  // If the moment IS lethal, let the risk be meaningfully higher
+  if (isLethalMoment) p *= 1.35;
+
+  return Math.max(0.000001, Math.min(0.92, p));
 }
 
 /**
