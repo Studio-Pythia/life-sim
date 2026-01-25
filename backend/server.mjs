@@ -127,7 +127,7 @@ function computeMortalityChance(age, stats) {
   const base = Math.min(0.65, Math.pow(a / 112, 3) * 0.55);
   const healthPenalty = (1 - s.health) * 0.22;
   const stressPenalty = s.stress * 0.14;
-  const exposurePenalty = s.exposure * 0.16;
+  const exposurePenalty = s.exposure * 0.11;
 
   const stabilityBuffer = (s.stability - 0.5) * 0.04;
   const freedomBuffer = (s.freedom - 0.5) * 0.03;
@@ -602,13 +602,18 @@ app.post("/api/epilogue", async (req, res) => {
     const history = Array.isArray(req.body?.history) ? req.body.history.slice(-20) : [];
 
     const sys = `
-Write a short death epilogue (1 paragraph).
+Write a short death epilogue (1 paragraph) for a life simulator.
 
-Rules:
+Hard rules:
 - Address the player as "you".
-- Any person mentioned must be formatted: Name (role). Role after name.
-- No headings, no lists, no odds.
-- Max ~700 characters.
+- Any person mentioned must be formatted: Name (role).
+- No headings, no lists, no odds, no moralising.
+- 450–800 characters max.
+- It must feel relatable and grounded: include 2–3 ordinary details (a room, a smell, a habit, a small routine).
+- You MUST explicitly state the cause of death in a plain sentence:
+  "You die from <cause>."
+- Make it emotionally legible (regret, relief, unfinishedness, tenderness), not melodramatic.
+- Do not use metaphors like "the universe" or "fate".
 `.trim();
 
     const user = JSON.stringify({
