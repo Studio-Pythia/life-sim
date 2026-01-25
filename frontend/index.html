@@ -187,7 +187,10 @@
       text-decoration:underline;
     }
 
-    .hidden{ display:none !important; }
+    .hidden{
+      display:none !important;
+      pointer-events:none !important;
+    }
 
     .loaderRow{
       display:flex;
@@ -233,13 +236,8 @@
         align-items:stretch;
       }
 
-      .field{
-        min-width:0;
-      }
-
-      .startBtn{
-        width:100%;
-      }
+      .field{ min-width:0; }
+      .startBtn{ width:100%; }
 
       .hud{
         flex-direction:column;
@@ -247,9 +245,7 @@
         gap:6px;
       }
 
-      .meta{
-        text-align:left;
-      }
+      .meta{ text-align:left; }
 
       .story{
         font-size:17px;
@@ -313,11 +309,13 @@
   </div>
 
 <script>
-  // ✅ CHANGE THIS TO YOUR BACKEND URL (Railway)
+  // ✅ Your Railway backend
   const API_BASE = "https://life-sim-production.up.railway.app";
 
   function newRunId(){
-    return (crypto?.randomUUID?.() || String(Date.now()) + "-" + Math.random().toString(16).slice(2));
+    // Safari-safe fallback
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return String(Date.now()) + "-" + Math.random().toString(16).slice(2);
   }
 
   function getSessionId(){
@@ -386,7 +384,6 @@
       el.loading.classList.remove("hidden");
       let i = 0;
       el.loadingMsg.textContent = loadLines[i];
-
       loadTimer = setInterval(() => {
         i = (i + 1) % loadLines.length;
         el.loadingMsg.textContent = loadLines[i];
@@ -405,7 +402,7 @@
 
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-  // Typewriter render: letter by letter (slow aesthetic)
+  // Typewriter render
   async function typewriter(text, speed=14){
     setButtonsDisabled(true);
 
@@ -437,22 +434,18 @@
     return json;
   }
 
+  // ✅ FIXED: only ONE apiApply function (your old code had duplicate + broken braces)
   async function apiApply(effects){
-  const r = await fetch(API_BASE + "/api/apply", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      age: state.age,
-      stats: state.stats,
-      effects,
-      death_cause_hint: currentScenario?.death_cause_hint || ""
-    })
-  });
-
-  const json = await r.json().catch(()=> null);
-  if(!r.ok) throw new Error(json?.error || "apply_failed");
-  return json;
-}
+    const r = await fetch(API_BASE + "/api/apply", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        age: state.age,
+        stats: state.stats,
+        effects,
+        death_cause_hint: currentScenario?.death_cause_hint || ""
+      })
+    });
 
     const json = await r.json().catch(()=> null);
     if(!r.ok){
@@ -468,7 +461,7 @@
 
   async function startGame(){
     setError("");
-    console.log("START CLICKED");
+
     // New run every start attempt
     state.run_id = newRunId();
     state.age = 0;
@@ -491,22 +484,24 @@
     setButtonsDisabled(true);
 
     try{
-      const { age_to, scenario, birth_stats, relationships } = await apiTurn();
+      const data = await apiTurn();
 
-      if (birth_stats) state.stats = birth_stats;
-      if (relationships && relationships.length === 3) state.relationships = relationships;
+      if (data.birth_stats) state.stats = data.birth_stats;
+      if (data.relationships && data.relationships.length === 3) state.relationships = data.relationships;
 
-      state.age = age_to;
-      currentScenario = scenario;
+      state.age = data.age_to;
+      currentScenario = data.scenario;
 
       el.age.textContent = `Age: ${state.age}`;
-      renderChoices(scenario);
+      renderChoices(currentScenario);
 
-      setLoading(false); // stop loader before typing starts
-      await typewriter(scenario.text, 14);
+      // Stop loader before typing
+      setLoading(false);
+      await typewriter(currentScenario.text, 14);
+
     }catch(e){
       setLoading(false);
-      setError("Start failed: " + (e.message || "Model failed to return valid JSON. Retry."));
+      setError("Start failed: " + (e.message || "Model error"));
       setButtonsDisabled(true);
     }
   }
@@ -528,43 +523,51 @@
       if(applied.died){
         setLoading(false);
 
-          const cause = (currentScenario.death_cause_hint || "complications").trim() || "complications";
+        const cause = (currentScenario.death_cause_hint || "complications").trim() || "complications";
 
-  // Fetch a proper ending
-  const r = await fetch(API_BASE + "/api/epilogue", {
-    method: "POST",
-    headers: { "Content-Type":"application/json" },
-    body: JSON.stringify({
-      age: state.age,
-      gender: state.gender,
-      city: state.city,
-      desire: state.desire,
-      relationships: state.relationships || [],
-      history: state.history.slice(-30),
-      cause
-    })
-  });
+        // Fetch a proper ending (optional endpoint)
+        try{
+          const r = await fetch(API_BASE + "/api/epilogue", {
+            method: "POST",
+            headers: { "Content-Type":"application/json" },
+            body: JSON.stringify({
+              age: state.age,
+              gender: state.gender,
+              city: state.city,
+              desire: state.desire,
+              relationships: state.relationships || [],
+              history: state.history.slice(-30),
+              cause
+            })
+          });
 
-  const ep = await r.json().catch(()=> null);
-  const endingText = ep?.text || `You die at ${state.age}. Cause: ${cause}.`;
+          const ep = await r.json().catch(()=> null);
+          const endingText = ep?.text || `You die at ${state.age}. Cause: ${cause}.`;
+          setButtonsDisabled(true);
+          await typewriter(endingText, 14);
+          return;
 
-  setButtonsDisabled(true);
-  await typewriter(endingText, 14);
-  return;
-}
+        }catch(_){
+          // fallback if epilogue endpoint isn't deployed yet
+          setButtonsDisabled(true);
+          await typewriter(`You die at ${state.age}. Cause: ${cause}.`, 14);
+          return;
+        }
+      }
 
-      const { age_to, scenario, relationships } = await apiTurn();
+      const next = await apiTurn();
 
-      if (relationships && relationships.length === 3) state.relationships = relationships;
+      if (next.relationships && next.relationships.length === 3) state.relationships = next.relationships;
 
-      state.age = age_to;
-      currentScenario = scenario;
+      state.age = next.age_to;
+      currentScenario = next.scenario;
 
       el.age.textContent = `Age: ${state.age}`;
-      renderChoices(scenario);
+      renderChoices(currentScenario);
 
-      setLoading(false); // stop loader before typing starts
-      await typewriter(scenario.text, 14);
+      setLoading(false);
+      await typewriter(currentScenario.text, 14);
+
     }catch(e){
       setLoading(false);
       setError("Turn failed: " + (e.message || "bad_request"));
@@ -572,12 +575,15 @@
     }
   }
 
-  el.start.addEventListener("click", (e) => {
-  e.preventDefault();
-  startGame();
-});
-  el.a.addEventListener("click", () => choose(0));
-  el.b.addEventListener("click", () => choose(1));
+  // ✅ attach handlers safely
+  window.addEventListener("DOMContentLoaded", () => {
+    el.start.addEventListener("click", (e) => {
+      e.preventDefault();
+      startGame();
+    });
+    el.a.addEventListener("click", () => choose(0));
+    el.b.addEventListener("click", () => choose(1));
+  });
 </script>
 </body>
 </html>
