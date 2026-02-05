@@ -9,11 +9,11 @@
     :root{
       --bg:#000000;
       --panel:#000000;
-      --ink:#00ff66;         /* terminal green */
-      --muted:#00cc55;       /* softer green */
-      --border:#00ff66;      /* green border */
-      --accent:#66ff99;      /* link-ish green */
-      --danger:#ff4d4d;      /* red error */
+      --ink:#00ff66;
+      --muted:#00cc55;
+      --border:#00ff66;
+      --accent:#66ff99;
+      --danger:#ff4d4d;
       --shadow: rgba(0,255,102,0.15);
     }
 
@@ -95,7 +95,7 @@
       background:#000;
       color:var(--ink);
       font-family: inherit;
-      font-size:16px; /* prevents iOS zoom */
+      font-size:16px;
       outline:none;
       box-shadow: inset 0 0 0 1px rgba(0,255,102,0.10);
     }
@@ -197,6 +197,15 @@
     .error{
       margin-top:8px;
       color:var(--danger);
+      font-size:13px;
+    }
+
+    .errorRetry{
+      display:inline-block;
+      margin-left:8px;
+      color:var(--ink);
+      cursor:pointer;
+      text-decoration:underline;
       font-size:13px;
     }
 
@@ -305,7 +314,7 @@
 </head>
 
 <body>
-  <!-- ✅ Add this modal HTML right after <body> opens (above .window) -->
+<!-- Intro modal -->
 <div class="overlay" id="intro">
   <div class="overlayBox">
     <div class="overlayTitle">DREAMLAND</div>
@@ -329,7 +338,6 @@
 </div>
 
 <style>
-  /* ✅ add this to your CSS (keeps intro modal centered not bottom-sheet) */
   #intro{
     align-items:center !important;
   }
@@ -339,8 +347,6 @@
 </style>
 
 <script>
-  // ✅ Add this inside your <script> block (near DOMContentLoaded)
-
   function hideIntro(){
     const intro = document.getElementById("intro");
     if(intro) intro.classList.add("hidden");
@@ -348,23 +354,21 @@
   }
 
   window.addEventListener("DOMContentLoaded", () => {
-    const seen = localStorage.getItem("lifeSimIntroSeen");
     const intro = document.getElementById("intro");
     const introStart = document.getElementById("introStart");
     const introClose = document.getElementById("introClose");
 
-    // show every time (remove this if you only want it once)
     if(intro) intro.classList.remove("hidden");
 
     introStart?.addEventListener("click", () => {
       hideIntro();
-      // optional: focus first input
       document.getElementById("city")?.focus();
     });
 
     introClose?.addEventListener("click", hideIntro);
   });
 </script>
+
   <div class="window" id="window">
 
     <div class="top" id="onboarding">
@@ -418,9 +422,20 @@
   </div>
 
 <script>
-  // ✅ Your backend URL
-  const API_BASE = "https://life-sim-production.up.railway.app";
+  // =============================================
+  // Phase 0 Frontend
+  // - sessionStorage persistence (survives refresh)
+  // - Server session recovery
+  // - Retry UI on failures
+  // - Analytics events
+  // =============================================
 
+  const API_BASE = "https://life-sim-production.up.railway.app";
+  const SAVE_KEY = "lifeSimGameState";
+
+  // ----------------------
+  // Session / Run IDs
+  // ----------------------
   function newRunId(){
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     return String(Date.now()) + "-" + Math.random().toString(16).slice(2);
@@ -436,6 +451,9 @@
     return id;
   }
 
+  // ----------------------
+  // Game state
+  // ----------------------
   const state = {
     session_id: getSessionId(),
     run_id: newRunId(),
@@ -450,7 +468,11 @@
 
   let currentScenario = null;
   let locked = false;
+  let lastFailedAction = null; // for retry
 
+  // ----------------------
+  // DOM refs
+  // ----------------------
   const el = {
     gender: document.getElementById("gender"),
     city: document.getElementById("city"),
@@ -477,19 +499,93 @@
   ];
   let loadTimer = null;
 
+  // ----------------------
+  // State persistence (sessionStorage)
+  // ----------------------
+  function saveGame(){
+    try {
+      const snapshot = {
+        state: { ...state },
+        currentScenario,
+        savedAt: Date.now()
+      };
+      sessionStorage.setItem(SAVE_KEY, JSON.stringify(snapshot));
+    } catch(e) {
+      // sessionStorage full or unavailable — ignore
+    }
+  }
+
+  function loadGame(){
+    try {
+      const raw = sessionStorage.getItem(SAVE_KEY);
+      if(!raw) return null;
+      const snapshot = JSON.parse(raw);
+
+      // Expire after 2 hours
+      if(Date.now() - snapshot.savedAt > 1000 * 60 * 120) {
+        sessionStorage.removeItem(SAVE_KEY);
+        return null;
+      }
+
+      return snapshot;
+    } catch(e) {
+      return null;
+    }
+  }
+
+  function clearSave(){
+    try { sessionStorage.removeItem(SAVE_KEY); } catch(e) {}
+  }
+
+  // ----------------------
+  // Analytics (fire-and-forget)
+  // ----------------------
+  function logAnalytics(type, data = {}){
+    try {
+      fetch(API_BASE + "/api/analytics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type,
+          session_id: state.session_id,
+          run_id: state.run_id,
+          data
+        })
+      }).catch(() => {}); // fire-and-forget
+    } catch(e) {}
+  }
+
+  // ----------------------
+  // UI helpers
+  // ----------------------
   function showPlayAgain(on){
     if(on) el.playAgain.classList.remove("hidden");
     else el.playAgain.classList.add("hidden");
   }
 
-  function setError(msg){
+  function setError(msg, retryFn){
     if(!msg){
       el.error.style.display = "none";
-      el.error.textContent = "";
+      el.error.innerHTML = "";
+      lastFailedAction = null;
       return;
     }
     el.error.style.display = "block";
-    el.error.textContent = msg;
+    if(retryFn){
+      lastFailedAction = retryFn;
+      el.error.innerHTML = msg + ` <span class="errorRetry" id="retryBtn">[RETRY]</span>`;
+      // Attach retry handler
+      setTimeout(() => {
+        const btn = document.getElementById("retryBtn");
+        if(btn) btn.addEventListener("click", () => {
+          setError("");
+          retryFn();
+        });
+      }, 0);
+    } else {
+      el.error.textContent = msg;
+      lastFailedAction = null;
+    }
   }
 
   function setLoading(on){
@@ -533,6 +629,9 @@
     setButtonsDisabled(false);
   }
 
+  // ----------------------
+  // API calls
+  // ----------------------
   async function apiTurn(){
     const r = await fetch(API_BASE + "/api/turn", {
       method:"POST",
@@ -555,6 +654,8 @@
         age: state.age,
         stats: state.stats,
         effects,
+        session_id: state.session_id,
+        run_id: state.run_id,
         death_cause_hint: currentScenario?.death_cause_hint || ""
       })
     });
@@ -584,6 +685,9 @@
     return json;
   }
 
+  // ----------------------
+  // Render
+  // ----------------------
   function renderChoices(scenario){
     el.a.textContent = scenario.options[0].label;
     el.b.textContent = scenario.options[1].label;
@@ -592,6 +696,7 @@
   function resetGameUI(){
     currentScenario = null;
     locked = false;
+    lastFailedAction = null;
 
     state.run_id = newRunId();
     state.age = 0;
@@ -610,8 +715,53 @@
     showPlayAgain(false);
     setError("");
     setLoading(false);
+    clearSave();
   }
 
+  // ----------------------
+  // Restore game from sessionStorage on refresh
+  // ----------------------
+  function restoreGame(){
+    const snapshot = loadGame();
+    if(!snapshot || !snapshot.currentScenario) return false;
+
+    const s = snapshot.state;
+
+    // Restore state
+    state.session_id = s.session_id || getSessionId();
+    state.run_id = s.run_id || newRunId();
+    state.age = s.age || 0;
+    state.gender = s.gender || "unspecified";
+    state.city = s.city || "";
+    state.desire = s.desire || "";
+    state.stats = s.stats || { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 };
+    state.relationships = s.relationships || [];
+    state.history = s.history || [];
+
+    currentScenario = snapshot.currentScenario;
+
+    // Restore UI
+    el.age.textContent = `Age: ${state.age}`;
+    el.meta.textContent = `${state.city.toUpperCase()} • I WANT TO BE ${state.desire.toUpperCase()}`;
+
+    // Show the story text immediately (no typewriter on restore)
+    const cursor = `<span class="cursor">█</span>`;
+    el.story.innerHTML = currentScenario.text.replaceAll("\n", "<br>") + cursor;
+
+    renderChoices(currentScenario);
+    setButtonsDisabled(false);
+
+    // Fill in form fields too
+    el.gender.value = state.gender;
+    el.city.value = state.city;
+    el.desire.value = state.desire;
+
+    return true;
+  }
+
+  // ----------------------
+  // Game flow
+  // ----------------------
   async function startGame(){
     showPlayAgain(false);
     setError("");
@@ -649,11 +799,14 @@
       renderChoices(currentScenario);
 
       setLoading(false);
+      saveGame();
+      logAnalytics("game_start", { gender: state.gender, city: state.city, desire: state.desire });
+
       await typewriter(currentScenario.text, 14);
 
     }catch(e){
       setLoading(false);
-      setError("Start failed: " + (e.message || "Model error"));
+      setError("Start failed: " + (e.message || "Model error"), startGame);
       setButtonsDisabled(true);
     }
   }
@@ -669,6 +822,9 @@
       const chosen = currentScenario.options[index];
       state.history.push(chosen.label);
 
+      // Log choice analytics
+      logAnalytics("choice", { age: state.age, choice_index: index, label: chosen.label });
+
       const applied = await apiApply(chosen.effects || {});
       state.stats = applied.next_stats;
 
@@ -683,12 +839,12 @@
           endingText = ep?.text || endingText;
         }catch(_){}
 
-        // ✅ death screen changes are FRONTEND-only:
-        // - Age header becomes RIP AGE: X
-        // - choice buttons vanish
         el.age.textContent = `RIP AGE: ${state.age}`;
         el.a.classList.add("hidden");
         el.b.classList.add("hidden");
+
+        logAnalytics("death", { age: state.age, cause });
+        clearSave(); // game over, clear save
 
         await typewriter(endingText, 14);
         showPlayAgain(true);
@@ -706,17 +862,30 @@
       renderChoices(currentScenario);
 
       setLoading(false);
+      saveGame();
+
       await typewriter(currentScenario.text, 14);
 
     }catch(e){
       setLoading(false);
-      setError("Turn failed: " + (e.message || "bad_request"));
+      setError("Turn failed: " + (e.message || "bad_request"), () => choose(index));
       setButtonsDisabled(false);
     }
   }
 
-  // handlers
+  // ----------------------
+  // Event handlers
+  // ----------------------
   window.addEventListener("DOMContentLoaded", () => {
+    // Try to restore a saved game first
+    const restored = restoreGame();
+
+    if(restored) {
+      // Hide the intro if game was in progress
+      const intro = document.getElementById("intro");
+      if(intro) intro.classList.add("hidden");
+    }
+
     el.start.addEventListener("click", (e) => {
       e.preventDefault();
       startGame();
@@ -726,7 +895,6 @@
     el.b.addEventListener("click", () => choose(1));
 
     el.playAgain.addEventListener("click", () => {
-      // bring choice buttons back for next run
       el.a.classList.remove("hidden");
       el.b.classList.remove("hidden");
       resetGameUI();
