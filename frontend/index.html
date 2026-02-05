@@ -9,398 +9,240 @@
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
     :root {
-      --bg: #1a1a2e;
-      --panel: #0f0f1a;
-      --ink: #e8e8e8;
-      --muted: #8888aa;
-      --border: #3a3a5c;
-      --accent: #5dade2;
-      --highlight: #f9e547;
-      --danger: #e74c3c;
-      --dialogue-bg: #0a0a18;
-      --dialogue-border: #4a4a7c;
+      --gb0: #0f380f;
+      --gb1: #306230;
+      --gb2: #8bac0f;
+      --gb3: #9bbc0f;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: var(--bg);
-      color: var(--ink);
+      background: #0a0a0a;
+      color: var(--gb3);
       font-family: 'Press Start 2P', monospace;
       overflow: hidden;
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 100vw; height: 100vh;
+      display: flex; align-items: center; justify-content: center;
       image-rendering: pixelated;
     }
 
     #game-wrapper {
-      position: relative;
-      width: 100%;
-      max-width: 960px;
-      aspect-ratio: 16/10;
-      max-height: 100vh;
-      background: #000;
-      overflow: hidden;
-      border: 3px solid var(--border);
-      box-shadow: 0 0 40px rgba(93,173,226,0.15), inset 0 0 60px rgba(0,0,0,0.5);
+      position: relative; width: 100%; max-width: 960px;
+      aspect-ratio: 16/10; max-height: 100vh;
+      background: var(--gb0); overflow: hidden;
+      border: 4px solid var(--gb1);
+      box-shadow: 0 0 60px rgba(155,188,15,0.08), inset 0 0 80px rgba(0,0,0,0.4);
+    }
+
+    #game-wrapper::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 999;
+      background: repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
+      mix-blend-mode: multiply;
     }
 
     #phaser-canvas { width: 100%; height: 100%; display: block; }
     #phaser-canvas canvas { width: 100% !important; height: 100% !important; }
 
     #ui-overlay {
-      position: absolute; inset: 0;
-      pointer-events: none;
-      display: flex; flex-direction: column; justify-content: flex-end;
-      z-index: 10;
+      position: absolute; inset: 0; pointer-events: none;
+      display: flex; flex-direction: column; justify-content: flex-end; z-index: 10;
     }
 
     #hud {
       position: absolute; top: 0; left: 0; right: 0;
       display: flex; justify-content: space-between; align-items: center;
-      padding: 8px 12px;
-      background: linear-gradient(180deg, rgba(10,10,24,0.92) 0%, rgba(10,10,24,0.6) 80%, transparent 100%);
-      font-size: 10px; z-index: 20;
+      padding: 6px 10px; background: var(--gb0);
+      border-bottom: 2px solid var(--gb1); font-size: 10px; z-index: 20;
     }
-
-    #hud-age {
-      font-size: 14px; color: var(--highlight);
-      text-shadow: 0 0 8px rgba(249,229,71,0.4);
-    }
-
-    #hud-meta {
-      color: var(--muted); font-size: 8px; text-align: right;
-      max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
+    #hud-age { font-size: 12px; color: var(--gb3); }
+    #hud-meta { color: var(--gb2); font-size: 7px; text-align: right; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     #hud-relations {
-      position: absolute; top: 36px; right: 12px;
-      display: flex; flex-direction: column; gap: 4px; z-index: 20;
+      position: absolute; top: 30px; right: 8px;
+      display: flex; flex-direction: column; gap: 3px; z-index: 20;
     }
-
     .rel-chip {
-      display: flex; align-items: center; gap: 6px;
-      background: rgba(10,10,24,0.85); border: 1px solid var(--border);
-      padding: 3px 8px 3px 4px; font-size: 7px; color: var(--muted);
+      display: flex; align-items: center; gap: 5px;
+      background: var(--gb0); border: 1px solid var(--gb1);
+      padding: 2px 6px 2px 3px; font-size: 6px; color: var(--gb2);
     }
+    .rel-icon { width: 16px; height: 16px; border: 1px solid var(--gb1); image-rendering: pixelated; }
 
-    .rel-icon {
-      width: 18px; height: 18px; border: 1px solid var(--border);
-      image-rendering: pixelated;
-    }
-
-    #dialogue-area {
-      pointer-events: auto; padding: 0 8px 8px 8px;
-      display: flex; flex-direction: column; gap: 6px;
-    }
+    #dialogue-area { pointer-events: auto; padding: 0 6px 6px 6px; display: flex; flex-direction: column; gap: 4px; }
 
     #dialogue-box {
-      background: var(--dialogue-bg); border: 3px solid var(--dialogue-border);
-      border-radius: 4px; padding: 14px 16px;
-      min-height: 100px; max-height: 160px; overflow-y: auto;
-      font-size: 11px; line-height: 1.8; color: var(--ink);
-      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+      background: var(--gb3); border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
+      padding: 12px 14px; min-height: 90px; max-height: 140px; overflow-y: auto;
+      font-size: 10px; line-height: 1.9; color: var(--gb0);
     }
-
-    #dialogue-box::-webkit-scrollbar { width: 4px; }
-    #dialogue-box::-webkit-scrollbar-track { background: transparent; }
-    #dialogue-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
+    #dialogue-box::-webkit-scrollbar { width: 6px; }
+    #dialogue-box::-webkit-scrollbar-track { background: var(--gb2); }
+    #dialogue-box::-webkit-scrollbar-thumb { background: var(--gb1); }
     #dialogue-text { white-space: pre-wrap; }
 
     .cursor-blink {
-      display: inline-block; width: 8px; height: 12px;
-      background: var(--ink); animation: blink 0.8s steps(1) infinite;
+      display: inline-block; width: 8px; height: 10px;
+      background: var(--gb0); animation: blink 0.7s steps(1) infinite;
       vertical-align: middle; margin-left: 2px;
     }
-
     @keyframes blink { 50% { opacity: 0; } }
 
-    #choices { display: flex; gap: 6px; }
-
+    #choices { display: flex; gap: 4px; }
     .choice-btn {
-      flex: 1; background: var(--dialogue-bg); border: 2px solid var(--dialogue-border);
-      border-radius: 3px; padding: 10px 12px;
-      font-family: 'Press Start 2P', monospace; font-size: 9px; line-height: 1.5;
-      color: var(--ink); cursor: pointer; text-align: left;
-      transition: all 0.15s; position: relative; pointer-events: auto;
+      flex: 1; background: var(--gb3); border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
+      padding: 10px 10px 10px 20px;
+      font-family: 'Press Start 2P', monospace; font-size: 8px; line-height: 1.5;
+      color: var(--gb0); cursor: pointer; text-align: left;
+      transition: background 0.1s; position: relative; pointer-events: auto;
     }
-
     .choice-btn::before {
-      content: '▶'; position: absolute; left: 4px; top: 50%;
-      transform: translateY(-50%); opacity: 0;
-      color: var(--highlight); font-size: 8px; transition: opacity 0.15s;
+      content: '▶'; position: absolute; left: 6px; top: 50%;
+      transform: translateY(-50%); opacity: 0; color: var(--gb0); font-size: 7px;
     }
-
-    .choice-btn:hover {
-      border-color: var(--highlight); background: rgba(249,229,71,0.08);
-      padding-left: 18px; box-shadow: 0 0 12px rgba(249,229,71,0.15);
-    }
-
-    .choice-btn:hover::before { opacity: 1; }
-
-    .choice-btn:disabled {
-      opacity: 0.3; cursor: not-allowed; pointer-events: none;
-    }
+    .choice-btn:hover, .choice-btn:focus { background: var(--gb2); }
+    .choice-btn:hover::before, .choice-btn:focus::before { opacity: 1; }
+    .choice-btn:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
 
     #play-again { display: none; pointer-events: auto; }
-
     #play-again button {
-      width: 100%; background: var(--dialogue-bg); border: 2px solid var(--highlight);
-      border-radius: 3px; padding: 14px;
-      font-family: 'Press Start 2P', monospace; font-size: 11px;
-      color: var(--highlight); cursor: pointer; text-align: center;
-      letter-spacing: 2px; transition: all 0.2s;
+      width: 100%; background: var(--gb3); border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
+      padding: 12px; font-family: 'Press Start 2P', monospace; font-size: 10px;
+      color: var(--gb0); cursor: pointer; text-align: center; letter-spacing: 2px;
     }
+    #play-again button:hover { background: var(--gb2); }
 
-    #play-again button:hover {
-      background: rgba(249,229,71,0.12); box-shadow: 0 0 20px rgba(249,229,71,0.2);
-    }
-
-    /* ── Onboarding ── */
     #onboarding-overlay {
-      position: absolute; inset: 0;
-      background: rgba(10,10,24,0.95); z-index: 100;
-      display: flex; align-items: center; justify-content: center;
-      pointer-events: auto;
+      position: absolute; inset: 0; background: var(--gb0); z-index: 100;
+      display: flex; align-items: center; justify-content: center; pointer-events: auto;
     }
-
-    #onboarding-box {
-      max-width: 420px; width: 90%;
-      display: flex; flex-direction: column; gap: 12px;
-    }
-
-    #onboarding-box h1 {
-      font-size: 20px; color: var(--highlight);
-      text-shadow: 0 0 16px rgba(249,229,71,0.3);
-      letter-spacing: 4px; text-align: center; margin-bottom: 4px;
-    }
-
-    #onboarding-box p {
-      font-size: 8px; color: var(--muted); line-height: 1.8; text-align: center;
-    }
-
-    .ob-field { display: flex; flex-direction: column; gap: 4px; }
-
-    .ob-field label {
-      font-size: 8px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase;
-    }
-
+    #onboarding-box { max-width: 420px; width: 90%; display: flex; flex-direction: column; gap: 10px; }
+    #onboarding-box h1 { font-size: 18px; color: var(--gb3); letter-spacing: 6px; text-align: center; margin-bottom: 2px; }
+    #onboarding-box p { font-size: 7px; color: var(--gb2); line-height: 2; text-align: center; }
+    .ob-field { display: flex; flex-direction: column; gap: 3px; }
+    .ob-field label { font-size: 7px; color: var(--gb2); letter-spacing: 1px; text-transform: uppercase; }
     .ob-field select, .ob-field input {
-      padding: 10px; background: var(--panel); border: 2px solid var(--border);
-      border-radius: 3px; color: var(--ink);
-      font-family: 'Press Start 2P', monospace; font-size: 10px; outline: none;
+      padding: 10px; background: var(--gb3); border: 2px solid var(--gb1);
+      color: var(--gb0); font-family: 'Press Start 2P', monospace; font-size: 9px; outline: none;
     }
-
-    .ob-field input::placeholder { color: rgba(136,136,170,0.5); }
-    .ob-field input:focus, .ob-field select:focus { border-color: var(--accent); }
-
+    .ob-field input::placeholder { color: var(--gb1); }
+    .ob-field input:focus, .ob-field select:focus { border-color: var(--gb0); outline: 1px solid var(--gb0); }
     #start-btn {
-      margin-top: 4px; padding: 14px; background: transparent;
-      border: 2px solid var(--highlight); border-radius: 3px;
-      color: var(--highlight); font-family: 'Press Start 2P', monospace;
-      font-size: 10px; cursor: pointer; letter-spacing: 2px; transition: all 0.2s;
+      margin-top: 4px; padding: 14px; background: var(--gb3);
+      border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
+      color: var(--gb0); font-family: 'Press Start 2P', monospace;
+      font-size: 9px; cursor: pointer; letter-spacing: 2px;
     }
+    #start-btn:hover { background: var(--gb2); }
 
-    #start-btn:hover {
-      background: rgba(249,229,71,0.1); box-shadow: 0 0 20px rgba(249,229,71,0.15);
-    }
-
-    /* ── Stat overlay ── */
     #stat-overlay {
-      position: absolute; inset: 0;
-      background: rgba(10,10,24,0.92); z-index: 50;
-      display: none; align-items: center; justify-content: center;
-      pointer-events: auto;
+      position: absolute; inset: 0; background: rgba(15,56,15,0.94); z-index: 50;
+      display: none; align-items: center; justify-content: center; pointer-events: auto;
     }
-
     #stat-card {
-      background: var(--dialogue-bg); border: 3px solid var(--dialogue-border);
-      border-radius: 6px; padding: 20px; max-width: 360px; width: 85%;
+      background: var(--gb3); border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
+      padding: 16px; max-width: 340px; width: 85%;
     }
-
-    #stat-card h2 {
-      font-size: 12px; color: var(--highlight); margin-bottom: 14px;
-      text-align: center; letter-spacing: 2px;
-    }
-
-    .stat-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-
-    .stat-label {
-      font-size: 7px; color: var(--muted); width: 70px;
-      text-transform: uppercase; letter-spacing: 0.5px;
-    }
-
-    .stat-bar-bg {
-      flex: 1; height: 8px; background: rgba(255,255,255,0.08);
-      border-radius: 2px; overflow: hidden;
-    }
-
-    .stat-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
-    .stat-val { font-size: 7px; color: var(--ink); width: 28px; text-align: right; }
-
+    #stat-card h2 { font-size: 10px; color: var(--gb0); margin-bottom: 12px; text-align: center; letter-spacing: 2px; }
+    .stat-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .stat-label { font-size: 6px; color: var(--gb0); width: 65px; text-transform: uppercase; }
+    .stat-bar-bg { flex: 1; height: 6px; background: var(--gb2); border: 1px solid var(--gb1); overflow: hidden; }
+    .stat-bar-fill { height: 100%; background: var(--gb0); transition: width 0.5s ease; }
+    .stat-val { font-size: 6px; color: var(--gb0); width: 26px; text-align: right; }
     #stat-close {
-      margin-top: 14px; width: 100%; padding: 10px;
-      background: transparent; border: 2px solid var(--border); border-radius: 3px;
-      color: var(--muted); font-family: 'Press Start 2P', monospace;
-      font-size: 8px; cursor: pointer;
+      margin-top: 12px; width: 100%; padding: 8px;
+      background: var(--gb2); border: 2px solid var(--gb1);
+      color: var(--gb0); font-family: 'Press Start 2P', monospace; font-size: 7px; cursor: pointer;
     }
-
-    #stat-close:hover { border-color: var(--ink); color: var(--ink); }
-
+    #stat-close:hover { background: var(--gb3); }
     #stat-toggle {
-      position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
-      z-index: 25; background: rgba(10,10,24,0.7);
-      border: 1px solid var(--border); border-radius: 3px;
-      padding: 3px 10px; font-family: 'Press Start 2P', monospace;
-      font-size: 7px; color: var(--muted); cursor: pointer;
-      pointer-events: auto; transition: all 0.15s;
+      position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+      z-index: 25; background: var(--gb0); border: 1px solid var(--gb1);
+      padding: 2px 8px; font-family: 'Press Start 2P', monospace;
+      font-size: 6px; color: var(--gb2); cursor: pointer; pointer-events: auto;
     }
+    #stat-toggle:hover { color: var(--gb3); border-color: var(--gb3); }
 
-    #stat-toggle:hover { color: var(--highlight); border-color: var(--highlight); }
-
-    /* ── Loading ── */
     #loading-overlay {
-      position: absolute; inset: 0; background: rgba(0,0,0,0.75);
+      position: absolute; inset: 0; background: rgba(15,56,15,0.85);
       z-index: 200; display: none; align-items: center; justify-content: center;
-      flex-direction: column; gap: 12px; pointer-events: auto;
+      flex-direction: column; gap: 10px; pointer-events: auto;
     }
-
-    .lds-ring { width: 32px; height: 32px; position: relative; }
+    .lds-ring { width: 28px; height: 28px; position: relative; }
     .lds-ring div {
-      width: 26px; height: 26px; border: 3px solid var(--accent);
-      border-color: var(--accent) transparent transparent transparent;
+      width: 22px; height: 22px; border: 3px solid var(--gb3);
+      border-color: var(--gb3) transparent transparent transparent;
       border-radius: 50%; position: absolute;
       animation: lds-ring 1s cubic-bezier(0.5,0,0.5,1) infinite;
     }
     @keyframes lds-ring { to { transform: rotate(360deg); } }
+    #loading-text { font-size: 8px; color: var(--gb2); }
 
-    #loading-text { font-size: 9px; color: var(--muted); }
-
-    /* ── Transition ── */
     #transition-overlay {
-      position: absolute; inset: 0; background: #000; z-index: 150;
-      display: none; align-items: center; justify-content: center;
-      opacity: 0; pointer-events: none;
+      position: absolute; inset: 0; background: var(--gb0); z-index: 150;
+      display: none; align-items: center; justify-content: center; opacity: 0; pointer-events: none;
     }
+    #transition-text { font-size: 12px; color: var(--gb3); letter-spacing: 3px; }
 
-    #transition-text { font-size: 14px; color: var(--ink); letter-spacing: 3px; }
-
-    /* ── Error ── */
     #error-bar {
       position: absolute; bottom: 0; left: 0; right: 0;
-      background: rgba(231,76,60,0.9); padding: 8px 12px;
-      font-size: 8px; color: #fff; z-index: 300; display: none;
-      pointer-events: auto;
+      background: var(--gb0); border-top: 2px solid var(--gb3);
+      padding: 6px 10px; font-size: 7px; color: var(--gb3); z-index: 300; display: none; pointer-events: auto;
     }
+    #error-bar a { color: var(--gb3); cursor: pointer; text-decoration: underline; }
 
-    #error-bar a { color: var(--highlight); cursor: pointer; text-decoration: underline; }
-
-    /* ── Responsive ── */
     @media (max-width: 640px) {
       #game-wrapper { border-width: 2px; aspect-ratio: auto; height: 100vh; max-height: 100vh; }
-      #hud { padding: 6px 8px; }
-      #hud-age { font-size: 11px; }
-      #dialogue-box { font-size: 9px; min-height: 80px; max-height: 120px; padding: 10px 12px; }
-      .choice-btn { font-size: 8px; padding: 8px 10px; }
-      .rel-chip { font-size: 6px; }
-      .rel-icon { width: 14px; height: 14px; }
-      #onboarding-box h1 { font-size: 16px; }
-      #stat-toggle { font-size: 6px; }
+      #hud { padding: 4px 6px; }
+      #hud-age { font-size: 10px; }
+      #dialogue-box { font-size: 8px; min-height: 70px; max-height: 110px; padding: 8px 10px; }
+      .choice-btn { font-size: 7px; padding: 8px 8px 8px 16px; }
+      .rel-chip { font-size: 5px; }
+      .rel-icon { width: 12px; height: 12px; }
+      #onboarding-box h1 { font-size: 14px; }
     }
-
-    @media (max-height: 500px) {
-      #dialogue-box { min-height: 60px; max-height: 90px; }
-    }
+    @media (max-height: 500px) { #dialogue-box { min-height: 50px; max-height: 80px; } }
   </style>
 </head>
 <body>
-
 <div id="game-wrapper">
   <div id="phaser-canvas"></div>
-
   <div id="ui-overlay">
-    <div id="hud">
-      <div id="hud-age">AGE 0</div>
-      <div id="hud-meta"></div>
-    </div>
+    <div id="hud"><div id="hud-age">AGE 0</div><div id="hud-meta"></div></div>
     <button id="stat-toggle">STATS</button>
     <div id="hud-relations"></div>
-
     <div id="dialogue-area">
-      <div id="dialogue-box">
-        <span id="dialogue-text"></span><span class="cursor-blink"></span>
-      </div>
+      <div id="dialogue-box"><span id="dialogue-text"></span><span class="cursor-blink"></span></div>
       <div id="choices">
         <button class="choice-btn" id="btn-a" disabled>A</button>
         <button class="choice-btn" id="btn-b" disabled>B</button>
       </div>
-      <div id="play-again"><button>▶ PLAY AGAIN</button></div>
+      <div id="play-again"><button>PLAY AGAIN</button></div>
     </div>
   </div>
-
   <div id="onboarding-overlay">
     <div id="onboarding-box">
       <h1>DREAMLAND</h1>
-      <p>A life simulator. Enter your starting conditions, then navigate key moments through choices that reshape your timeline.</p>
-      <div class="ob-field">
-        <label>Gender</label>
-        <select id="gender"><option value="female">Female</option><option value="male">Male</option></select>
-      </div>
-      <div class="ob-field">
-        <label>City of birth</label>
-        <input id="city" placeholder="e.g. Chicago" />
-      </div>
-      <div class="ob-field">
-        <label>I want to become…</label>
-        <input id="desire" placeholder="e.g. famous / rich / a musician" />
-      </div>
+      <p>A life simulator. Enter your starting conditions, then navigate key moments through choices.</p>
+      <div class="ob-field"><label>Gender</label><select id="gender"><option value="female">Female</option><option value="male">Male</option></select></div>
+      <div class="ob-field"><label>City of birth</label><input id="city" placeholder="e.g. Chicago" /></div>
+      <div class="ob-field"><label>I want to become…</label><input id="desire" placeholder="e.g. famous / rich / a musician" /></div>
       <button id="start-btn">START LIFE</button>
     </div>
   </div>
-
   <div id="stat-overlay">
-    <div id="stat-card">
-      <h2>LIFE STATS</h2>
-      <div id="stat-bars"></div>
-      <button id="stat-close">CLOSE [ESC]</button>
-    </div>
+    <div id="stat-card"><h2>TRAINER CARD</h2><div id="stat-bars"></div><button id="stat-close">CLOSE [ESC]</button></div>
   </div>
-
-  <div id="loading-overlay">
-    <div class="lds-ring"><div></div></div>
-    <div id="loading-text">Generating life moment…</div>
-  </div>
-
-  <div id="transition-overlay">
-    <div id="transition-text"></div>
-  </div>
-
+  <div id="loading-overlay"><div class="lds-ring"><div></div></div><div id="loading-text">Generating life moment…</div></div>
+  <div id="transition-overlay"><div id="transition-text"></div></div>
   <div id="error-bar"></div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════
-// DREAMLAND — Phase 1+2: Phaser Scene + RPG UI
-// ═══════════════════════════════════════════════
-
 const API_BASE = "https://life-sim-production.up.railway.app";
 
-// ── Palettes for pixel art scenes ──
-const PALETTES = {
-  nursery:    ['#2d1b4e','#8b6d4a','#d4a574','#f2c6de','#c9a0dc','#f7d08a','#7ec8e3','#fff4c1'],
-  school:     ['#4a90d9','#6b8e4e','#c4a882','#e8d5b7','#8b7355','#f5c542','#5dade2','#ffffff'],
-  bedroom:    ['#1a1a3e','#3d2b5a','#6b4d8a','#9b6dba','#4a4a7c','#e8a0c9','#7ec8e3','#f9e547'],
-  apartment:  ['#2c3e50','#8b6d4a','#bdc3c7','#e0d5c0','#6b4d3a','#f39c12','#3498db','#ecf0f1'],
-  office:     ['#1a2530','#4a4a4a','#7f8c8d','#bdc3c7','#34495e','#e67e22','#2980b9','#ecf0f1'],
-  home:       ['#2d4a1a','#8b6d4a','#d4a574','#e8d5b7','#6b4d3a','#f7d08a','#7ec8e3','#fff4c1'],
-  hospital:   ['#e8f0f5','#c5d5e0','#9bb0c0','#ffffff','#708090','#e74c3c','#5dade2','#f0f0f0'],
-  death:      ['#0a0a0a','#1a1a1a','#2a2a2a','#3a3a3a','#4a4a4a','#5a5a5a','#333333','#666666'],
-};
+// Game Boy 4 shades
+const GB = { BLACK: 0x0f380f, DARK: 0x306230, LIGHT: 0x8bac0f, WHITE: 0x9bbc0f };
 
 function getSceneType(age, stats) {
   if (age <= 5)  return 'nursery';
@@ -415,338 +257,793 @@ function getSceneType(age, stats) {
   return 'home';
 }
 
-// ── Phaser Scene ──
+// ── Pixel helpers ──
+function fillDither(gfx, x, y, w, h, c1, c2, pat) {
+  const ps = 2;
+  gfx.fillStyle(c1, 1); gfx.fillRect(x, y, w, h);
+  gfx.fillStyle(c2, 1);
+  for (let py = 0; py < h; py += ps) {
+    for (let px = 0; px < w; px += ps) {
+      const gx = Math.floor(px/ps), gy = Math.floor(py/ps);
+      let draw = false;
+      if (pat === 'check') draw = (gx+gy)%2===0;
+      else if (pat === 'horiz') draw = gy%2===0;
+      else if (pat === 'vert') draw = gx%2===0;
+      else if (pat === 'sparse') draw = gx%4===0 && gy%4===0;
+      else if (pat === 'dense') draw = (gx+gy)%2===0 || gx%3===0;
+      if (draw) gfx.fillRect(x+px, y+py, ps, ps);
+    }
+  }
+}
+
+function px(gfx, x, y, s, shade) {
+  gfx.fillStyle(shade, 1);
+  gfx.fillRect(x, y, s, s);
+}
+
+// ── Sprite map renderer ──
+// chars: 0=BLACK 1=DARK 2=LIGHT 3=WHITE .=transparent
+function drawSprite(gfx, map, ox, oy, s) {
+  const rows = map.trim().split('\n');
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r];
+    for (let c = 0; c < row.length; c++) {
+      const ch = row[c];
+      if (ch === '.' || ch === ' ') continue;
+      const shade = ch==='0'?GB.BLACK:ch==='1'?GB.DARK:ch==='2'?GB.LIGHT:GB.WHITE;
+      gfx.fillStyle(shade, 1);
+      gfx.fillRect(ox + c*s, oy + r*s, s, s);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+// PHASER SCENE — Game Boy rooms
+// ═══════════════════════════════════════════════
 class LifeScene extends Phaser.Scene {
   constructor() { super({ key: 'LifeScene' }); }
 
   create() {
-    this.tileSize = 16;
-    this.scaleF = 3;
-    this.currentType = 'nursery';
     this.particles = [];
-    this.renderScene('nursery', { money:.5,stability:.5,status:.5,health:.5,stress:.5,freedom:.5,exposure:.5 }, 0);
-    this.time.addEvent({ delay: 80, callback: () => this.animateParticles(), loop: true });
+    this.renderScene('nursery', {money:.5,stability:.5,status:.5,health:.5,stress:.5,freedom:.5,exposure:.5}, 0);
+    this.time.addEvent({ delay: 100, callback: () => this.tickParticles(), loop: true });
   }
 
   renderScene(type, stats, age) {
-    this.currentType = type;
-    const pal = PALETTES[type] || PALETTES.nursery;
-    this.children.removeAll(true);
-    this.tweens.killAll();
-    this.particles = [];
+    this.children.removeAll(true); this.tweens.killAll(); this.particles = [];
+    const W = this.cameras.main.width, H = this.cameras.main.height;
+    const P = 2;
+    const floorY = Math.floor(H * 0.62);
+    const wallTop = Math.floor(H * 0.06);
 
-    const W = this.cameras.main.width;
-    const H = this.cameras.main.height;
-    const T = this.tileSize * this.scaleF;
+    // ── BG ──
+    const bg = this.add.graphics();
+    bg.fillStyle(GB.WHITE, 1); bg.fillRect(0, 0, W, H);
 
-    // ── Sky gradient ──
-    const skyGfx = this.add.graphics();
-    const c1 = Phaser.Display.Color.HexStringToColor(pal[0]);
-    const c2 = Phaser.Display.Color.HexStringToColor(pal[1]);
-    for (let y = 0; y < H; y++) {
-      const t = y / H;
-      skyGfx.fillStyle(Phaser.Display.Color.GetColor(
-        Phaser.Math.Linear(c1.red, c2.red, t),
-        Phaser.Math.Linear(c1.green, c2.green, t),
-        Phaser.Math.Linear(c1.blue, c2.blue, t)
-      ), 1);
-      skyGfx.fillRect(0, y, W, 1);
-    }
-
-    const floorY = H * 0.65;
-
-    // ── Floor with checkerboard ──
-    const floorGfx = this.add.graphics();
-    floorGfx.fillStyle(Phaser.Display.Color.HexStringToColor(pal[1]).color, 1);
-    floorGfx.fillRect(0, floorY, W, H - floorY);
-    const floorDark = Phaser.Display.Color.HexStringToColor(pal[4]).color;
-    for (let x = 0; x < W; x += T) {
-      for (let y = floorY; y < H; y += T) {
-        if ((Math.floor(x/T) + Math.floor(y/T)) % 2 === 0) {
-          floorGfx.fillStyle(floorDark, 0.15);
-          floorGfx.fillRect(x, y, T, T);
-        }
-      }
-    }
-
-    // ── Back wall with brick texture ──
-    const wallGfx = this.add.graphics();
-    wallGfx.fillStyle(Phaser.Display.Color.HexStringToColor(pal[2]).color, 1);
-    wallGfx.fillRect(0, H*0.15, W, floorY - H*0.15);
-    const wlc = Phaser.Display.Color.HexStringToColor(pal[4]).color;
-    wallGfx.lineStyle(1, wlc, 0.12);
-    for (let y = H*0.15; y < floorY; y += T) wallGfx.lineBetween(0, y, W, y);
-    for (let x = 0; x < W; x += T*2) {
-      const off = (Math.floor(x/T/2) % 2) * T;
-      wallGfx.lineBetween(x+off, H*0.15, x+off, floorY);
-    }
-
-    // Ceiling trim
+    // ── Ceiling ──
     const ceil = this.add.graphics();
-    ceil.fillStyle(Phaser.Display.Color.HexStringToColor(pal[4]).color, 0.5);
-    ceil.fillRect(0, H*0.14, W, 6);
+    ceil.fillStyle(GB.DARK, 1); ceil.fillRect(0, wallTop, W, 8);
+    ceil.fillStyle(GB.BLACK, 1);
+    ceil.fillRect(0, wallTop, W, P);
+    ceil.fillRect(0, wallTop+6, W, P);
+
+    // ── Wall ──
+    const wall = this.add.graphics();
+    wall.fillStyle(GB.WHITE, 1);
+    wall.fillRect(0, wallTop+8, W, floorY-wallTop-8);
+    // Wallpaper lines
+    wall.fillStyle(GB.LIGHT, 1);
+    for (let y = wallTop+8; y < floorY; y += 14) wall.fillRect(0, y, W, P);
+    // Baseboard
+    wall.fillStyle(GB.DARK, 1); wall.fillRect(0, floorY-8, W, 8);
+    wall.fillStyle(GB.BLACK, 1); wall.fillRect(0, floorY-8, W, P);
+    wall.fillRect(0, floorY-P, W, P);
+
+    // ── Floor ──
+    const fl = this.add.graphics();
+    if (type === 'hospital') {
+      fillDither(fl, 0, floorY, W, H-floorY, GB.WHITE, GB.LIGHT, 'check');
+      fl.fillStyle(GB.DARK, 1);
+      for (let x = 0; x < W; x += 32) fl.fillRect(x, floorY, P, H-floorY);
+      for (let y = floorY; y < H; y += 32) fl.fillRect(0, y, W, P);
+    } else if (type === 'school') {
+      fl.fillStyle(GB.LIGHT, 1); fl.fillRect(0, floorY, W, H-floorY);
+      fl.fillStyle(GB.DARK, 1);
+      for (let y = floorY; y < H; y += 10) fl.fillRect(0, y, W, P);
+      for (let y = floorY; y < H; y += 10) {
+        const off = (Math.floor((y-floorY)/10)%2)*40;
+        for (let x = off; x < W; x += 80) fl.fillRect(x, y, P, 10);
+      }
+    } else {
+      fillDither(fl, 0, floorY, W, H-floorY, GB.LIGHT, GB.DARK, 'check');
+    }
+    fl.fillStyle(GB.BLACK, 1); fl.fillRect(0, floorY, W, P);
 
     // ── Window ──
-    this.drawWindow(W*0.12, H*0.22, T*2, T*2.5, pal, age);
+    this.drawWindow(Math.floor(W*0.08), wallTop+16, 60, 74, age, type);
 
-    // ── Furniture ──
-    this.drawFurniture(type, stats, age, pal, W, H, T, floorY);
+    // ── Room contents ──
+    this.drawRoom(type, stats, age, W, H, floorY);
 
-    // ── Character ──
-    this.drawCharacter(age, stats, W*0.5, floorY, T, pal);
+    // ── Character sprite ──
+    this.drawChar(age, stats, Math.floor(W*0.42), floorY);
 
     // ── Particles ──
-    this.setupParticles(type, stats, W, H);
+    this.spawnParticles(type, stats, W, H, floorY);
 
-    // ── Vignette edges ──
-    const vig = this.add.graphics();
-    vig.fillStyle(0x000000, 0.3);
-    vig.fillRect(0, 0, 8, H);
-    vig.fillRect(W-8, 0, 8, H);
-    vig.fillStyle(0x000000, 0.15);
-    vig.fillRect(0, 0, W, 4);
-
+    // ── Death dither ──
     if (type === 'death') {
       const d = this.add.graphics();
-      d.fillStyle(0x000000, 0.5);
-      d.fillRect(0, 0, W, H);
+      fillDither(d, 0, 0, W, H, GB.BLACK, GB.DARK, 'check');
+      d.setAlpha(0.55);
     }
   }
 
-  drawWindow(x, y, w, h, pal, age) {
-    const gfx = this.add.graphics();
-    const col = (i) => Phaser.Display.Color.HexStringToColor(pal[i]).color;
-    gfx.fillStyle(col(4), 1);
-    gfx.fillRect(x-3, y-3, w+6, h+6);
-    const hour = (age * 7 + 10) % 24;
-    const sky = hour < 6 || hour > 20 ? '#0a0a2e' : hour < 8 || hour > 18 ? '#e8835a' : '#87ceeb';
-    gfx.fillStyle(Phaser.Display.Color.HexStringToColor(sky).color, 1);
+  // ── Window with detail ──
+  drawWindow(x, y, w, h, age, type) {
+    const gfx = this.add.graphics(), P = 2;
+    // Frame
+    gfx.fillStyle(GB.BLACK, 1); gfx.fillRect(x-4, y-4, w+8, h+8);
+    gfx.fillStyle(GB.DARK, 1); gfx.fillRect(x-2, y-2, w+4, h+4);
+
+    const night = ((age*7+10)%24) < 6 || ((age*7+10)%24) > 20;
+    gfx.fillStyle(night ? GB.BLACK : GB.WHITE, 1);
     gfx.fillRect(x, y, w, h);
-    gfx.fillStyle(col(4), 1);
-    gfx.fillRect(x + w/2 - 2, y, 4, h);
-    gfx.fillRect(x, y + h/2 - 2, w, 4);
-    gfx.fillStyle(Phaser.Display.Color.HexStringToColor(sky).color, 0.15);
-    gfx.fillRect(x-10, y+h, w+20, 40);
+
+    if (night) {
+      gfx.fillStyle(GB.WHITE, 1);
+      [[6,6],[22,14],[44,10],[14,36],[38,48],[50,28],[10,56],[32,64]].forEach(([sx,sy]) => {
+        if (sx < w && sy < h) gfx.fillRect(x+sx, y+sy, P, P);
+      });
+      // Crescent moon
+      gfx.fillStyle(GB.LIGHT, 1);
+      gfx.fillRect(x+w-18, y+6, 10, 10);
+      gfx.fillStyle(GB.BLACK, 1);
+      gfx.fillRect(x+w-14, y+6, 8, 8);
+    } else {
+      gfx.fillStyle(GB.LIGHT, 1);
+      // Cloud 1
+      gfx.fillRect(x+8, y+14, 18, 4); gfx.fillRect(x+12, y+10, 10, 4);
+      // Cloud 2
+      gfx.fillRect(x+34, y+22, 14, 4); gfx.fillRect(x+36, y+18, 8, 4);
+    }
+
+    // Crossbars
+    gfx.fillStyle(GB.DARK, 1);
+    gfx.fillRect(x+Math.floor(w/2)-1, y, 3, h);
+    gfx.fillRect(x, y+Math.floor(h/2)-1, w, 3);
+
+    // Sill
+    gfx.fillStyle(GB.DARK, 1); gfx.fillRect(x-6, y+h+2, w+12, 6);
+    gfx.fillStyle(GB.BLACK, 1); gfx.fillRect(x-6, y+h+2, w+12, P);
+
+    // Window light on floor
+    if (!night && type !== 'hospital' && type !== 'death') {
+      const gl = this.add.graphics();
+      fillDither(gl, x-6, y+h+50, w+20, 36, GB.WHITE, GB.LIGHT, 'sparse');
+      gl.setAlpha(0.35);
+    }
   }
 
-  drawFurniture(type, stats, age, pal, W, H, T, floorY) {
-    const gfx = this.add.graphics();
-    const col = (i) => Phaser.Display.Color.HexStringToColor(pal[i]).color;
+  // ══════════════════════════════════════
+  // Room furniture — high detail, GB style
+  // ══════════════════════════════════════
+  drawRoom(type, stats, age, W, H, floorY) {
+    const g = this.add.graphics(), P = 2;
 
     switch(type) {
       case 'nursery': {
-        gfx.fillStyle(col(5), 1);
-        gfx.fillRect(W*0.65, floorY-T*1.8, T*2.5, T*1.8);
-        gfx.fillStyle(col(3), 1);
-        gfx.fillRect(W*0.65+4, floorY-T*1.5, T*2.5-8, T*1.2);
-        gfx.lineStyle(2, col(5), 0.6);
-        for (let i = 0; i < 6; i++) gfx.lineBetween(W*0.65+8+i*18, floorY-T*1.8, W*0.65+8+i*18, floorY-T*0.6);
-        gfx.fillStyle(col(6), 1);
-        gfx.fillRect(W*0.35, floorY-12, 14, 12);
-        gfx.fillStyle(col(7), 1);
-        gfx.fillRect(W*0.38, floorY-10, 8, 8);
-        gfx.fillStyle(col(3), 0.25);
-        gfx.fillEllipse(W*0.5, floorY+T*0.8, T*4, T*1.2);
+        // ── Crib with detailed slats ──
+        const cx = Math.floor(W*0.60), cw = 90, ch = 64;
+        // Outer frame
+        g.fillStyle(GB.BLACK, 1); g.fillRect(cx-2, floorY-ch-2, cw+4, ch+2);
+        g.fillStyle(GB.DARK, 1); g.fillRect(cx, floorY-ch, cw, ch);
+        g.fillStyle(GB.LIGHT, 1); g.fillRect(cx+4, floorY-ch+4, cw-8, ch-8);
+        // Mattress
+        g.fillStyle(GB.WHITE, 1); g.fillRect(cx+6, floorY-22, cw-12, 18);
+        g.fillStyle(GB.LIGHT, 1); g.fillRect(cx+8, floorY-20, cw-16, 14);
+        // Pillow
+        g.fillStyle(GB.WHITE, 1); g.fillRect(cx+8, floorY-30, 22, 10);
+        // Slats
+        g.fillStyle(GB.DARK, 1);
+        for (let i = 0; i < 10; i++) g.fillRect(cx+8+i*8, floorY-ch+2, P, ch-24);
+        // Corner posts
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(cx, floorY-ch-8, 6, ch+8);
+        g.fillRect(cx+cw-6, floorY-ch-8, 6, ch+8);
+        // Post tops (knobs)
+        g.fillStyle(GB.DARK, 1);
+        g.fillRect(cx-1, floorY-ch-12, 8, 6);
+        g.fillRect(cx+cw-7, floorY-ch-12, 8, 6);
+        // Legs
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(cx+2, floorY-4, 4, 4);
+        g.fillRect(cx+cw-6, floorY-4, 4, 4);
+
+        // ── Teddy bear ──
+        const tx = Math.floor(W*0.28), ty = floorY;
+        drawSprite(g, `
+..011110..
+.01111110.
+.01300310.
+.01100110.
+.01011010.
+.01111110.
+..011110..
+.00111100.
+0011111100
+0011111100
+.00111100.
+..01..10..
+..00..00..`, tx, ty-40, P);
+
+        // ── Mobile hanging from ceiling ──
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(cx+40, floorY-ch-60, P, 48);
+        // Star shapes on mobile
+        g.fillStyle(GB.DARK, 1);
+        g.fillRect(cx+34, floorY-ch-18, 6, 6);
+        g.fillRect(cx+46, floorY-ch-22, 6, 6);
+        g.fillRect(cx+38, floorY-ch-26, 6, 6);
+        // Strings
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(cx+36, floorY-ch-12, P, 6);
+        g.fillRect(cx+48, floorY-ch-16, P, 6);
+
+        // Rug
+        const rug = this.add.graphics();
+        fillDither(rug, Math.floor(W*0.26), floorY+8, 130, 26, GB.LIGHT, GB.DARK, 'horiz');
+        g.fillStyle(GB.DARK, 1);
+        g.fillRect(Math.floor(W*0.26), floorY+8, 130, P);
+        g.fillRect(Math.floor(W*0.26), floorY+32, 130, P);
         break;
       }
+
       case 'school': {
-        gfx.fillStyle(col(4), 1);
-        gfx.fillRect(W*0.55, floorY-T*1.2, T*3, T*0.2);
-        gfx.fillRect(W*0.55+6, floorY-T*1, 6, T*1);
-        gfx.fillRect(W*0.55+T*3-12, floorY-T*1, 6, T*1);
-        gfx.fillStyle(col(6), 1);
-        gfx.fillRect(W*0.62, floorY-T*1.5, 20, 14);
-        gfx.fillStyle(0x2d4a2d, 1);
-        gfx.fillRect(W*0.35, H*0.2, T*4, T*2);
-        gfx.lineStyle(3, col(5), 0.6);
-        gfx.strokeRect(W*0.35, H*0.2, T*4, T*2);
-        // Chalk marks
-        gfx.lineStyle(1, 0xffffff, 0.3);
-        gfx.lineBetween(W*0.38, H*0.28, W*0.48, H*0.28);
-        gfx.lineBetween(W*0.38, H*0.34, W*0.52, H*0.34);
+        // ── Blackboard — detailed ──
+        const bx = Math.floor(W*0.28), by = H*0.12, bw = 180, bh = 90;
+        g.fillStyle(GB.BLACK, 1); g.fillRect(bx-6, by-6, bw+12, bh+12);
+        g.fillStyle(GB.DARK, 1); g.fillRect(bx-3, by-3, bw+6, bh+6);
+        g.fillStyle(GB.BLACK, 1); g.fillRect(bx, by, bw, bh);
+        // Chalk writing — "2+2=4"
+        g.fillStyle(GB.LIGHT, 1);
+        drawSprite(g, `
+33.33..33
+.3.3.3..3
+.3.33..33
+.3...3.3.
+.3.33..33`, bx+12, by+12, P);
+        // More chalk lines
+        g.fillRect(bx+12, by+38, 60, P);
+        g.fillRect(bx+12, by+46, 44, P);
+        g.fillRect(bx+12, by+54, 72, P);
+        g.fillRect(bx+12, by+62, 36, P);
+        // Chalk tray
+        g.fillStyle(GB.DARK, 1); g.fillRect(bx-3, by+bh+4, bw+6, 6);
+        g.fillStyle(GB.LIGHT, 1); g.fillRect(bx+10, by+bh+5, 8, 3);
+        g.fillRect(bx+24, by+bh+5, 12, 3);
+
+        // ── Student desk ──
+        const dx = Math.floor(W*0.58), dy = floorY;
+        g.fillStyle(GB.DARK, 1); g.fillRect(dx, dy-38, 100, 6);
+        g.fillStyle(GB.BLACK, 1); g.fillRect(dx, dy-38, 100, P);
+        g.fillRect(dx+6, dy-32, 4, 32);
+        g.fillRect(dx+90, dy-32, 4, 32);
+        // Desk panel
+        g.fillStyle(GB.DARK, 1); g.fillRect(dx+8, dy-32, 80, 14);
+
+        // Book stack
+        g.fillStyle(GB.BLACK, 1); g.fillRect(dx+24, dy-54, 28, 16);
+        g.fillStyle(GB.DARK, 1); g.fillRect(dx+26, dy-52, 24, 4);
+        g.fillRect(dx+26, dy-46, 24, 4);
+        g.fillRect(dx+26, dy-40, 24, 4);
+        g.fillStyle(GB.LIGHT, 1);
+        g.fillRect(dx+48, dy-52, P, 14);
+
+        // Pencil
+        g.fillStyle(GB.BLACK, 1); g.fillRect(dx+60, dy-46, 20, P);
+        g.fillStyle(GB.DARK, 1); g.fillRect(dx+58, dy-48, 4, 4);
+
+        // ── Chair ──
+        g.fillStyle(GB.DARK, 1); g.fillRect(dx+26, dy-24, 44, 4);
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(dx+28, dy-20, 4, 20);
+        g.fillRect(dx+64, dy-20, 4, 20);
+        g.fillRect(dx+62, dy-56, 6, 36);
+        g.fillRect(dx+56, dy-56, 16, 4);
+
+        // ── Clock on wall ──
+        const clx = Math.floor(W*0.78), cly = H*0.14;
+        g.fillStyle(GB.BLACK, 1); g.fillRect(clx, cly, 24, 24);
+        g.fillStyle(GB.LIGHT, 1); g.fillRect(clx+2, cly+2, 20, 20);
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(clx+11, cly+4, P, 9);   // minute hand
+        g.fillRect(clx+11, cly+11, 6, P);   // hour hand
+        g.fillRect(clx+11, cly+11, P, P);   // center dot
         break;
       }
+
       case 'bedroom': {
-        gfx.fillStyle(col(4), 1);
-        gfx.fillRect(W*0.6, floorY-T*1, T*3, T*1);
-        gfx.fillStyle(col(3), 1);
-        gfx.fillRect(W*0.6+4, floorY-T*0.8, T*3-8, T*0.5);
-        gfx.fillStyle(col(7), 0.8);
-        gfx.fillRect(W*0.6+8, floorY-T*0.75, 24, 16);
-        gfx.fillStyle(col(4), 1);
-        gfx.fillRect(W*0.6, floorY-T*1.8, 8, T*1.8);
-        // Poster
-        gfx.fillStyle(col(5), 1);
-        gfx.fillRect(W*0.3, H*0.25, T*1.5, T*2);
-        gfx.fillStyle(col(6), 0.6);
-        gfx.fillRect(W*0.3+6, H*0.25+6, T*1.5-12, T*2-12);
-        // Desk lamp glow
-        gfx.fillStyle(col(7), 0.08);
-        gfx.fillEllipse(W*0.75, floorY-T*1.4, T*2, T*1.5);
+        // ── Bed ──
+        const bx = Math.floor(W*0.56), by = floorY;
+        g.fillStyle(GB.BLACK, 1); g.fillRect(bx-2, by-42, 122, 42);
+        g.fillStyle(GB.DARK, 1); g.fillRect(bx, by-40, 118, 38);
+        // Blanket with dither
+        fillDither(g, bx+4, by-32, 110, 24, GB.LIGHT, GB.DARK, 'horiz');
+        // Pillow
+        g.fillStyle(GB.WHITE, 1); g.fillRect(bx+6, by-38, 26, 10);
+        g.fillStyle(GB.LIGHT, 1); g.fillRect(bx+8, by-36, 22, 6);
+        // Headboard (tall, wooden)
+        g.fillStyle(GB.BLACK, 1); g.fillRect(bx-2, by-80, 10, 80);
+        g.fillRect(bx-2, by-80, 50, 8);
+        g.fillStyle(GB.DARK, 1); g.fillRect(bx, by-78, 6, 38);
+        // Legs
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(bx+2, by-4, 4, 4);
+        g.fillRect(bx+114, by-4, 4, 4);
+
+        // ── Poster ──
+        const px = Math.floor(W*0.20), py = H*0.14;
+        g.fillStyle(GB.BLACK, 1); g.fillRect(px-2, py-2, 48, 58);
+        g.fillStyle(GB.DARK, 1); g.fillRect(px, py, 44, 54);
+        // Band poster art — skull/star
+        drawSprite(g, `
+...0000...
+..010010..
+..001100..
+..011110..
+.01001010.
+..010010..
+...0110...
+..000000..
+.0.0..0.0.
+...0..0...`, px+12, py+6, P);
+        // Text
+        g.fillStyle(GB.LIGHT, 1);
+        g.fillRect(px+8, py+36, 28, P);
+        g.fillRect(px+12, py+42, 20, P);
+        g.fillRect(px+10, py+48, 24, P);
+
+        // ── Desk + lamp ──
+        const dx = Math.floor(W*0.16), dy = floorY;
+        g.fillStyle(GB.DARK, 1); g.fillRect(dx, dy-34, 66, 4);
+        g.fillStyle(GB.BLACK, 1); g.fillRect(dx, dy-34, 66, P);
+        g.fillRect(dx+4, dy-30, 4, 30);
+        g.fillRect(dx+58, dy-30, 4, 30);
+        // Lamp
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(dx+48, dy-58, 16, 10); // shade
+        g.fillRect(dx+48, dy-60, P, 4);   // shade top left
+        g.fillRect(dx+62, dy-60, P, 4);   // shade top right
+        g.fillRect(dx+54, dy-48, 4, 14);  // stem
+        g.fillRect(dx+50, dy-36, 12, P);  // base
+        // Lamp glow
+        const gl = this.add.graphics();
+        fillDither(gl, dx+34, dy-66, 44, 34, GB.WHITE, GB.LIGHT, 'sparse');
+        gl.setAlpha(0.25);
+
+        // ── Shoes by bed ──
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(bx+30, by-6, 10, 6);
+        g.fillRect(bx+44, by-6, 10, 6);
         break;
       }
+
       case 'apartment': {
         const nice = stats.money > 0.5;
-        gfx.fillStyle(col(nice?6:4), 1);
-        gfx.fillRect(W*0.55, floorY-T*1.2, T*3.5, T*0.8);
-        gfx.fillStyle(col(nice?6:4), 0.5);
-        gfx.fillRect(W*0.55, floorY-T*2, T*3.5, T*0.4);
-        gfx.fillStyle(col(4), 1);
-        gfx.fillRect(W*0.32, floorY-T*0.9, T*1.8, T*0.15);
-        gfx.fillRect(W*0.38, floorY-T*0.75, 6, T*0.75);
+        // ── Couch ──
+        const sx = Math.floor(W*0.52), sy = floorY;
+        g.fillStyle(GB.BLACK, 1); g.fillRect(sx-2, sy-54, 134, 54);
+        // Back
+        g.fillStyle(GB.DARK, 1); g.fillRect(sx, sy-52, 130, 20);
+        // Seat
+        g.fillStyle(nice?GB.DARK:GB.BLACK, 1); g.fillRect(sx, sy-32, 130, 20);
         if (nice) {
-          gfx.fillStyle(0x4a7a3a, 1);
-          gfx.fillEllipse(W*0.28, floorY-T*1.2, 22, 28);
-          gfx.fillStyle(col(4), 1);
-          gfx.fillRect(W*0.28-6, floorY-T*0.8, 12, 16);
+          g.fillStyle(GB.LIGHT, 1);
+          g.fillRect(sx+6, sy-28, 38, 12);
+          g.fillRect(sx+48, sy-28, 38, 12);
+          g.fillRect(sx+90, sy-28, 34, 12);
         }
+        // Armrests
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(sx-8, sy-44, 10, 32);
+        g.fillRect(sx+128, sy-44, 10, 32);
+        // Legs
+        g.fillRect(sx+4, sy-12, 4, 12);
+        g.fillRect(sx+122, sy-12, 4, 12);
+
+        // ── Coffee table ──
+        const tx = Math.floor(W*0.34);
+        g.fillStyle(GB.DARK, 1); g.fillRect(tx, sy-20, 60, 4);
+        g.fillStyle(GB.BLACK, 1); g.fillRect(tx, sy-20, 60, P);
+        g.fillRect(tx+4, sy-16, 4, 16);
+        g.fillRect(tx+52, sy-16, 4, 16);
+        // Mug
+        g.fillStyle(GB.BLACK, 1); g.fillRect(tx+24, sy-30, 10, 10);
+        g.fillStyle(GB.LIGHT, 1); g.fillRect(tx+26, sy-28, 6, 6);
+        // Steam
+        g.fillStyle(GB.DARK, 1);
+        g.fillRect(tx+28, sy-36, P, 4);
+        g.fillRect(tx+32, sy-38, P, 4);
+
+        // ── Wall art ──
+        const fx = Math.floor(W*0.60), fy = H*0.14;
+        g.fillStyle(GB.BLACK, 1); g.fillRect(fx-2, fy-2, 52, 38);
+        g.fillStyle(GB.LIGHT, 1); g.fillRect(fx, fy, 48, 34);
+        // Landscape
+        g.fillStyle(GB.DARK, 1);
+        g.fillRect(fx+4, fy+20, 40, 10);
+        g.fillRect(fx+14, fy+8, 8, 14);
+        g.fillRect(fx+8, fy+4, 20, 8);
+
+        if (nice) {
+          // ── Potted plant ──
+          const plx = Math.floor(W*0.86);
+          drawSprite(g, `
+....00....
+...0110...
+..011110..
+.01111110.
+0112112110
+.01111110.
+..011110..
+...1001...
+...1001...
+..000000..
+..011110..
+..011110..
+..011110..
+...0000...`, plx, floorY-44, P);
+        }
+
+        // ── Rug ──
+        fillDither(g, Math.floor(W*0.32), floorY+6, 140, 24, GB.LIGHT, GB.DARK, 'horiz');
         break;
       }
+
       case 'office': {
-        gfx.fillStyle(col(4), 1);
-        gfx.fillRect(W*0.45, floorY-T*1.2, T*4, T*0.2);
-        gfx.fillRect(W*0.45+8, floorY-T*1, 6, T*1);
-        gfx.fillRect(W*0.45+T*4-14, floorY-T*1, 6, T*1);
-        gfx.fillStyle(0x222222, 1);
-        gfx.fillRect(W*0.55, floorY-T*2.4, T*2, T*1.1);
-        gfx.fillStyle(col(6), 0.5);
-        gfx.fillRect(W*0.55+4, floorY-T*2.3, T*2-8, T*0.9);
-        gfx.fillStyle(0x222222, 1);
-        gfx.fillRect(W*0.62, floorY-T*1.3, 12, T*0.2);
-        gfx.fillStyle(col(2), 0.8);
-        gfx.fillRect(W*0.82, floorY-T*2, T*1, T*2);
-        gfx.lineStyle(1, 0x000000, 0.2);
-        gfx.lineBetween(W*0.82, floorY-T*1.3, W*0.82+T*1, floorY-T*1.3);
-        gfx.lineBetween(W*0.82, floorY-T*0.6, W*0.82+T*1, floorY-T*0.6);
+        // ── Desk ──
+        const dx = Math.floor(W*0.44), dy = floorY;
+        g.fillStyle(GB.DARK, 1); g.fillRect(dx, dy-38, 150, 6);
+        g.fillStyle(GB.BLACK, 1); g.fillRect(dx, dy-38, 150, P);
+        g.fillRect(dx+4, dy-32, 4, 32);
+        g.fillRect(dx+142, dy-32, 4, 32);
+        // Drawer block
+        g.fillStyle(GB.DARK, 1); g.fillRect(dx+90, dy-32, 52, 24);
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(dx+90, dy-32, 52, P);
+        g.fillRect(dx+90, dy-20, 52, P);
+        g.fillStyle(GB.LIGHT, 1);
+        g.fillRect(dx+112, dy-28, 8, P);
+        g.fillRect(dx+112, dy-16, 8, P);
+
+        // ── Monitor ──
+        g.fillStyle(GB.BLACK, 1); g.fillRect(dx+40, dy-76, 64, 38);
+        g.fillStyle(GB.LIGHT, 1); g.fillRect(dx+44, dy-72, 56, 30);
+        // Screen text
+        g.fillStyle(GB.DARK, 1);
+        for (let i = 0; i < 5; i++) {
+          const lw = 20 + (i*7)%24;
+          g.fillRect(dx+48, dy-68+i*6, lw, P);
+        }
+        // Stand
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(dx+64, dy-40, 18, 4);
+        g.fillRect(dx+58, dy-38, 30, P);
+
+        // ── Keyboard ──
+        g.fillStyle(GB.BLACK, 1); g.fillRect(dx+50, dy-44, 46, 6);
+        g.fillStyle(GB.DARK, 1);
+        g.fillRect(dx+52, dy-42, 42, P);
+
+        // ── Chair ──
+        g.fillStyle(GB.DARK, 1); g.fillRect(dx+56, dy-26, 34, 4);
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(dx+84, dy-58, 8, 36);
+        g.fillRect(dx+78, dy-60, 18, 4);
+        g.fillRect(dx+72, dy-22, P, 22);
+        g.fillRect(dx+64, dy-4, 8, 4);
+        g.fillRect(dx+78, dy-4, 8, 4);
+
+        // ── Filing cabinet ──
+        const fc = Math.floor(W*0.84);
+        g.fillStyle(GB.DARK, 1); g.fillRect(fc, dy-84, 44, 84);
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(fc, dy-84, 44, P); g.fillRect(fc, dy-84, P, 84); g.fillRect(fc+42, dy-84, P, 84);
+        g.fillRect(fc, dy-56, 44, P); g.fillRect(fc, dy-28, 44, P);
+        g.fillStyle(GB.LIGHT, 1);
+        g.fillRect(fc+18, dy-74, 8, P);
+        g.fillRect(fc+18, dy-46, 8, P);
+        g.fillRect(fc+18, dy-18, 8, P);
+
+        // ── Clock ──
+        const clx = Math.floor(W*0.22), cly = H*0.16;
+        g.fillStyle(GB.BLACK, 1); g.fillRect(clx, cly, 26, 26);
+        g.fillStyle(GB.LIGHT, 1); g.fillRect(clx+2, cly+2, 22, 22);
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(clx+12, cly+4, P, 10);
+        g.fillRect(clx+12, cly+12, 7, P);
+        g.fillRect(clx+12, cly+12, P, P);
         break;
       }
+
       case 'home': {
         const nice = stats.money > 0.5;
-        gfx.fillStyle(col(nice?5:4), 1);
-        gfx.fillRect(W*0.5, floorY-T*1.2, T*4, T*0.8);
-        gfx.fillStyle(col(nice?5:4), 0.6);
-        gfx.fillRect(W*0.5, floorY-T*1.8, T*4, T*0.6);
-        gfx.fillStyle(col(4), 1);
-        gfx.fillRect(W*0.35, floorY-T*0.7, T*2, T*0.12);
-        gfx.fillRect(W*0.38, floorY-T*0.58, 5, T*0.58);
-        // Bookshelf
-        gfx.fillStyle(col(4), 1);
-        gfx.fillRect(W*0.82, H*0.2, T*1.2, floorY-H*0.2);
-        for (let s = 0; s < 3; s++) {
-          gfx.fillStyle(col(4), 0.8);
-          gfx.fillRect(W*0.82, H*0.2+s*T*1.2, T*1.2, 4);
-          for (let b = 0; b < 4; b++) {
-            gfx.fillStyle([col(3),col(5),col(6),col(7)][b], 0.8);
-            gfx.fillRect(W*0.82+4+b*12, H*0.2+s*T*1.2+6, 10, T*1-4);
+        // ── Sofa ──
+        const sx = Math.floor(W*0.50), sy = floorY;
+        g.fillStyle(GB.BLACK, 1); g.fillRect(sx-2, sy-58, 140, 58);
+        g.fillStyle(GB.DARK, 1);
+        g.fillRect(sx, sy-56, 136, 22);
+        g.fillRect(sx, sy-34, 136, 22);
+        g.fillStyle(GB.LIGHT, 1);
+        g.fillRect(sx+6, sy-30, 40, 14);
+        g.fillRect(sx+50, sy-30, 40, 14);
+        g.fillRect(sx+94, sy-30, 36, 14);
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(sx-8, sy-46, 10, 34);
+        g.fillRect(sx+134, sy-46, 10, 34);
+        g.fillRect(sx+4, sy-12, 4, 12);
+        g.fillRect(sx+128, sy-12, 4, 12);
+
+        // ── Coffee table ──
+        const tx = Math.floor(W*0.32);
+        g.fillStyle(GB.DARK, 1); g.fillRect(tx, sy-20, 64, 4);
+        g.fillStyle(GB.BLACK, 1); g.fillRect(tx, sy-20, 64, P);
+        g.fillRect(tx+4, sy-16, 4, 16);
+        g.fillRect(tx+56, sy-16, 4, 16);
+        // Magazine
+        g.fillStyle(GB.BLACK, 1); g.fillRect(tx+20, sy-28, 18, 8);
+        g.fillStyle(GB.LIGHT, 1); g.fillRect(tx+22, sy-26, 14, 4);
+
+        // ── Bookshelf ──
+        const bx = Math.floor(W*0.82), bs = floorY-H*0.12;
+        g.fillStyle(GB.DARK, 1); g.fillRect(bx, H*0.12, 54, bs);
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(bx, H*0.12, 54, P); g.fillRect(bx, H*0.12, P, bs); g.fillRect(bx+52, H*0.12, P, bs);
+        for (let s = 0; s < 4; s++) {
+          const shY = H*0.12+10+s*Math.floor(bs/4);
+          g.fillStyle(GB.BLACK, 1); g.fillRect(bx, shY, 54, 3);
+          for (let b = 0; b < 5; b++) {
+            const bw = 6+(b%3)*2, bh = 14+(b%2)*6;
+            g.fillStyle(b%2===0?GB.BLACK:GB.DARK, 1);
+            g.fillRect(bx+4+b*10, shY-bh, bw, bh);
+            g.fillStyle(GB.LIGHT, 1);
+            g.fillRect(bx+5+b*10, shY-bh+2, P, bh-4);
           }
         }
+
         if (nice) {
-          gfx.fillStyle(col(5), 1);
-          gfx.fillRect(W*0.3, H*0.25, T*1.5, T*1.2);
-          gfx.fillStyle(col(6), 0.4);
-          gfx.fillRect(W*0.3+5, H*0.25+5, T*1.5-10, T*1.2-10);
+          // ── Family photo ──
+          const fx = Math.floor(W*0.26), fy = H*0.16;
+          g.fillStyle(GB.BLACK, 1); g.fillRect(fx-2, fy-2, 44, 36);
+          g.fillStyle(GB.LIGHT, 1); g.fillRect(fx, fy, 40, 32);
+          drawSprite(g, `
+..00..00..
+..01..01..
+.0110.110.
+..01..01..`, fx+8, fy+6, P);
         }
+
+        // Rug
+        fillDither(g, Math.floor(W*0.30), floorY+6, 150, 26, GB.LIGHT, GB.DARK, 'horiz');
         break;
       }
+
       case 'hospital': {
-        gfx.fillStyle(col(4), 1);
-        gfx.fillRect(W*0.4, floorY-T*0.8, T*4, T*0.8);
-        gfx.fillStyle(col(3), 1);
-        gfx.fillRect(W*0.4+4, floorY-T*0.6, T*4-8, T*0.35);
-        gfx.fillStyle(col(3), 0.8);
-        gfx.fillRect(W*0.4+8, floorY-T*0.55, 30, 14);
-        gfx.fillStyle(col(4), 1);
-        gfx.fillRect(W*0.4, floorY-T*1.4, 6, T*1.4);
-        gfx.lineStyle(2, col(4), 0.8);
-        gfx.lineBetween(W*0.78, floorY-T*3, W*0.78, floorY);
-        gfx.lineStyle(2, col(4), 0.6);
-        gfx.lineBetween(W*0.76, floorY-T*3, W*0.80, floorY-T*3);
-        gfx.fillStyle(col(6), 0.5);
-        gfx.fillRect(W*0.77, floorY-T*2.8, 10, 16);
-        gfx.fillStyle(0x222233, 1);
-        gfx.fillRect(W*0.82, floorY-T*2, T*1.2, T*0.9);
-        // Heartbeat
-        gfx.lineStyle(1, 0x4ade80, 0.8);
-        const mx = W*0.82+6, my = floorY-T*1.6;
-        gfx.beginPath(); gfx.moveTo(mx, my);
-        for (let i = 0; i < 40; i++) {
-          let py = my;
-          if (i%10===5) py -= 8;
-          if (i%10===6) py += 6;
-          gfx.lineTo(mx+i*1.2, py);
+        // ── Bed ──
+        const bx = Math.floor(W*0.32), by = floorY;
+        g.fillStyle(GB.BLACK, 1); g.fillRect(bx-2, by-40, 154, 40);
+        g.fillStyle(GB.DARK, 1); g.fillRect(bx, by-38, 150, 36);
+        g.fillStyle(GB.WHITE, 1); g.fillRect(bx+4, by-32, 142, 24);
+        fillDither(g, bx+34, by-28, 108, 18, GB.LIGHT, GB.DARK, 'horiz');
+        g.fillStyle(GB.WHITE, 1); g.fillRect(bx+8, by-34, 30, 12);
+        g.fillStyle(GB.LIGHT, 1); g.fillRect(bx+10, by-32, 26, 8);
+        // Headboard
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(bx-2, by-66, 10, 66);
+        g.fillRect(bx-2, by-66, 46, 8);
+        // Rails
+        g.fillStyle(GB.DARK, 1);
+        g.fillRect(bx+2, by-56, P, 20);
+        g.fillRect(bx+6, by-56, P, 20);
+        // Wheels
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(bx+4, by-4, 6, 4);
+        g.fillRect(bx+140, by-4, 6, 4);
+
+        // ── IV Stand ──
+        const ix = Math.floor(W*0.76);
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(ix+2, by-130, P, 130);
+        g.fillRect(ix-6, by-130, 16, P);
+        // Bag
+        g.fillStyle(GB.DARK, 1); g.fillRect(ix-2, by-126, 8, 16);
+        g.fillStyle(GB.LIGHT, 1); g.fillRect(ix, by-124, 4, 12);
+        // Line
+        g.fillStyle(GB.DARK, 1);
+        g.fillRect(ix+2, by-110, P, 56);
+        g.fillRect(bx+130, by-56, ix-bx-128, P);
+        // Base
+        g.fillRect(ix-6, by-4, 16, 4);
+
+        // ── Heart monitor ──
+        const mx = Math.floor(W*0.82), my = by-100;
+        g.fillStyle(GB.BLACK, 1); g.fillRect(mx, my, 54, 40);
+        g.fillStyle(GB.DARK, 1); g.fillRect(mx+2, my+2, 50, 36);
+        g.fillStyle(GB.BLACK, 1); g.fillRect(mx+4, my+4, 46, 24);
+        // EKG line
+        g.fillStyle(GB.LIGHT, 1);
+        const ekg = [0,0,0,0,0,-8,10,-4,0,0,0,0,0,0,-6,8,-2,0,0,0,0,0];
+        for (let i = 0; i < ekg.length; i++) {
+          g.fillRect(mx+6+i*P, my+16+ekg[i], P, P);
         }
-        gfx.strokePath();
+        // Readings
+        g.fillStyle(GB.LIGHT, 1);
+        g.fillRect(mx+6, my+30, 16, P);
+        g.fillRect(mx+28, my+30, 10, P);
+        // Monitor table
+        g.fillStyle(GB.DARK, 1);
+        g.fillRect(mx-4, my+40, 62, 4);
+        g.fillRect(mx+2, my+44, 4, by-my-44);
+        g.fillRect(mx+52, my+44, 4, by-my-44);
+
+        // ── Clipboard at foot of bed ──
+        g.fillStyle(GB.DARK, 1); g.fillRect(bx+140, by-50, 12, 16);
+        g.fillStyle(GB.LIGHT, 1); g.fillRect(bx+142, by-48, 8, 12);
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(bx+144, by-44, 4, P);
+        g.fillRect(bx+144, by-40, 4, P);
         break;
       }
     }
   }
 
-  drawCharacter(age, stats, x, floorY, T, pal) {
+  // ══════════════════════════════════════
+  // Character sprites — proper GB proportions
+  // ══════════════════════════════════════
+  drawChar(age, stats, x, floorY) {
     const gfx = this.add.graphics();
-    const h = age<6 ? T*1 : age<13 ? T*1.4 : age<60 ? T*1.8 : T*1.5;
-    const cy = floorY - h;
-    const head = age<6 ? 14 : age<13 ? 12 : 10;
+    let map, scale;
 
-    // Head
-    gfx.fillStyle(Phaser.Display.Color.HexStringToColor('#d4a574').color, 1);
-    gfx.fillEllipse(x, cy+head, head, head);
+    if (age <= 3) {
+      scale = 2;
+      map = `
+...0000...
+..000000..
+.00300300.
+.00000000.
+.00011000.
+..000000..
+...0000...
+..111111..
+.11111111.
+.11111111.
+..11..11..
+..00..00..`;
+    } else if (age <= 8) {
+      scale = 2;
+      map = `
+...1111...
+..111111..
+.11111111.
+.11300311.
+.11000011.
+.11011011.
+..111111..
+...0000...
+..111111..
+.11111111.
+.11111111.
+..11..11..
+..11..11..
+..00..00..`;
+    } else if (age <= 14) {
+      scale = 2;
+      map = `
+...1111...
+..111111..
+.11111111.
+.11300311.
+.11000011.
+.11001011.
+..111111..
+...1111...
+...0000...
+..111111..
+.11111111.
+.11111111.
+.11111111.
+..11..11..
+..11..11..
+..11..11..
+..00..00..`;
+    } else if (age <= 55) {
+      scale = 3;
+      map = `
+..1111..
+.111111.
+11111111
+11300311
+11000011
+11001011
+.111111.
+..1111..
+..0000..
+.111111.
+11111111
+11111111
+11111111
+.11..11.
+.11..11.
+.00..00.`;
+    } else {
+      scale = 3;
+      map = `
+..2222..
+.222222.
+22222222
+22300322
+22000022
+22001022
+.222222.
+..2222..
+..0000..
+.222222.
+22222222
+22222222
+22222222
+.22..22.
+.22..22.
+.00..00.`;
+    }
 
-    // Body
-    const bw = age<6 ? 12 : age<13 ? 14 : 16;
-    const bh = h - head*2;
-    const bc = pal[age<13 ? 3 : age<30 ? 6 : 5];
-    gfx.fillStyle(Phaser.Display.Color.HexStringToColor(bc).color, 1);
-    gfx.fillRect(x-bw/2, cy+head*1.5, bw, bh);
+    const rows = map.trim().split('\n');
+    const sprH = rows.length * scale;
+    const sprW = rows[0].length * scale;
+    const ox = x - sprW/2;
+    const oy = floorY - sprH;
 
-    // Legs
-    gfx.fillStyle(Phaser.Display.Color.HexStringToColor(pal[4]).color, 1);
-    gfx.fillRect(x-bw/2+2, cy+head*1.5+bh, bw/2-3, h*0.2);
-    gfx.fillRect(x+1, cy+head*1.5+bh, bw/2-3, h*0.2);
+    drawSprite(gfx, map, ox, oy, scale);
 
-    // Hair
-    gfx.fillStyle(age>55 ? 0xbbbbbb : 0x3a2a1a, 1);
-    gfx.fillEllipse(x, cy+head*0.6, head+2, head*0.7);
-
-    // Eyes
-    gfx.fillStyle(0x222222, 1);
-    gfx.fillRect(x-4, cy+head-1, 2, 2);
-    gfx.fillRect(x+2, cy+head-1, 2, 2);
+    // Shadow
+    const sh = this.add.graphics();
+    fillDither(sh, ox-2, floorY+2, sprW+4, 6, GB.DARK, GB.LIGHT, 'check');
+    sh.setAlpha(0.3);
 
     // Idle bob
     this.tweens.add({
       targets: gfx, y: -2,
-      duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+      duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
     });
   }
 
-  setupParticles(type, stats, W, H) {
-    if (type !== 'death') {
-      for (let i = 0; i < 8; i++) {
-        const p = this.add.graphics();
-        p.fillStyle(0xffffff, Phaser.Math.FloatBetween(0.05, 0.15));
-        p.fillCircle(0, 0, Phaser.Math.Between(1, 3));
-        p.x = Phaser.Math.Between(0, W);
-        p.y = Phaser.Math.Between(0, H*0.6);
-        this.particles.push({ gfx:p, vx:Phaser.Math.FloatBetween(-0.3,0.3), vy:Phaser.Math.FloatBetween(0.1,0.4), maxY:H });
-      }
+  // ── Particles ──
+  spawnParticles(type, stats, W, H, floorY) {
+    if (type === 'death') return;
+    for (let i = 0; i < 4; i++) {
+      const p = this.add.graphics();
+      p.fillStyle(GB.DARK, Phaser.Math.FloatBetween(0.2, 0.4));
+      p.fillRect(0, 0, 2, 2);
+      p.x = Phaser.Math.Between(0, W);
+      p.y = Phaser.Math.Between(floorY*0.3, floorY*0.8);
+      this.particles.push({ gfx:p, vx:Phaser.Math.FloatBetween(-0.15,0.15), vy:Phaser.Math.FloatBetween(0.05,0.15), maxY:floorY-10, wrap:false });
     }
     if (stats.stress > 0.7) {
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 10; i++) {
         const r = this.add.graphics();
-        r.lineStyle(1, 0x7ec8e3, 0.3);
-        r.lineBetween(0, 0, -2, 8);
+        r.fillStyle(GB.DARK, 0.5);
+        r.fillRect(0, 0, 1, 4);
         r.x = Phaser.Math.Between(0, W);
         r.y = Phaser.Math.Between(-20, H);
-        this.particles.push({ gfx:r, vx:-1, vy:6, maxY:H+20, wrap:true });
+        this.particles.push({ gfx:r, vx:-0.4, vy:3.5, maxY:H+10, wrap:true });
       }
     }
   }
 
-  animateParticles() {
+  tickParticles() {
     const W = this.cameras.main.width;
     for (const p of this.particles) {
-      p.gfx.x += p.vx;
-      p.gfx.y += p.vy;
+      p.gfx.x += p.vx; p.gfx.y += p.vy;
       if (p.gfx.y > p.maxY) { p.gfx.y = -10; if (p.wrap) p.gfx.x = Phaser.Math.Between(0, W); }
       if (p.gfx.x < -10) p.gfx.x = W+10;
       if (p.gfx.x > W+10) p.gfx.x = -10;
@@ -755,7 +1052,7 @@ class LifeScene extends Phaser.Scene {
 }
 
 // ═══════════════════════════════════════════════
-// Game State + API (same as Phase 0)
+// Game State + API (unchanged)
 // ═══════════════════════════════════════════════
 
 function newRunId() {
@@ -796,305 +1093,185 @@ let loadTimer = null;
 
 function setLoading(on) {
   locked = on;
-  if (on) {
-    el.loading.style.display = 'flex'; let i = 0;
-    el.loadingText.textContent = loadLines[i];
-    loadTimer = setInterval(() => { i=(i+1)%loadLines.length; el.loadingText.textContent=loadLines[i]; }, 400);
-  } else {
-    el.loading.style.display = 'none';
-    if (loadTimer) clearInterval(loadTimer);
-  }
+  if (on) { el.loading.style.display='flex'; let i=0; el.loadingText.textContent=loadLines[i]; loadTimer=setInterval(()=>{i=(i+1)%loadLines.length;el.loadingText.textContent=loadLines[i];},400); }
+  else { el.loading.style.display='none'; if(loadTimer)clearInterval(loadTimer); }
 }
-
 function setError(msg) {
-  if (!msg) { el.errorBar.style.display='none'; return; }
-  el.errorBar.innerHTML = msg;
-  el.errorBar.style.display = 'block';
-  setTimeout(() => { el.errorBar.style.display='none'; }, 8000);
+  if(!msg){el.errorBar.style.display='none';return;}
+  el.errorBar.innerHTML=msg; el.errorBar.style.display='block';
+  setTimeout(()=>{el.errorBar.style.display='none';},8000);
 }
-
-function setButtonsDisabled(d) { el.btnA.disabled=d; el.btnB.disabled=d; }
+function setButtonsDisabled(d){el.btnA.disabled=d;el.btnB.disabled=d;}
 
 function playTransition(text) {
   return new Promise(resolve => {
-    el.transition.style.display = 'flex';
-    el.transitionText.textContent = text;
-    el.transition.style.opacity = '0';
-    let op = 0;
-    const fi = setInterval(() => {
-      op += 0.05;
-      el.transition.style.opacity = String(Math.min(op,1));
-      if (op >= 1) {
-        clearInterval(fi);
-        setTimeout(() => {
-          const fo = setInterval(() => {
-            op -= 0.04;
-            el.transition.style.opacity = String(Math.max(op,0));
-            if (op <= 0) { clearInterval(fo); el.transition.style.display='none'; resolve(); }
-          }, 30);
-        }, 800);
-      }
-    }, 30);
+    el.transition.style.display='flex'; el.transitionText.textContent=text; el.transition.style.opacity='0';
+    let op=0;
+    const fi=setInterval(()=>{op+=0.05;el.transition.style.opacity=String(Math.min(op,1));if(op>=1){clearInterval(fi);setTimeout(()=>{const fo=setInterval(()=>{op-=0.04;el.transition.style.opacity=String(Math.max(op,0));if(op<=0){clearInterval(fo);el.transition.style.display='none';resolve();}},30);},800);}},30);
   });
 }
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-async function typewriter(text, speed = 18) {
+async function typewriter(text,speed=18){
   setButtonsDisabled(true);
-  const cursor = el.dialogueBox.querySelector('.cursor-blink');
-  el.dialogueText.textContent = '';
-  if (cursor) cursor.style.display = 'inline-block';
-  for (let i = 0; i < text.length; i++) {
-    el.dialogueText.textContent += text[i];
-    el.dialogueBox.scrollTop = el.dialogueBox.scrollHeight;
-    await sleep(speed);
-  }
+  const cursor=el.dialogueBox.querySelector('.cursor-blink');
+  el.dialogueText.textContent='';
+  if(cursor)cursor.style.display='inline-block';
+  for(let i=0;i<text.length;i++){el.dialogueText.textContent+=text[i];el.dialogueBox.scrollTop=el.dialogueBox.scrollHeight;await sleep(speed);}
   setButtonsDisabled(false);
 }
-
-function showTextInstant(text) {
-  el.dialogueText.textContent = text;
-  el.dialogueBox.scrollTop = el.dialogueBox.scrollHeight;
-}
+function showTextInstant(text){el.dialogueText.textContent=text;el.dialogueBox.scrollTop=el.dialogueBox.scrollHeight;}
 
 function renderRelations(rels) {
-  el.hudRelations.innerHTML = '';
-  if (!rels?.length) return;
-  const colors = ['#e74c3c','#3498db','#2ecc71'];
-  rels.forEach((r, i) => {
-    if (!r?.name) return;
-    const chip = document.createElement('div');
-    chip.className = 'rel-chip';
-    const icon = document.createElement('canvas');
-    icon.className = 'rel-icon'; icon.width=18; icon.height=18;
-    const ctx = icon.getContext('2d');
-    ctx.fillStyle = colors[i%3]; ctx.fillRect(0,0,18,18);
-    ctx.fillStyle = '#d4a574'; ctx.fillRect(5,3,8,8);
-    ctx.fillStyle = colors[i%3]; ctx.fillRect(3,10,12,8);
-    const lbl = document.createElement('span');
-    lbl.textContent = r.display || `${r.name} (${r.role})`;
+  el.hudRelations.innerHTML='';
+  if(!rels?.length)return;
+  rels.forEach((r,i)=>{
+    if(!r?.name)return;
+    const chip=document.createElement('div'); chip.className='rel-chip';
+    const icon=document.createElement('canvas'); icon.className='rel-icon'; icon.width=16; icon.height=16;
+    const ctx=icon.getContext('2d');
+    ctx.fillStyle='#9bbc0f'; ctx.fillRect(0,0,16,16);
+    ctx.fillStyle='#306230'; ctx.fillRect(4,2,8,6); ctx.fillRect(2,9,12,7);
+    ctx.fillStyle='#0f380f'; ctx.fillRect(5,4,2,2); ctx.fillRect(9,4,2,2);
+    const lbl=document.createElement('span');
+    lbl.textContent=r.display||`${r.name} (${r.role})`;
     chip.appendChild(icon); chip.appendChild(lbl);
     el.hudRelations.appendChild(chip);
   });
 }
 
-const STAT_COLORS = {
-  money:'#f9e547', stability:'#5dade2', status:'#9b59b6',
-  health:'#4ade80', stress:'#e74c3c', freedom:'#1abc9c', exposure:'#e67e22'
-};
-const STAT_KEYS = ['money','stability','status','health','stress','freedom','exposure'];
-
-function renderStatBars() {
-  el.statBars.innerHTML = '';
-  STAT_KEYS.forEach(k => {
-    const val = Math.round((state.stats[k]||0.5)*100);
-    const row = document.createElement('div'); row.className = 'stat-row';
-    row.innerHTML = `<span class="stat-label">${k}</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:${val}%;background:${STAT_COLORS[k]}"></div></div><span class="stat-val">${val}%</span>`;
+const STAT_KEYS=['money','stability','status','health','stress','freedom','exposure'];
+function renderStatBars(){
+  el.statBars.innerHTML='';
+  STAT_KEYS.forEach(k=>{
+    const val=Math.round((state.stats[k]||0.5)*100);
+    const row=document.createElement('div'); row.className='stat-row';
+    row.innerHTML=`<span class="stat-label">${k}</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:${val}%"></div></div><span class="stat-val">${val}%</span>`;
     el.statBars.appendChild(row);
   });
 }
 
-function updateScene(isDeath = false) {
-  const scene = phaserGame?.scene?.scenes?.[0];
-  if (!scene) return;
-  scene.renderScene(isDeath ? 'death' : getSceneType(state.age, state.stats), state.stats, state.age);
+function updateScene(isDeath=false){
+  const scene=phaserGame?.scene?.scenes?.[0];
+  if(!scene)return;
+  scene.renderScene(isDeath?'death':getSceneType(state.age,state.stats),state.stats,state.age);
 }
 
-// ── API ──
-async function apiTurn() {
-  const r = await fetch(API_BASE+'/api/turn', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({state}) });
-  const j = await r.json().catch(()=>null);
-  if (!r.ok) throw new Error(j?.message||'turn_failed');
-  return j;
-}
+async function apiTurn(){const r=await fetch(API_BASE+'/api/turn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state})});const j=await r.json().catch(()=>null);if(!r.ok)throw new Error(j?.message||'turn_failed');return j;}
+async function apiApply(effects){const r=await fetch(API_BASE+'/api/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({age:state.age,stats:state.stats,effects,death_cause_hint:currentScenario?.death_cause_hint||''})});const j=await r.json().catch(()=>null);if(!r.ok)throw new Error(j?.error||'apply_failed');return j;}
+async function apiEpilogue(cause){const r=await fetch(API_BASE+'/api/epilogue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({age:state.age,gender:state.gender,city:state.city,desire:state.desire,relationships:state.relationships||[],history:state.history.slice(-30),cause})});const j=await r.json().catch(()=>null);if(!r.ok)throw new Error(j?.error||'epilogue_failed');return j;}
+function logEvent(event,data={}){fetch(API_BASE+'/api/analytics',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,session_id:state.session_id,run_id:state.run_id,...data})}).catch(()=>{});}
+function saveSession(){try{sessionStorage.setItem('dreamlandState',JSON.stringify({state:{...state},scenario:currentScenario,ts:Date.now()}));}catch{}}
+function clearSave(){try{sessionStorage.removeItem('dreamlandState');}catch{}}
+function restoreSession(){try{const raw=sessionStorage.getItem('dreamlandState');if(!raw)return false;const saved=JSON.parse(raw);if(Date.now()-saved.ts>2*60*60*1000){clearSave();return false;}Object.assign(state,saved.state);currentScenario=saved.scenario;return true;}catch{return false;}}
 
-async function apiApply(effects) {
-  const r = await fetch(API_BASE+'/api/apply', { method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ age:state.age, stats:state.stats, effects, death_cause_hint:currentScenario?.death_cause_hint||'' })
-  });
-  const j = await r.json().catch(()=>null);
-  if (!r.ok) throw new Error(j?.error||'apply_failed');
-  return j;
-}
-
-async function apiEpilogue(cause) {
-  const r = await fetch(API_BASE+'/api/epilogue', { method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ age:state.age, gender:state.gender, city:state.city, desire:state.desire,
-      relationships:state.relationships||[], history:state.history.slice(-30), cause })
-  });
-  const j = await r.json().catch(()=>null);
-  if (!r.ok) throw new Error(j?.error||'epilogue_failed');
-  return j;
-}
-
-function logEvent(event, data={}) {
-  fetch(API_BASE+'/api/analytics', { method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ event, session_id:state.session_id, run_id:state.run_id, ...data })
-  }).catch(()=>{});
-}
-
-function saveSession() {
-  try { sessionStorage.setItem('dreamlandState', JSON.stringify({ state:{...state}, scenario:currentScenario, ts:Date.now() })); } catch {}
-}
-function clearSave() { try { sessionStorage.removeItem('dreamlandState'); } catch {} }
-
-function restoreSession() {
-  try {
-    const raw = sessionStorage.getItem('dreamlandState');
-    if (!raw) return false;
-    const saved = JSON.parse(raw);
-    if (Date.now()-saved.ts > 2*60*60*1000) { clearSave(); return false; }
-    Object.assign(state, saved.state);
-    currentScenario = saved.scenario;
-    return true;
-  } catch { return false; }
-}
-
-// ── Game flow ──
-async function startGame() {
+async function startGame(){
   setError('');
-  state.run_id = newRunId(); state.age = 0; state.history = []; state.relationships = [];
-  state.stats = { money:.5,stability:.5,status:.5,health:.5,stress:.5,freedom:.5,exposure:.5 };
-  state.gender = (el.gender.value||'unspecified').trim();
-  state.city = (el.city.value||'').trim();
-  state.desire = (el.desire.value||'').trim();
-
-  if (!state.city || !state.desire) { setError('Enter a city and what you want to become.'); return; }
-
-  el.onboarding.style.display = 'none';
-  el.hudMeta.textContent = `${state.city.toUpperCase()} · ${state.desire.toUpperCase()}`;
-  el.playAgain.style.display = 'none';
-  el.btnA.style.display = ''; el.btnB.style.display = '';
-  setLoading(true); setButtonsDisabled(true);
-
-  try {
-    const data = await apiTurn();
-    if (data.birth_stats) state.stats = data.birth_stats;
-    if (data.relationships?.length === 3) state.relationships = data.relationships;
-    state.age = data.age_to;
-    currentScenario = data.scenario;
-    el.hudAge.textContent = `AGE ${state.age}`;
-    el.btnA.textContent = currentScenario.options[0].label;
-    el.btnB.textContent = currentScenario.options[1].label;
-    renderRelations(state.relationships); renderStatBars(); updateScene(); saveSession();
-    logEvent('game_start', { city:state.city, desire:state.desire, gender:state.gender });
+  state.run_id=newRunId();state.age=0;state.history=[];state.relationships=[];
+  state.stats={money:.5,stability:.5,status:.5,health:.5,stress:.5,freedom:.5,exposure:.5};
+  state.gender=(el.gender.value||'unspecified').trim();
+  state.city=(el.city.value||'').trim();
+  state.desire=(el.desire.value||'').trim();
+  if(!state.city||!state.desire){setError('Enter a city and what you want to become.');return;}
+  el.onboarding.style.display='none';
+  el.hudMeta.textContent=`${state.city.toUpperCase()} · ${state.desire.toUpperCase()}`;
+  el.playAgain.style.display='none';
+  el.btnA.style.display='';el.btnB.style.display='';
+  setLoading(true);setButtonsDisabled(true);
+  try{
+    const data=await apiTurn();
+    if(data.birth_stats)state.stats=data.birth_stats;
+    if(data.relationships?.length===3)state.relationships=data.relationships;
+    state.age=data.age_to; currentScenario=data.scenario;
+    el.hudAge.textContent=`AGE ${state.age}`;
+    el.btnA.textContent=currentScenario.options[0].label;
+    el.btnB.textContent=currentScenario.options[1].label;
+    renderRelations(state.relationships);renderStatBars();updateScene();saveSession();
+    logEvent('game_start',{city:state.city,desire:state.desire,gender:state.gender});
     setLoading(false);
-    await typewriter(currentScenario.text, 18);
-  } catch (e) {
-    setLoading(false);
-    lastFailedAction = startGame;
-    setError(`Start failed: ${e.message} — <a onclick="retryLast()">RETRY</a>`);
-    setButtonsDisabled(true);
-  }
+    await typewriter(currentScenario.text,18);
+  }catch(e){setLoading(false);lastFailedAction=startGame;setError(`Start failed: ${e.message} — <a onclick="retryLast()">RETRY</a>`);setButtonsDisabled(true);}
 }
 
-async function choose(index) {
-  if (locked || !currentScenario) return;
-  setError(''); setLoading(true); setButtonsDisabled(true);
-
-  try {
-    const chosen = currentScenario.options[index];
+async function choose(index){
+  if(locked||!currentScenario)return;
+  setError('');setLoading(true);setButtonsDisabled(true);
+  try{
+    const chosen=currentScenario.options[index];
     state.history.push(chosen.label);
-    logEvent('choice', { age:state.age, choice:index, label:chosen.label });
-
-    const applied = await apiApply(chosen.effects||{});
-    state.stats = applied.next_stats;
-
-    if (applied.died) {
+    logEvent('choice',{age:state.age,choice:index,label:chosen.label});
+    const applied=await apiApply(chosen.effects||{});
+    state.stats=applied.next_stats;
+    if(applied.died){
       setLoading(false);
-      const cause = (currentScenario.death_cause_hint||'complications').trim()||'complications';
+      const cause=(currentScenario.death_cause_hint||'complications').trim()||'complications';
       await playTransition(`AGE ${state.age}`);
-
-      let endingText = `You die at ${state.age}. Cause: ${cause}.`;
-      try { const ep = await apiEpilogue(cause); endingText = ep?.text||endingText; } catch {}
-
-      el.hudAge.textContent = `✝ AGE ${state.age}`;
-      el.btnA.style.display = 'none'; el.btnB.style.display = 'none';
-      updateScene(true); clearSave();
-      logEvent('death', { age:state.age, cause });
-      await typewriter(endingText, 22);
-      el.playAgain.style.display = 'block';
+      let endingText=`You die at ${state.age}. Cause: ${cause}.`;
+      try{const ep=await apiEpilogue(cause);endingText=ep?.text||endingText;}catch{}
+      el.hudAge.textContent=`RIP AGE ${state.age}`;
+      el.btnA.style.display='none';el.btnB.style.display='none';
+      updateScene(true);clearSave();
+      logEvent('death',{age:state.age,cause});
+      await typewriter(endingText,22);
+      el.playAgain.style.display='block';
       return;
     }
-
-    const prevAge = state.age;
-    const next = await apiTurn();
-    if (next.relationships?.length === 3) state.relationships = next.relationships;
-    state.age = next.age_to;
-    currentScenario = next.scenario;
-
+    const prevAge=state.age;
+    const next=await apiTurn();
+    if(next.relationships?.length===3)state.relationships=next.relationships;
+    state.age=next.age_to;currentScenario=next.scenario;
     setLoading(false);
-    const diff = state.age - prevAge;
-    await playTransition(diff > 0 ? `${diff} YEARS LATER...` : `AGE ${state.age}`);
-
-    el.hudAge.textContent = `AGE ${state.age}`;
-    el.btnA.textContent = currentScenario.options[0].label;
-    el.btnB.textContent = currentScenario.options[1].label;
-    renderRelations(state.relationships); renderStatBars(); updateScene(); saveSession();
-    await typewriter(currentScenario.text, 18);
-  } catch (e) {
-    setLoading(false);
-    lastFailedAction = () => choose(index);
-    setError(`Turn failed: ${e.message} — <a onclick="retryLast()">RETRY</a>`);
-    setButtonsDisabled(false);
-  }
+    const diff=state.age-prevAge;
+    await playTransition(diff>0?`${diff} YEARS LATER...`:`AGE ${state.age}`);
+    el.hudAge.textContent=`AGE ${state.age}`;
+    el.btnA.textContent=currentScenario.options[0].label;
+    el.btnB.textContent=currentScenario.options[1].label;
+    renderRelations(state.relationships);renderStatBars();updateScene();saveSession();
+    await typewriter(currentScenario.text,18);
+  }catch(e){setLoading(false);lastFailedAction=()=>choose(index);setError(`Turn failed: ${e.message} — <a onclick="retryLast()">RETRY</a>`);setButtonsDisabled(false);}
 }
 
-window.retryLast = function() { if (lastFailedAction) lastFailedAction(); };
+window.retryLast=function(){if(lastFailedAction)lastFailedAction();};
 
-function resetGame() {
-  currentScenario = null; locked = false;
-  state.run_id = newRunId(); state.age = 0; state.history = []; state.relationships = [];
-  state.stats = { money:.5,stability:.5,status:.5,health:.5,stress:.5,freedom:.5,exposure:.5 };
-  el.hudAge.textContent = 'AGE 0'; el.hudMeta.textContent = '';
-  el.hudRelations.innerHTML = ''; el.dialogueText.textContent = '';
-  el.btnA.textContent = 'A'; el.btnB.textContent = 'B';
-  el.btnA.style.display = ''; el.btnB.style.display = '';
-  setButtonsDisabled(true); el.playAgain.style.display = 'none';
-  el.onboarding.style.display = 'flex';
-  setError(''); setLoading(false); clearSave(); updateScene();
+function resetGame(){
+  currentScenario=null;locked=false;
+  state.run_id=newRunId();state.age=0;state.history=[];state.relationships=[];
+  state.stats={money:.5,stability:.5,status:.5,health:.5,stress:.5,freedom:.5,exposure:.5};
+  el.hudAge.textContent='AGE 0';el.hudMeta.textContent='';
+  el.hudRelations.innerHTML='';el.dialogueText.textContent='';
+  el.btnA.textContent='A';el.btnB.textContent='B';
+  el.btnA.style.display='';el.btnB.style.display='';
+  setButtonsDisabled(true);el.playAgain.style.display='none';
+  el.onboarding.style.display='flex';
+  setError('');setLoading(false);clearSave();updateScene();
 }
 
-// ── Init ──
-window.addEventListener('DOMContentLoaded', () => {
-  phaserGame = new Phaser.Game({
-    type: Phaser.AUTO,
-    parent: 'phaser-canvas',
-    width: 960, height: 600,
-    backgroundColor: '#1a1a2e',
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-    scene: [LifeScene],
-    pixelArt: true, antialias: false, roundPixels: true,
+window.addEventListener('DOMContentLoaded',()=>{
+  phaserGame=new Phaser.Game({
+    type:Phaser.AUTO,parent:'phaser-canvas',
+    width:960,height:600,backgroundColor:0x9bbc0f,
+    scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},
+    scene:[LifeScene],pixelArt:true,antialias:false,roundPixels:true,
   });
-
-  el.startBtn.addEventListener('click', e => { e.preventDefault(); startGame(); });
-  el.btnA.addEventListener('click', () => choose(0));
-  el.btnB.addEventListener('click', () => choose(1));
-  el.playAgain.querySelector('button').addEventListener('click', resetGame);
-
-  el.statToggle.addEventListener('click', () => { renderStatBars(); el.statOverlay.style.display='flex'; });
-  el.statClose.addEventListener('click', () => { el.statOverlay.style.display='none'; });
-
-  document.addEventListener('keydown', e => {
-    if (e.key==='Escape') el.statOverlay.style.display='none';
-    if (el.onboarding.style.display!=='none') return;
-    if (e.key==='1'||e.key==='a') el.btnA.click();
-    if (e.key==='2'||e.key==='b') el.btnB.click();
-    if (e.key==='s'||e.key==='S') el.statToggle.click();
+  el.startBtn.addEventListener('click',e=>{e.preventDefault();startGame();});
+  el.btnA.addEventListener('click',()=>choose(0));
+  el.btnB.addEventListener('click',()=>choose(1));
+  el.playAgain.querySelector('button').addEventListener('click',resetGame);
+  el.statToggle.addEventListener('click',()=>{renderStatBars();el.statOverlay.style.display='flex';});
+  el.statClose.addEventListener('click',()=>{el.statOverlay.style.display='none';});
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape')el.statOverlay.style.display='none';
+    if(el.onboarding.style.display!=='none')return;
+    if(e.key==='1'||e.key==='a')el.btnA.click();
+    if(e.key==='2'||e.key==='b')el.btnB.click();
+    if(e.key==='s'||e.key==='S')el.statToggle.click();
   });
-
-  if (restoreSession()) {
-    el.onboarding.style.display = 'none';
-    el.hudAge.textContent = `AGE ${state.age}`;
-    el.hudMeta.textContent = `${state.city.toUpperCase()} · ${state.desire.toUpperCase()}`;
-    renderRelations(state.relationships); renderStatBars(); updateScene();
-    if (currentScenario) {
-      showTextInstant(currentScenario.text);
-      el.btnA.textContent = currentScenario.options[0].label;
-      el.btnB.textContent = currentScenario.options[1].label;
-      setButtonsDisabled(false);
-    }
+  if(restoreSession()){
+    el.onboarding.style.display='none';
+    el.hudAge.textContent=`AGE ${state.age}`;
+    el.hudMeta.textContent=`${state.city.toUpperCase()} · ${state.desire.toUpperCase()}`;
+    renderRelations(state.relationships);renderStatBars();updateScene();
+    if(currentScenario){showTextInstant(currentScenario.text);el.btnA.textContent=currentScenario.options[0].label;el.btnB.textContent=currentScenario.options[1].label;setButtonsDisabled(false);}
   }
 });
 </script>
