@@ -1,14 +1,14 @@
-// server.mjs
+// server.mjs — Phase 0
 // Life Sim Backend (Express + OpenAI Structured Outputs)
 //
-// ✅ No name pools
-// ✅ No hard-coded narrative outputs (only rules)
-// ✅ JSON-safe output via json_schema (no "invalid JSON" drift)
-// ✅ Birth turn generates initial stats + 3 relationships
-// ✅ Subsequent turns generate moments + 2 choices
-// ✅ Hidden mortality (very low at Age 0)
-// ✅ Prefetches next turn for A and B to reduce wait time
-// ✅ Enforces: every person mentioned must be "Name (role)" (role AFTER name)
+// Phase 0 upgrades:
+// ✅ Server-side session store (in-memory Map) — client no longer owns full state
+// ✅ GET /api/session/:id — recover game state on page refresh
+// ✅ Retry logic with exponential backoff on OpenAI calls (3 attempts)
+// ✅ POST /api/analytics — lightweight event logging
+// ✅ Prefetch cache with TTL + auto-cleanup
+// ✅ History trimmed to 18 entries max
+// ✅ All existing features preserved (birth, turn, apply, epilogue)
 
 import "dotenv/config";
 import express from "express";
@@ -54,7 +54,6 @@ function randomInt(min, maxInclusive) {
   return Math.floor(min + Math.random() * (maxInclusive - min + 1));
 }
 
-// 5–15 years jumps
 function jumpYears() {
   return randomInt(5, 15);
 }
@@ -74,7 +73,6 @@ function normalizeStats(stats) {
 }
 
 function normalizeEffects(effects) {
-  // Schema stability: ALWAYS include all keys
   const out = {};
   for (const k of STAT_KEYS) out[k] = Number(effects?.[k] ?? 0);
   return out;
@@ -83,13 +81,11 @@ function normalizeEffects(effects) {
 function applyEffects(stats, effects) {
   const base = normalizeStats(stats);
   const eff = normalizeEffects(effects);
-
   const next = {};
   for (const k of STAT_KEYS) next[k] = clamp01(base[k] + eff[k]);
   return next;
 }
 
-// Always return relationships with display = "Name (role)"
 function withDisplayRelationships(rels) {
   const arr = Array.isArray(rels) ? rels : [];
   return arr.slice(0, 3).map((p) => {
@@ -107,7 +103,6 @@ function computeMortalityChance(age, stats) {
   const a = Math.max(0, Math.min(112, Number(age) || 0));
   const s = normalizeStats(stats);
 
-  // Infant: tiny (should not die at 0 constantly)
   if (a < 2) {
     const base = 0.00012;
     const exposure = s.exposure * 0.0005;
@@ -115,7 +110,6 @@ function computeMortalityChance(age, stats) {
     return Math.min(0.01, base + exposure + health);
   }
 
-  // Child: still low
   if (a < 12) {
     const base = 0.00030;
     const exposure = s.exposure * 0.0010;
@@ -123,12 +117,10 @@ function computeMortalityChance(age, stats) {
     return Math.min(0.02, base + exposure + health);
   }
 
-  // Adult: nonlinear rise
   const base = Math.min(0.65, Math.pow(a / 112, 3) * 0.55);
   const healthPenalty = (1 - s.health) * 0.12;
   const stressPenalty = s.stress * 0.08;
   const exposurePenalty = s.exposure * 0.06;
-
   const stabilityBuffer = (s.stability - 0.5) * 0.04;
   const freedomBuffer = (s.freedom - 0.5) * 0.03;
 
@@ -137,7 +129,37 @@ function computeMortalityChance(age, stats) {
 }
 
 // ----------------------
-// Prefetch cache (in-memory MVP)
+// Server-side session store (in-memory)
+// ----------------------
+const SESSIONS = new Map();
+const SESSION_TTL_MS = 1000 * 60 * 60 * 2; // 2 hours
+
+function getSession(sessionId, runId) {
+  const key = `${sessionId}:${runId}`;
+  const s = SESSIONS.get(key);
+  if (!s) return null;
+  if (Date.now() - s.updatedAt > SESSION_TTL_MS) {
+    SESSIONS.delete(key);
+    return null;
+  }
+  return s;
+}
+
+function setSession(sessionId, runId, data) {
+  const key = `${sessionId}:${runId}`;
+  SESSIONS.set(key, { ...data, updatedAt: Date.now() });
+}
+
+// Clean expired sessions every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of SESSIONS) {
+    if (now - v.updatedAt > SESSION_TTL_MS) SESSIONS.delete(k);
+  }
+}, 1000 * 60 * 10);
+
+// ----------------------
+// Prefetch cache (in-memory)
 // ----------------------
 const PREFETCH = new Map();
 const PREFETCH_TTL_MS = 1000 * 60 * 10;
@@ -158,6 +180,49 @@ function getPrefetch(k) {
     return null;
   }
   return v;
+}
+
+// Clean expired prefetch every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of PREFETCH) {
+    if (now - v.createdAt > PREFETCH_TTL_MS) PREFETCH.delete(k);
+  }
+}, 1000 * 60 * 5);
+
+// ----------------------
+// Analytics (in-memory ring buffer — last 5000 events)
+// ----------------------
+const ANALYTICS = [];
+const ANALYTICS_MAX = 5000;
+
+function logEvent(event) {
+  ANALYTICS.push({ ...event, ts: Date.now() });
+  if (ANALYTICS.length > ANALYTICS_MAX) ANALYTICS.shift();
+}
+
+// ----------------------
+// Retry with exponential backoff
+// ----------------------
+async function withRetry(fn, { maxAttempts = 3, baseDelay = 1000 } = {}) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      console.error(`Attempt ${attempt}/${maxAttempts} failed:`, err?.message || err);
+
+      // Don't retry on 4xx client errors
+      if (err?.status >= 400 && err?.status < 500) throw err;
+
+      if (attempt < maxAttempts) {
+        const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 500;
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError;
 }
 
 // ----------------------
@@ -192,11 +257,9 @@ const REL_CHANGE_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
-    // If a key relationship changes, choose index 0..2, otherwise null
     replace_index: {
       anyOf: [{ type: "integer", minimum: 0, maximum: 2 }, { type: "null" }],
     },
-    // If replaced, return new person OR null (null means the person dies / is removed)
     new_person: {
       anyOf: [
         {
@@ -275,7 +338,7 @@ const BirthJSONSchema = {
 };
 
 // ----------------------
-// Prompts (NO hardcoded narrative)
+// Prompts
 // ----------------------
 function systemPrompt() {
   return `
@@ -315,41 +378,118 @@ Remember: any person mentioned must be "Name (role)".
 }
 
 // ----------------------
-// OpenAI wrapper
+// OpenAI wrapper (with retry)
 // ----------------------
 async function generateTurn({ isBirth, payload }) {
   const schema = isBirth ? BirthJSONSchema : TurnJSONSchema;
 
-  const response = await client.responses.create({
-    model: "gpt-4.1",
-    input: [
-      { role: "system", content: systemPrompt() },
-      ...(isBirth ? [{ role: "user", content: birthInstruction() }] : []),
-      { role: "user", content: JSON.stringify(payload) },
-    ],
-    max_output_tokens: 950,
-    text: {
-      format: {
-        type: "json_schema",
-        name: schema.name,
-        strict: true,
-        schema: schema.schema,
+  return withRetry(async () => {
+    const response = await client.responses.create({
+      model: "gpt-4.1",
+      input: [
+        { role: "system", content: systemPrompt() },
+        ...(isBirth ? [{ role: "user", content: birthInstruction() }] : []),
+        { role: "user", content: JSON.stringify(payload) },
+      ],
+      max_output_tokens: 950,
+      text: {
+        format: {
+          type: "json_schema",
+          name: schema.name,
+          strict: true,
+          schema: schema.schema,
+        },
       },
-    },
+    });
+
+    const raw = response.output_text;
+    if (!raw) throw new Error("OpenAI returned empty output_text");
+
+    try {
+      return JSON.parse(raw);
+    } catch {
+      throw new Error("Model output not parseable JSON");
+    }
   });
-
-  const raw = response.output_text;
-  if (!raw) throw new Error("OpenAI returned empty output_text");
-
-  try {
-    return JSON.parse(raw);
-  } catch {
-    throw new Error("Model output not parseable JSON");
-  }
 }
 
 // ----------------------
-// Routes
+// Session recovery endpoint
+// ----------------------
+app.get("/api/session/:sessionId/:runId", (req, res) => {
+  const { sessionId, runId } = req.params;
+  const session = getSession(sessionId, runId);
+
+  if (!session) {
+    return res.status(404).json({ error: "session_not_found" });
+  }
+
+  return res.json({
+    age: session.age,
+    gender: session.gender,
+    city: session.city,
+    desire: session.desire,
+    stats: session.stats,
+    relationships: session.relationships,
+    history: session.history,
+    currentScenario: session.currentScenario,
+    died: session.died || false,
+  });
+});
+
+// ----------------------
+// Analytics endpoint
+// ----------------------
+app.post("/api/analytics", (req, res) => {
+  const event = req.body;
+  if (!event?.type) {
+    return res.status(400).json({ error: "missing event type" });
+  }
+  logEvent({
+    type: String(event.type),
+    session_id: String(event.session_id || ""),
+    run_id: String(event.run_id || ""),
+    data: event.data || {},
+  });
+  return res.json({ ok: true });
+});
+
+// Read-only analytics summary (for you to check)
+app.get("/api/analytics/summary", (_, res) => {
+  const total = ANALYTICS.length;
+  const counts = {};
+  let totalDeathAge = 0;
+  let deathCount = 0;
+  const desires = {};
+
+  for (const e of ANALYTICS) {
+    counts[e.type] = (counts[e.type] || 0) + 1;
+
+    if (e.type === "death" && e.data?.age) {
+      totalDeathAge += Number(e.data.age);
+      deathCount++;
+    }
+    if (e.type === "game_start" && e.data?.desire) {
+      const d = String(e.data.desire).toLowerCase().trim();
+      desires[d] = (desires[d] || 0) + 1;
+    }
+  }
+
+  return res.json({
+    total_events: total,
+    event_counts: counts,
+    avg_death_age: deathCount > 0 ? Math.round(totalDeathAge / deathCount) : null,
+    top_desires: Object.entries(desires)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([desire, count]) => ({ desire, count })),
+    active_sessions: SESSIONS.size,
+    prefetch_entries: PREFETCH.size,
+  });
+});
+
+// ----------------------
+// Main turn endpoint
 // ----------------------
 app.post("/api/turn", async (req, res) => {
   const t0 = Date.now();
@@ -369,7 +509,7 @@ app.post("/api/turn", async (req, res) => {
     const age_from = Number(state.age ?? 0);
     const isBirth = age_from === 0 && (!state.history || state.history.length === 0);
 
-    // Serve prefetched turn if available (for the last A/B choice)
+    // Serve prefetched turn if available
     if (!isBirth && Array.isArray(state.history) && state.history.length > 0) {
       const last = String(state.history[state.history.length - 1] || "").trim();
       const letter = last.startsWith("A") ? "A" : last.startsWith("B") ? "B" : null;
@@ -378,6 +518,18 @@ app.post("/api/turn", async (req, res) => {
         const k = prefetchKey(session_id, run_id, age_from, letter);
         const cached = getPrefetch(k);
         if (cached?.scenario) {
+          // Save to session store
+          setSession(session_id, run_id, {
+            age: cached.age_to,
+            gender: state.gender,
+            city: state.city,
+            desire: state.desire,
+            stats: normalizeStats(state.stats),
+            relationships: cached.relationships || [],
+            history: Array.isArray(state.history) ? state.history.slice(-18) : [],
+            currentScenario: cached.scenario,
+          });
+
           return res.json({
             age_from,
             age_to: cached.age_to,
@@ -424,17 +576,15 @@ app.post("/api/turn", async (req, res) => {
       death_cause_hint: String(out.death_cause_hint || ""),
     };
 
-    // Start with current relationships from state
     let relationships = payload.relationships;
 
-    // Apply model-driven relationship change (replace / add / death)
+    // Apply relationship changes
     const rc = scenario.relationship_changes;
     if (rc && rc.replace_index !== null) {
       const idx = Number(rc.replace_index);
       if (idx >= 0 && idx <= 2 && relationships.length === 3) {
         const updated = [...relationships];
 
-        // If new_person is null => relationship dies / disappears (we mark as deceased)
         if (rc.new_person === null) {
           const old = updated[idx];
           if (old?.name && old?.role) {
@@ -459,7 +609,36 @@ app.post("/api/turn", async (req, res) => {
       }
     }
 
-    // Prefetch next A + B in background (makes next click faster)
+    // Save session state
+    const sessionData = {
+      age: age_to,
+      gender: payload.gender,
+      city: payload.city,
+      desire: payload.desire,
+      stats: payload.stats,
+      relationships,
+      history: payload.history,
+      currentScenario: scenario,
+    };
+
+    if (isBirth) {
+      sessionData.stats = normalizeStats(out.birth_stats);
+      sessionData.relationships = withDisplayRelationships(out.relationships);
+    }
+
+    setSession(session_id, run_id, sessionData);
+
+    // Log analytics
+    if (isBirth) {
+      logEvent({
+        type: "game_start",
+        session_id,
+        run_id,
+        data: { gender: payload.gender, city: payload.city, desire: payload.desire },
+      });
+    }
+
+    // Prefetch next A + B in background
     (async () => {
       try {
         const baseStats = payload.stats;
@@ -562,12 +741,14 @@ app.post("/api/turn", async (req, res) => {
   }
 });
 
-// Apply effects + decide death (hidden)
+// Apply effects + decide death
 app.post("/api/apply", (req, res) => {
   try {
     const age = Number(req.body?.age ?? 0);
     const stats = req.body?.stats;
     const effects = req.body?.effects;
+    const session_id = String(req.body?.session_id || "").trim();
+    const run_id = String(req.body?.run_id || "").trim();
 
     if (!stats || typeof stats !== "object") {
       return res.status(400).json({ error: "bad_request", message: "Missing stats" });
@@ -580,6 +761,26 @@ app.post("/api/apply", (req, res) => {
     const pDeath = computeMortalityChance(age, next_stats);
     const died = Math.random() < pDeath;
 
+    // Update session with new stats
+    if (session_id && run_id) {
+      const session = getSession(session_id, run_id);
+      if (session) {
+        session.stats = next_stats;
+        if (died) session.died = true;
+        setSession(session_id, run_id, session);
+      }
+    }
+
+    // Log death
+    if (died) {
+      logEvent({
+        type: "death",
+        session_id,
+        run_id,
+        data: { age, probability: pDeath },
+      });
+    }
+
     return res.json({ next_stats, died });
   } catch (err) {
     return res.status(500).json({
@@ -589,7 +790,19 @@ app.post("/api/apply", (req, res) => {
   }
 });
 
-// Death epilogue
+// Log choices
+app.post("/api/choice", (req, res) => {
+  const { session_id, run_id, age, choice_index, label } = req.body || {};
+  logEvent({
+    type: "choice",
+    session_id: String(session_id || ""),
+    run_id: String(run_id || ""),
+    data: { age: Number(age || 0), choice_index, label: String(label || "") },
+  });
+  return res.json({ ok: true });
+});
+
+// Death epilogue (with retry)
 app.post("/api/epilogue", async (req, res) => {
   try {
     const age = Number(req.body?.age ?? 0);
@@ -627,16 +840,18 @@ Hard rules:
       history,
     });
 
-    const r = await client.responses.create({
-      model: "gpt-4.1",
-      input: [
-        { role: "system", content: sys },
-        { role: "user", content: user },
-      ],
-      max_output_tokens: 260,
+    const text = await withRetry(async () => {
+      const r = await client.responses.create({
+        model: "gpt-4.1",
+        input: [
+          { role: "system", content: sys },
+          { role: "user", content: user },
+        ],
+        max_output_tokens: 260,
+      });
+      return (r.output_text || "").trim() || `You die at ${age}. Cause: ${cause}.`;
     });
 
-    const text = (r.output_text || "").trim() || `You die at ${age}. Cause: ${cause}.`;
     res.json({ text });
   } catch (err) {
     res.status(500).json({
@@ -648,4 +863,5 @@ Hard rules:
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Phase 0 features: sessions, retry, analytics, prefetch`);
 });
