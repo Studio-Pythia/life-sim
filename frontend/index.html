@@ -2,904 +2,1101 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <title>Dreamland</title>
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
   <style>
-    :root{
-      --bg:#000000;
-      --panel:#000000;
-      --ink:#00ff66;
-      --muted:#00cc55;
-      --border:#00ff66;
-      --accent:#66ff99;
-      --danger:#ff4d4d;
-      --shadow: rgba(0,255,102,0.15);
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    :root {
+      --bg: #1a1a2e;
+      --panel: #0f0f1a;
+      --ink: #e8e8e8;
+      --muted: #8888aa;
+      --border: #3a3a5c;
+      --accent: #5dade2;
+      --highlight: #f9e547;
+      --danger: #e74c3c;
+      --dialogue-bg: #0a0a18;
+      --dialogue-border: #4a4a7c;
     }
 
-    *{ box-sizing:border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body{
-      margin:0;
-      background:var(--bg);
-      color:var(--ink);
-      font-family: "Courier New", Courier, ui-monospace, Menlo, Monaco, Consolas;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      min-height:100vh;
-      padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
-              max(18px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Press Start 2P', monospace;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      image-rendering: pixelated;
     }
 
-    /* subtle CRT glow */
-    body::before{
-      content:"";
-      position:fixed;
-      inset:0;
-      pointer-events:none;
-      background:
-        radial-gradient(circle at 50% 35%, rgba(0,255,102,0.08), transparent 55%),
-        repeating-linear-gradient(
-          0deg,
-          rgba(0,255,102,0.035) 0px,
-          rgba(0,255,102,0.035) 1px,
-          transparent 2px,
-          transparent 5px
-        );
-      mix-blend-mode: screen;
-      opacity: .55;
-    }
-
-    .window{
+    #game-wrapper {
+      position: relative;
       width: 100%;
-      max-width: 980px;
-      background:var(--panel);
-      border:1px solid var(--border);
-      padding:14px;
-      min-height: min(92vh, 860px);
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-      box-shadow: 0 0 0 1px rgba(0,255,102,0.25), 0 0 30px var(--shadow);
+      max-width: 960px;
+      aspect-ratio: 16/10;
+      max-height: 100vh;
+      background: #000;
+      overflow: hidden;
+      border: 3px solid var(--border);
+      box-shadow: 0 0 40px rgba(93,173,226,0.15), inset 0 0 60px rgba(0,0,0,0.5);
     }
 
-    .top{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:end;
-      border-bottom:1px solid var(--border);
-      padding-bottom:12px;
-      margin-bottom:0;
+    #phaser-canvas { width: 100%; height: 100%; display: block; }
+    #phaser-canvas canvas { width: 100% !important; height: 100% !important; }
+
+    #ui-overlay {
+      position: absolute; inset: 0;
+      pointer-events: none;
+      display: flex; flex-direction: column; justify-content: flex-end;
+      z-index: 10;
     }
 
-    .field{
-      flex:1;
-      min-width:180px;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
+    #hud {
+      position: absolute; top: 0; left: 0; right: 0;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px;
+      background: linear-gradient(180deg, rgba(10,10,24,0.92) 0%, rgba(10,10,24,0.6) 80%, transparent 100%);
+      font-size: 10px; z-index: 20;
     }
 
-    label{
-      font-size:12px;
-      color:var(--muted);
-      letter-spacing:0.4px;
-      text-transform:uppercase;
+    #hud-age {
+      font-size: 14px; color: var(--highlight);
+      text-shadow: 0 0 8px rgba(249,229,71,0.4);
     }
 
-    input, select{
-      padding:12px;
-      border:1px solid var(--border);
-      background:#000;
-      color:var(--ink);
-      font-family: inherit;
-      font-size:16px;
-      outline:none;
-      box-shadow: inset 0 0 0 1px rgba(0,255,102,0.10);
+    #hud-meta {
+      color: var(--muted); font-size: 8px; text-align: right;
+      max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
 
-    input::placeholder{
-      color: rgba(0,255,102,0.45);
+    #hud-relations {
+      position: absolute; top: 36px; right: 12px;
+      display: flex; flex-direction: column; gap: 4px; z-index: 20;
     }
 
-    input:focus, select:focus{
-      box-shadow: 0 0 0 2px rgba(0,255,102,0.25);
+    .rel-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(10,10,24,0.85); border: 1px solid var(--border);
+      padding: 3px 8px 3px 4px; font-size: 7px; color: var(--muted);
     }
 
-    .startBtn{
-      padding:14px 12px;
-      border:1px solid var(--border);
-      background:#000;
-      cursor:pointer;
-      font-family: inherit;
-      text-decoration:underline;
-      color:var(--ink);
-      width: min(220px, 100%);
+    .rel-icon {
+      width: 18px; height: 18px; border: 1px solid var(--border);
+      image-rendering: pixelated;
     }
 
-    .startBtn:hover{
-      background: rgba(0,255,102,0.06);
+    #dialogue-area {
+      pointer-events: auto; padding: 0 8px 8px 8px;
+      display: flex; flex-direction: column; gap: 6px;
     }
 
-    .hud{
-      display:flex;
-      justify-content:space-between;
-      align-items:baseline;
-      gap:10px;
-      margin-top:2px;
-      flex-wrap:wrap;
+    #dialogue-box {
+      background: var(--dialogue-bg); border: 3px solid var(--dialogue-border);
+      border-radius: 4px; padding: 14px 16px;
+      min-height: 100px; max-height: 160px; overflow-y: auto;
+      font-size: 11px; line-height: 1.8; color: var(--ink);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
     }
 
-    .age{
-      font-size: clamp(34px, 8vw, 52px);
-      font-weight:800;
-      text-shadow: 0 0 12px rgba(0,255,102,0.18);
+    #dialogue-box::-webkit-scrollbar { width: 4px; }
+    #dialogue-box::-webkit-scrollbar-track { background: transparent; }
+    #dialogue-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    #dialogue-text { white-space: pre-wrap; }
+
+    .cursor-blink {
+      display: inline-block; width: 8px; height: 12px;
+      background: var(--ink); animation: blink 0.8s steps(1) infinite;
+      vertical-align: middle; margin-left: 2px;
     }
 
-    .meta{
-      font-size:12px;
-      color:var(--muted);
-      text-align:right;
-      max-width:100%;
-      opacity:.85;
-      text-transform:uppercase;
-      letter-spacing:.5px;
+    @keyframes blink { 50% { opacity: 0; } }
+
+    #choices { display: flex; gap: 6px; }
+
+    .choice-btn {
+      flex: 1; background: var(--dialogue-bg); border: 2px solid var(--dialogue-border);
+      border-radius: 3px; padding: 10px 12px;
+      font-family: 'Press Start 2P', monospace; font-size: 9px; line-height: 1.5;
+      color: var(--ink); cursor: pointer; text-align: left;
+      transition: all 0.15s; position: relative; pointer-events: auto;
     }
 
-    .story{
-      border-top:1px solid var(--border);
-      padding-top:14px;
-      min-height:180px;
-      font-size:18px;
-      line-height:1.75;
-      letter-spacing:.1px;
-      white-space:pre-wrap;
+    .choice-btn::before {
+      content: '▶'; position: absolute; left: 4px; top: 50%;
+      transform: translateY(-50%); opacity: 0;
+      color: var(--highlight); font-size: 8px; transition: opacity 0.15s;
     }
 
-    .cursor{
-      display:inline-block;
-      width:8px;
-      margin-left:3px;
-      animation: blink 0.9s steps(1) infinite;
-      color:var(--ink);
+    .choice-btn:hover {
+      border-color: var(--highlight); background: rgba(249,229,71,0.08);
+      padding-left: 18px; box-shadow: 0 0 12px rgba(249,229,71,0.15);
     }
 
-    @keyframes blink{
-      50%{ opacity:0; }
+    .choice-btn:hover::before { opacity: 1; }
+
+    .choice-btn:disabled {
+      opacity: 0.3; cursor: not-allowed; pointer-events: none;
     }
 
-    .choices{
-      margin-top:4px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
+    #play-again { display: none; pointer-events: auto; }
+
+    #play-again button {
+      width: 100%; background: var(--dialogue-bg); border: 2px solid var(--highlight);
+      border-radius: 3px; padding: 14px;
+      font-family: 'Press Start 2P', monospace; font-size: 11px;
+      color: var(--highlight); cursor: pointer; text-align: center;
+      letter-spacing: 2px; transition: all 0.2s;
     }
 
-    .choiceBtn{
-      width:100%;
-      padding:18px 16px;
-      border:1px solid var(--border);
-      background:#000;
-      cursor:pointer;
-      font-family: inherit;
-      text-align:left;
-      font-size:16px;
-      line-height:1.3;
-      touch-action: manipulation;
-      color:var(--ink);
+    #play-again button:hover {
+      background: rgba(249,229,71,0.12); box-shadow: 0 0 20px rgba(249,229,71,0.2);
     }
 
-    .choiceBtn:hover{ background: rgba(0,255,102,0.06); }
-    .choiceBtn:disabled{ opacity:.35; cursor:not-allowed; }
-
-    .error{
-      margin-top:8px;
-      color:var(--danger);
-      font-size:13px;
+    /* ── Onboarding ── */
+    #onboarding-overlay {
+      position: absolute; inset: 0;
+      background: rgba(10,10,24,0.95); z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: auto;
     }
 
-    .errorRetry{
-      display:inline-block;
-      margin-left:8px;
-      color:var(--ink);
-      cursor:pointer;
-      text-decoration:underline;
-      font-size:13px;
+    #onboarding-box {
+      max-width: 420px; width: 90%;
+      display: flex; flex-direction: column; gap: 12px;
     }
 
-    /* Loading overlay -> bottom sheet */
-    .overlay{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.78);
-      display:flex;
-      align-items:flex-end;
-      justify-content:center;
-      z-index:9999;
-      padding: 0 14px max(14px, env(safe-area-inset-bottom)) 14px;
+    #onboarding-box h1 {
+      font-size: 20px; color: var(--highlight);
+      text-shadow: 0 0 16px rgba(249,229,71,0.3);
+      letter-spacing: 4px; text-align: center; margin-bottom: 4px;
     }
 
-    .overlayBox{
-      border:1px solid var(--border);
-      background:#000;
-      padding:14px 16px;
-      font-size:14px;
-      width:100%;
-      max-width:980px;
-      box-shadow: 0 0 18px rgba(0,255,102,0.18);
+    #onboarding-box p {
+      font-size: 8px; color: var(--muted); line-height: 1.8; text-align: center;
     }
 
-    .overlayTitle{
-      font-weight:700;
-      margin-bottom:8px;
-      text-decoration:underline;
-      color:var(--ink);
+    .ob-field { display: flex; flex-direction: column; gap: 4px; }
+
+    .ob-field label {
+      font-size: 8px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase;
     }
 
-    .hidden{
-      display:none !important;
-      pointer-events:none !important;
+    .ob-field select, .ob-field input {
+      padding: 10px; background: var(--panel); border: 2px solid var(--border);
+      border-radius: 3px; color: var(--ink);
+      font-family: 'Press Start 2P', monospace; font-size: 10px; outline: none;
     }
 
-    .loaderRow{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      margin-top:6px;
-      color:var(--muted);
+    .ob-field input::placeholder { color: rgba(136,136,170,0.5); }
+    .ob-field input:focus, .ob-field select:focus { border-color: var(--accent); }
+
+    #start-btn {
+      margin-top: 4px; padding: 14px; background: transparent;
+      border: 2px solid var(--highlight); border-radius: 3px;
+      color: var(--highlight); font-family: 'Press Start 2P', monospace;
+      font-size: 10px; cursor: pointer; letter-spacing: 2px; transition: all 0.2s;
     }
 
-    .spinner{
-      width:14px;
-      height:14px;
-      border:2px solid var(--ink);
-      border-top-color: transparent;
-      border-radius:999px;
-      animation: spin .8s linear infinite;
+    #start-btn:hover {
+      background: rgba(249,229,71,0.1); box-shadow: 0 0 20px rgba(249,229,71,0.15);
     }
 
-    @keyframes spin{
-      to{ transform: rotate(360deg); }
+    /* ── Stat overlay ── */
+    #stat-overlay {
+      position: absolute; inset: 0;
+      background: rgba(10,10,24,0.92); z-index: 50;
+      display: none; align-items: center; justify-content: center;
+      pointer-events: auto;
     }
 
-    .dots::after{
-      content:"";
-      display:inline-block;
-      width:14px;
-      text-align:left;
-      animation: dots 1.2s steps(4,end) infinite;
+    #stat-card {
+      background: var(--dialogue-bg); border: 3px solid var(--dialogue-border);
+      border-radius: 6px; padding: 20px; max-width: 360px; width: 85%;
     }
 
-    @keyframes dots{
-      0%{ content:""; }
-      25%{ content:"."; }
-      50%{ content:".."; }
-      75%{ content:"..."; }
-      100%{ content:""; }
+    #stat-card h2 {
+      font-size: 12px; color: var(--highlight); margin-bottom: 14px;
+      text-align: center; letter-spacing: 2px;
     }
 
-    #playAgain{
-      text-align:center;
-      font-weight:800;
-      letter-spacing:1.2px;
-      text-transform:uppercase;
+    .stat-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+
+    .stat-label {
+      font-size: 7px; color: var(--muted); width: 70px;
+      text-transform: uppercase; letter-spacing: 0.5px;
     }
 
-    /* Mobile */
-    @media (max-width: 640px){
-      .top{
-        display:grid;
-        grid-template-columns:1fr;
-        gap:10px;
-        align-items:stretch;
-      }
-      .field{ min-width:0; }
-      .startBtn{ width:100%; }
+    .stat-bar-bg {
+      flex: 1; height: 8px; background: rgba(255,255,255,0.08);
+      border-radius: 2px; overflow: hidden;
+    }
 
-      .hud{
-        flex-direction:column;
-        align-items:flex-start;
-        gap:6px;
-      }
-      .meta{ text-align:left; }
+    .stat-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+    .stat-val { font-size: 7px; color: var(--ink); width: 28px; text-align: right; }
 
-      .story{
-        font-size:17px;
-        min-height:160px;
-      }
+    #stat-close {
+      margin-top: 14px; width: 100%; padding: 10px;
+      background: transparent; border: 2px solid var(--border); border-radius: 3px;
+      color: var(--muted); font-family: 'Press Start 2P', monospace;
+      font-size: 8px; cursor: pointer;
+    }
+
+    #stat-close:hover { border-color: var(--ink); color: var(--ink); }
+
+    #stat-toggle {
+      position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+      z-index: 25; background: rgba(10,10,24,0.7);
+      border: 1px solid var(--border); border-radius: 3px;
+      padding: 3px 10px; font-family: 'Press Start 2P', monospace;
+      font-size: 7px; color: var(--muted); cursor: pointer;
+      pointer-events: auto; transition: all 0.15s;
+    }
+
+    #stat-toggle:hover { color: var(--highlight); border-color: var(--highlight); }
+
+    /* ── Loading ── */
+    #loading-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.75);
+      z-index: 200; display: none; align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px; pointer-events: auto;
+    }
+
+    .lds-ring { width: 32px; height: 32px; position: relative; }
+    .lds-ring div {
+      width: 26px; height: 26px; border: 3px solid var(--accent);
+      border-color: var(--accent) transparent transparent transparent;
+      border-radius: 50%; position: absolute;
+      animation: lds-ring 1s cubic-bezier(0.5,0,0.5,1) infinite;
+    }
+    @keyframes lds-ring { to { transform: rotate(360deg); } }
+
+    #loading-text { font-size: 9px; color: var(--muted); }
+
+    /* ── Transition ── */
+    #transition-overlay {
+      position: absolute; inset: 0; background: #000; z-index: 150;
+      display: none; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+    }
+
+    #transition-text { font-size: 14px; color: var(--ink); letter-spacing: 3px; }
+
+    /* ── Error ── */
+    #error-bar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: rgba(231,76,60,0.9); padding: 8px 12px;
+      font-size: 8px; color: #fff; z-index: 300; display: none;
+      pointer-events: auto;
+    }
+
+    #error-bar a { color: var(--highlight); cursor: pointer; text-decoration: underline; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      #game-wrapper { border-width: 2px; aspect-ratio: auto; height: 100vh; max-height: 100vh; }
+      #hud { padding: 6px 8px; }
+      #hud-age { font-size: 11px; }
+      #dialogue-box { font-size: 9px; min-height: 80px; max-height: 120px; padding: 10px 12px; }
+      .choice-btn { font-size: 8px; padding: 8px 10px; }
+      .rel-chip { font-size: 6px; }
+      .rel-icon { width: 14px; height: 14px; }
+      #onboarding-box h1 { font-size: 16px; }
+      #stat-toggle { font-size: 6px; }
+    }
+
+    @media (max-height: 500px) {
+      #dialogue-box { min-height: 60px; max-height: 90px; }
     }
   </style>
 </head>
-
 <body>
-<!-- Intro modal -->
-<div class="overlay" id="intro">
-  <div class="overlayBox">
-    <div class="overlayTitle">DREAMLAND</div>
-    <div style="line-height:1.55; color: var(--muted);">
-      This is a life simulator.<br><br>
-      Enter anything you want at the top (gender, city, what you want to become).<br><br>
-      Then simulate your life through key moments: every screen gives you two choices that can redirect your timeline.<br><br>
-      Play as many times as you want. Different inputs create different lives.<br><br>
-      -R
-    </div>
 
-    <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
-      <button class="choiceBtn" id="introStart" type="button" style="text-align:center; font-weight:800;">
-        OK — LET ME IN
-      </button>
-      <button class="choiceBtn" id="introClose" type="button" style="text-align:center; opacity:.9;">
-        CLOSE
-      </button>
+<div id="game-wrapper">
+  <div id="phaser-canvas"></div>
+
+  <div id="ui-overlay">
+    <div id="hud">
+      <div id="hud-age">AGE 0</div>
+      <div id="hud-meta"></div>
+    </div>
+    <button id="stat-toggle">STATS</button>
+    <div id="hud-relations"></div>
+
+    <div id="dialogue-area">
+      <div id="dialogue-box">
+        <span id="dialogue-text"></span><span class="cursor-blink"></span>
+      </div>
+      <div id="choices">
+        <button class="choice-btn" id="btn-a" disabled>A</button>
+        <button class="choice-btn" id="btn-b" disabled>B</button>
+      </div>
+      <div id="play-again"><button>▶ PLAY AGAIN</button></div>
     </div>
   </div>
-</div>
 
-<style>
-  #intro{
-    align-items:center !important;
-  }
-  #intro .overlayBox{
-    max-width:720px !important;
-  }
-</style>
-
-<script>
-  function hideIntro(){
-    const intro = document.getElementById("intro");
-    if(intro) intro.classList.add("hidden");
-    localStorage.setItem("lifeSimIntroSeen", "1");
-  }
-
-  window.addEventListener("DOMContentLoaded", () => {
-    const intro = document.getElementById("intro");
-    const introStart = document.getElementById("introStart");
-    const introClose = document.getElementById("introClose");
-
-    if(intro) intro.classList.remove("hidden");
-
-    introStart?.addEventListener("click", () => {
-      hideIntro();
-      document.getElementById("city")?.focus();
-    });
-
-    introClose?.addEventListener("click", hideIntro);
-  });
-</script>
-
-  <div class="window" id="window">
-
-    <div class="top" id="onboarding">
-      <div class="field">
+  <div id="onboarding-overlay">
+    <div id="onboarding-box">
+      <h1>DREAMLAND</h1>
+      <p>A life simulator. Enter your starting conditions, then navigate key moments through choices that reshape your timeline.</p>
+      <div class="ob-field">
         <label>Gender</label>
-        <select id="gender">
-          <option value="female">female</option>
-          <option value="male">male</option>
-        </select>
+        <select id="gender"><option value="female">Female</option><option value="male">Male</option></select>
       </div>
-
-      <div class="field">
+      <div class="ob-field">
         <label>City of birth</label>
         <input id="city" placeholder="e.g. Chicago" />
       </div>
-
-      <div class="field">
+      <div class="ob-field">
         <label>I want to become…</label>
-        <input id="desire" placeholder="e.g. famous / rich / free / a basketball player" />
+        <input id="desire" placeholder="e.g. famous / rich / a musician" />
       </div>
-
-      <button class="startBtn" id="start" type="button">Start Life</button>
+      <button id="start-btn">START LIFE</button>
     </div>
-
-    <div class="hud">
-      <div class="age" id="age">Age: 0</div>
-      <div class="meta" id="meta">CHOOSE WISELY</div>
-    </div>
-
-    <div class="story" id="story">
-      Fill in info and Press Start Life above.<span class="cursor">█</span>
-    </div>
-
-    <div class="choices">
-      <button class="choiceBtn" id="a" disabled>A</button>
-      <button class="choiceBtn" id="b" disabled>B</button>
-      <button class="choiceBtn hidden" id="playAgain" type="button">PLAY AGAIN</button>
-    </div>
-
-    <div class="error" id="error" style="display:none;"></div>
   </div>
 
-  <div class="overlay hidden" id="loading">
-    <div class="overlayBox">
-      <div class="overlayTitle">Loading<span class="dots"></span></div>
-      <div class="loaderRow">
-        <div class="spinner"></div>
-        <div class="loaderMsg">Generating next life moment<span class="dots"></span></div>
-      </div>
+  <div id="stat-overlay">
+    <div id="stat-card">
+      <h2>LIFE STATS</h2>
+      <div id="stat-bars"></div>
+      <button id="stat-close">CLOSE [ESC]</button>
     </div>
   </div>
+
+  <div id="loading-overlay">
+    <div class="lds-ring"><div></div></div>
+    <div id="loading-text">Generating life moment…</div>
+  </div>
+
+  <div id="transition-overlay">
+    <div id="transition-text"></div>
+  </div>
+
+  <div id="error-bar"></div>
+</div>
 
 <script>
-  // =============================================
-  // Phase 0 Frontend
-  // - sessionStorage persistence (survives refresh)
-  // - Server session recovery
-  // - Retry UI on failures
-  // - Analytics events
-  // =============================================
+// ═══════════════════════════════════════════════
+// DREAMLAND — Phase 1+2: Phaser Scene + RPG UI
+// ═══════════════════════════════════════════════
 
-  const API_BASE = "https://life-sim-production.up.railway.app";
-  const SAVE_KEY = "lifeSimGameState";
+const API_BASE = "https://life-sim-production.up.railway.app";
 
-  // ----------------------
-  // Session / Run IDs
-  // ----------------------
-  function newRunId(){
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    return String(Date.now()) + "-" + Math.random().toString(16).slice(2);
+// ── Palettes for pixel art scenes ──
+const PALETTES = {
+  nursery:    ['#2d1b4e','#8b6d4a','#d4a574','#f2c6de','#c9a0dc','#f7d08a','#7ec8e3','#fff4c1'],
+  school:     ['#4a90d9','#6b8e4e','#c4a882','#e8d5b7','#8b7355','#f5c542','#5dade2','#ffffff'],
+  bedroom:    ['#1a1a3e','#3d2b5a','#6b4d8a','#9b6dba','#4a4a7c','#e8a0c9','#7ec8e3','#f9e547'],
+  apartment:  ['#2c3e50','#8b6d4a','#bdc3c7','#e0d5c0','#6b4d3a','#f39c12','#3498db','#ecf0f1'],
+  office:     ['#1a2530','#4a4a4a','#7f8c8d','#bdc3c7','#34495e','#e67e22','#2980b9','#ecf0f1'],
+  home:       ['#2d4a1a','#8b6d4a','#d4a574','#e8d5b7','#6b4d3a','#f7d08a','#7ec8e3','#fff4c1'],
+  hospital:   ['#e8f0f5','#c5d5e0','#9bb0c0','#ffffff','#708090','#e74c3c','#5dade2','#f0f0f0'],
+  death:      ['#0a0a0a','#1a1a1a','#2a2a2a','#3a3a3a','#4a4a4a','#5a5a5a','#333333','#666666'],
+};
+
+function getSceneType(age, stats) {
+  if (age <= 5)  return 'nursery';
+  if (age <= 12) return 'school';
+  if (age <= 18) return 'bedroom';
+  if (age <= 25) return 'apartment';
+  if (age <= 55) {
+    if (stats.health < 0.2) return 'hospital';
+    return stats.money > 0.6 ? 'home' : 'office';
+  }
+  if (stats.health < 0.3) return 'hospital';
+  return 'home';
+}
+
+// ── Phaser Scene ──
+class LifeScene extends Phaser.Scene {
+  constructor() { super({ key: 'LifeScene' }); }
+
+  create() {
+    this.tileSize = 16;
+    this.scaleF = 3;
+    this.currentType = 'nursery';
+    this.particles = [];
+    this.renderScene('nursery', { money:.5,stability:.5,status:.5,health:.5,stress:.5,freedom:.5,exposure:.5 }, 0);
+    this.time.addEvent({ delay: 80, callback: () => this.animateParticles(), loop: true });
   }
 
-  function getSessionId(){
-    const key = "lifeSimSessionId";
-    let id = localStorage.getItem(key);
-    if(!id){
-      id = newRunId();
-      localStorage.setItem(key, id);
+  renderScene(type, stats, age) {
+    this.currentType = type;
+    const pal = PALETTES[type] || PALETTES.nursery;
+    this.children.removeAll(true);
+    this.tweens.killAll();
+    this.particles = [];
+
+    const W = this.cameras.main.width;
+    const H = this.cameras.main.height;
+    const T = this.tileSize * this.scaleF;
+
+    // ── Sky gradient ──
+    const skyGfx = this.add.graphics();
+    const c1 = Phaser.Display.Color.HexStringToColor(pal[0]);
+    const c2 = Phaser.Display.Color.HexStringToColor(pal[1]);
+    for (let y = 0; y < H; y++) {
+      const t = y / H;
+      skyGfx.fillStyle(Phaser.Display.Color.GetColor(
+        Phaser.Math.Linear(c1.red, c2.red, t),
+        Phaser.Math.Linear(c1.green, c2.green, t),
+        Phaser.Math.Linear(c1.blue, c2.blue, t)
+      ), 1);
+      skyGfx.fillRect(0, y, W, 1);
     }
-    return id;
-  }
 
-  // ----------------------
-  // Game state
-  // ----------------------
-  const state = {
-    session_id: getSessionId(),
-    run_id: newRunId(),
-    age: 0,
-    gender: "unspecified",
-    city: "",
-    desire: "",
-    stats: { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 },
-    relationships: [],
-    history: []
-  };
+    const floorY = H * 0.65;
 
-  let currentScenario = null;
-  let locked = false;
-  let lastFailedAction = null; // for retry
-
-  // ----------------------
-  // DOM refs
-  // ----------------------
-  const el = {
-    gender: document.getElementById("gender"),
-    city: document.getElementById("city"),
-    desire: document.getElementById("desire"),
-    start: document.getElementById("start"),
-    age: document.getElementById("age"),
-    meta: document.getElementById("meta"),
-    story: document.getElementById("story"),
-    a: document.getElementById("a"),
-    b: document.getElementById("b"),
-    playAgain: document.getElementById("playAgain"),
-    error: document.getElementById("error"),
-    loading: document.getElementById("loading"),
-    loadingMsg: document.querySelector(".loaderMsg"),
-    onboarding: document.getElementById("onboarding")
-  };
-
-  const loadLines = [
-    "Generating next life moment…",
-    "Calculating consequences…",
-    "Locking the timeline…",
-    "Spooling the next decade…",
-    "Loading the moment…"
-  ];
-  let loadTimer = null;
-
-  // ----------------------
-  // State persistence (sessionStorage)
-  // ----------------------
-  function saveGame(){
-    try {
-      const snapshot = {
-        state: { ...state },
-        currentScenario,
-        savedAt: Date.now()
-      };
-      sessionStorage.setItem(SAVE_KEY, JSON.stringify(snapshot));
-    } catch(e) {
-      // sessionStorage full or unavailable — ignore
-    }
-  }
-
-  function loadGame(){
-    try {
-      const raw = sessionStorage.getItem(SAVE_KEY);
-      if(!raw) return null;
-      const snapshot = JSON.parse(raw);
-
-      // Expire after 2 hours
-      if(Date.now() - snapshot.savedAt > 1000 * 60 * 120) {
-        sessionStorage.removeItem(SAVE_KEY);
-        return null;
+    // ── Floor with checkerboard ──
+    const floorGfx = this.add.graphics();
+    floorGfx.fillStyle(Phaser.Display.Color.HexStringToColor(pal[1]).color, 1);
+    floorGfx.fillRect(0, floorY, W, H - floorY);
+    const floorDark = Phaser.Display.Color.HexStringToColor(pal[4]).color;
+    for (let x = 0; x < W; x += T) {
+      for (let y = floorY; y < H; y += T) {
+        if ((Math.floor(x/T) + Math.floor(y/T)) % 2 === 0) {
+          floorGfx.fillStyle(floorDark, 0.15);
+          floorGfx.fillRect(x, y, T, T);
+        }
       }
+    }
 
-      return snapshot;
-    } catch(e) {
-      return null;
+    // ── Back wall with brick texture ──
+    const wallGfx = this.add.graphics();
+    wallGfx.fillStyle(Phaser.Display.Color.HexStringToColor(pal[2]).color, 1);
+    wallGfx.fillRect(0, H*0.15, W, floorY - H*0.15);
+    const wlc = Phaser.Display.Color.HexStringToColor(pal[4]).color;
+    wallGfx.lineStyle(1, wlc, 0.12);
+    for (let y = H*0.15; y < floorY; y += T) wallGfx.lineBetween(0, y, W, y);
+    for (let x = 0; x < W; x += T*2) {
+      const off = (Math.floor(x/T/2) % 2) * T;
+      wallGfx.lineBetween(x+off, H*0.15, x+off, floorY);
+    }
+
+    // Ceiling trim
+    const ceil = this.add.graphics();
+    ceil.fillStyle(Phaser.Display.Color.HexStringToColor(pal[4]).color, 0.5);
+    ceil.fillRect(0, H*0.14, W, 6);
+
+    // ── Window ──
+    this.drawWindow(W*0.12, H*0.22, T*2, T*2.5, pal, age);
+
+    // ── Furniture ──
+    this.drawFurniture(type, stats, age, pal, W, H, T, floorY);
+
+    // ── Character ──
+    this.drawCharacter(age, stats, W*0.5, floorY, T, pal);
+
+    // ── Particles ──
+    this.setupParticles(type, stats, W, H);
+
+    // ── Vignette edges ──
+    const vig = this.add.graphics();
+    vig.fillStyle(0x000000, 0.3);
+    vig.fillRect(0, 0, 8, H);
+    vig.fillRect(W-8, 0, 8, H);
+    vig.fillStyle(0x000000, 0.15);
+    vig.fillRect(0, 0, W, 4);
+
+    if (type === 'death') {
+      const d = this.add.graphics();
+      d.fillStyle(0x000000, 0.5);
+      d.fillRect(0, 0, W, H);
     }
   }
 
-  function clearSave(){
-    try { sessionStorage.removeItem(SAVE_KEY); } catch(e) {}
+  drawWindow(x, y, w, h, pal, age) {
+    const gfx = this.add.graphics();
+    const col = (i) => Phaser.Display.Color.HexStringToColor(pal[i]).color;
+    gfx.fillStyle(col(4), 1);
+    gfx.fillRect(x-3, y-3, w+6, h+6);
+    const hour = (age * 7 + 10) % 24;
+    const sky = hour < 6 || hour > 20 ? '#0a0a2e' : hour < 8 || hour > 18 ? '#e8835a' : '#87ceeb';
+    gfx.fillStyle(Phaser.Display.Color.HexStringToColor(sky).color, 1);
+    gfx.fillRect(x, y, w, h);
+    gfx.fillStyle(col(4), 1);
+    gfx.fillRect(x + w/2 - 2, y, 4, h);
+    gfx.fillRect(x, y + h/2 - 2, w, 4);
+    gfx.fillStyle(Phaser.Display.Color.HexStringToColor(sky).color, 0.15);
+    gfx.fillRect(x-10, y+h, w+20, 40);
   }
 
-  // ----------------------
-  // Analytics (fire-and-forget)
-  // ----------------------
-  function logAnalytics(type, data = {}){
-    try {
-      fetch(API_BASE + "/api/analytics", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type,
-          session_id: state.session_id,
-          run_id: state.run_id,
-          data
-        })
-      }).catch(() => {}); // fire-and-forget
-    } catch(e) {}
-  }
+  drawFurniture(type, stats, age, pal, W, H, T, floorY) {
+    const gfx = this.add.graphics();
+    const col = (i) => Phaser.Display.Color.HexStringToColor(pal[i]).color;
 
-  // ----------------------
-  // UI helpers
-  // ----------------------
-  function showPlayAgain(on){
-    if(on) el.playAgain.classList.remove("hidden");
-    else el.playAgain.classList.add("hidden");
-  }
-
-  function setError(msg, retryFn){
-    if(!msg){
-      el.error.style.display = "none";
-      el.error.innerHTML = "";
-      lastFailedAction = null;
-      return;
+    switch(type) {
+      case 'nursery': {
+        gfx.fillStyle(col(5), 1);
+        gfx.fillRect(W*0.65, floorY-T*1.8, T*2.5, T*1.8);
+        gfx.fillStyle(col(3), 1);
+        gfx.fillRect(W*0.65+4, floorY-T*1.5, T*2.5-8, T*1.2);
+        gfx.lineStyle(2, col(5), 0.6);
+        for (let i = 0; i < 6; i++) gfx.lineBetween(W*0.65+8+i*18, floorY-T*1.8, W*0.65+8+i*18, floorY-T*0.6);
+        gfx.fillStyle(col(6), 1);
+        gfx.fillRect(W*0.35, floorY-12, 14, 12);
+        gfx.fillStyle(col(7), 1);
+        gfx.fillRect(W*0.38, floorY-10, 8, 8);
+        gfx.fillStyle(col(3), 0.25);
+        gfx.fillEllipse(W*0.5, floorY+T*0.8, T*4, T*1.2);
+        break;
+      }
+      case 'school': {
+        gfx.fillStyle(col(4), 1);
+        gfx.fillRect(W*0.55, floorY-T*1.2, T*3, T*0.2);
+        gfx.fillRect(W*0.55+6, floorY-T*1, 6, T*1);
+        gfx.fillRect(W*0.55+T*3-12, floorY-T*1, 6, T*1);
+        gfx.fillStyle(col(6), 1);
+        gfx.fillRect(W*0.62, floorY-T*1.5, 20, 14);
+        gfx.fillStyle(0x2d4a2d, 1);
+        gfx.fillRect(W*0.35, H*0.2, T*4, T*2);
+        gfx.lineStyle(3, col(5), 0.6);
+        gfx.strokeRect(W*0.35, H*0.2, T*4, T*2);
+        // Chalk marks
+        gfx.lineStyle(1, 0xffffff, 0.3);
+        gfx.lineBetween(W*0.38, H*0.28, W*0.48, H*0.28);
+        gfx.lineBetween(W*0.38, H*0.34, W*0.52, H*0.34);
+        break;
+      }
+      case 'bedroom': {
+        gfx.fillStyle(col(4), 1);
+        gfx.fillRect(W*0.6, floorY-T*1, T*3, T*1);
+        gfx.fillStyle(col(3), 1);
+        gfx.fillRect(W*0.6+4, floorY-T*0.8, T*3-8, T*0.5);
+        gfx.fillStyle(col(7), 0.8);
+        gfx.fillRect(W*0.6+8, floorY-T*0.75, 24, 16);
+        gfx.fillStyle(col(4), 1);
+        gfx.fillRect(W*0.6, floorY-T*1.8, 8, T*1.8);
+        // Poster
+        gfx.fillStyle(col(5), 1);
+        gfx.fillRect(W*0.3, H*0.25, T*1.5, T*2);
+        gfx.fillStyle(col(6), 0.6);
+        gfx.fillRect(W*0.3+6, H*0.25+6, T*1.5-12, T*2-12);
+        // Desk lamp glow
+        gfx.fillStyle(col(7), 0.08);
+        gfx.fillEllipse(W*0.75, floorY-T*1.4, T*2, T*1.5);
+        break;
+      }
+      case 'apartment': {
+        const nice = stats.money > 0.5;
+        gfx.fillStyle(col(nice?6:4), 1);
+        gfx.fillRect(W*0.55, floorY-T*1.2, T*3.5, T*0.8);
+        gfx.fillStyle(col(nice?6:4), 0.5);
+        gfx.fillRect(W*0.55, floorY-T*2, T*3.5, T*0.4);
+        gfx.fillStyle(col(4), 1);
+        gfx.fillRect(W*0.32, floorY-T*0.9, T*1.8, T*0.15);
+        gfx.fillRect(W*0.38, floorY-T*0.75, 6, T*0.75);
+        if (nice) {
+          gfx.fillStyle(0x4a7a3a, 1);
+          gfx.fillEllipse(W*0.28, floorY-T*1.2, 22, 28);
+          gfx.fillStyle(col(4), 1);
+          gfx.fillRect(W*0.28-6, floorY-T*0.8, 12, 16);
+        }
+        break;
+      }
+      case 'office': {
+        gfx.fillStyle(col(4), 1);
+        gfx.fillRect(W*0.45, floorY-T*1.2, T*4, T*0.2);
+        gfx.fillRect(W*0.45+8, floorY-T*1, 6, T*1);
+        gfx.fillRect(W*0.45+T*4-14, floorY-T*1, 6, T*1);
+        gfx.fillStyle(0x222222, 1);
+        gfx.fillRect(W*0.55, floorY-T*2.4, T*2, T*1.1);
+        gfx.fillStyle(col(6), 0.5);
+        gfx.fillRect(W*0.55+4, floorY-T*2.3, T*2-8, T*0.9);
+        gfx.fillStyle(0x222222, 1);
+        gfx.fillRect(W*0.62, floorY-T*1.3, 12, T*0.2);
+        gfx.fillStyle(col(2), 0.8);
+        gfx.fillRect(W*0.82, floorY-T*2, T*1, T*2);
+        gfx.lineStyle(1, 0x000000, 0.2);
+        gfx.lineBetween(W*0.82, floorY-T*1.3, W*0.82+T*1, floorY-T*1.3);
+        gfx.lineBetween(W*0.82, floorY-T*0.6, W*0.82+T*1, floorY-T*0.6);
+        break;
+      }
+      case 'home': {
+        const nice = stats.money > 0.5;
+        gfx.fillStyle(col(nice?5:4), 1);
+        gfx.fillRect(W*0.5, floorY-T*1.2, T*4, T*0.8);
+        gfx.fillStyle(col(nice?5:4), 0.6);
+        gfx.fillRect(W*0.5, floorY-T*1.8, T*4, T*0.6);
+        gfx.fillStyle(col(4), 1);
+        gfx.fillRect(W*0.35, floorY-T*0.7, T*2, T*0.12);
+        gfx.fillRect(W*0.38, floorY-T*0.58, 5, T*0.58);
+        // Bookshelf
+        gfx.fillStyle(col(4), 1);
+        gfx.fillRect(W*0.82, H*0.2, T*1.2, floorY-H*0.2);
+        for (let s = 0; s < 3; s++) {
+          gfx.fillStyle(col(4), 0.8);
+          gfx.fillRect(W*0.82, H*0.2+s*T*1.2, T*1.2, 4);
+          for (let b = 0; b < 4; b++) {
+            gfx.fillStyle([col(3),col(5),col(6),col(7)][b], 0.8);
+            gfx.fillRect(W*0.82+4+b*12, H*0.2+s*T*1.2+6, 10, T*1-4);
+          }
+        }
+        if (nice) {
+          gfx.fillStyle(col(5), 1);
+          gfx.fillRect(W*0.3, H*0.25, T*1.5, T*1.2);
+          gfx.fillStyle(col(6), 0.4);
+          gfx.fillRect(W*0.3+5, H*0.25+5, T*1.5-10, T*1.2-10);
+        }
+        break;
+      }
+      case 'hospital': {
+        gfx.fillStyle(col(4), 1);
+        gfx.fillRect(W*0.4, floorY-T*0.8, T*4, T*0.8);
+        gfx.fillStyle(col(3), 1);
+        gfx.fillRect(W*0.4+4, floorY-T*0.6, T*4-8, T*0.35);
+        gfx.fillStyle(col(3), 0.8);
+        gfx.fillRect(W*0.4+8, floorY-T*0.55, 30, 14);
+        gfx.fillStyle(col(4), 1);
+        gfx.fillRect(W*0.4, floorY-T*1.4, 6, T*1.4);
+        gfx.lineStyle(2, col(4), 0.8);
+        gfx.lineBetween(W*0.78, floorY-T*3, W*0.78, floorY);
+        gfx.lineStyle(2, col(4), 0.6);
+        gfx.lineBetween(W*0.76, floorY-T*3, W*0.80, floorY-T*3);
+        gfx.fillStyle(col(6), 0.5);
+        gfx.fillRect(W*0.77, floorY-T*2.8, 10, 16);
+        gfx.fillStyle(0x222233, 1);
+        gfx.fillRect(W*0.82, floorY-T*2, T*1.2, T*0.9);
+        // Heartbeat
+        gfx.lineStyle(1, 0x4ade80, 0.8);
+        const mx = W*0.82+6, my = floorY-T*1.6;
+        gfx.beginPath(); gfx.moveTo(mx, my);
+        for (let i = 0; i < 40; i++) {
+          let py = my;
+          if (i%10===5) py -= 8;
+          if (i%10===6) py += 6;
+          gfx.lineTo(mx+i*1.2, py);
+        }
+        gfx.strokePath();
+        break;
+      }
     }
-    el.error.style.display = "block";
-    if(retryFn){
-      lastFailedAction = retryFn;
-      el.error.innerHTML = msg + ` <span class="errorRetry" id="retryBtn">[RETRY]</span>`;
-      // Attach retry handler
-      setTimeout(() => {
-        const btn = document.getElementById("retryBtn");
-        if(btn) btn.addEventListener("click", () => {
-          setError("");
-          retryFn();
-        });
-      }, 0);
-    } else {
-      el.error.textContent = msg;
-      lastFailedAction = null;
-    }
   }
 
-  function setLoading(on){
-    locked = on;
-    if(on){
-      el.loading.classList.remove("hidden");
-      let i = 0;
-      el.loadingMsg.textContent = loadLines[i];
-      loadTimer = setInterval(() => {
-        i = (i + 1) % loadLines.length;
-        el.loadingMsg.textContent = loadLines[i];
-      }, 350);
-    } else {
-      el.loading.classList.add("hidden");
-      if(loadTimer) clearInterval(loadTimer);
-      loadTimer = null;
-    }
-  }
+  drawCharacter(age, stats, x, floorY, T, pal) {
+    const gfx = this.add.graphics();
+    const h = age<6 ? T*1 : age<13 ? T*1.4 : age<60 ? T*1.8 : T*1.5;
+    const cy = floorY - h;
+    const head = age<6 ? 14 : age<13 ? 12 : 10;
 
-  function setButtonsDisabled(disabled){
-    el.a.disabled = disabled;
-    el.b.disabled = disabled;
-  }
+    // Head
+    gfx.fillStyle(Phaser.Display.Color.HexStringToColor('#d4a574').color, 1);
+    gfx.fillEllipse(x, cy+head, head, head);
 
-  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+    // Body
+    const bw = age<6 ? 12 : age<13 ? 14 : 16;
+    const bh = h - head*2;
+    const bc = pal[age<13 ? 3 : age<30 ? 6 : 5];
+    gfx.fillStyle(Phaser.Display.Color.HexStringToColor(bc).color, 1);
+    gfx.fillRect(x-bw/2, cy+head*1.5, bw, bh);
 
-  async function typewriter(text, speed=14){
-    setButtonsDisabled(true);
+    // Legs
+    gfx.fillStyle(Phaser.Display.Color.HexStringToColor(pal[4]).color, 1);
+    gfx.fillRect(x-bw/2+2, cy+head*1.5+bh, bw/2-3, h*0.2);
+    gfx.fillRect(x+1, cy+head*1.5+bh, bw/2-3, h*0.2);
 
-    const cursor = `<span class="cursor">█</span>`;
-    el.story.innerHTML = cursor;
+    // Hair
+    gfx.fillStyle(age>55 ? 0xbbbbbb : 0x3a2a1a, 1);
+    gfx.fillEllipse(x, cy+head*0.6, head+2, head*0.7);
 
-    let out = "";
-    for(let i=0;i<text.length;i++){
-      out += text[i];
-      el.story.innerHTML = out.replaceAll("\n", "<br>") + cursor;
-      await sleep(speed);
-    }
+    // Eyes
+    gfx.fillStyle(0x222222, 1);
+    gfx.fillRect(x-4, cy+head-1, 2, 2);
+    gfx.fillRect(x+2, cy+head-1, 2, 2);
 
-    el.story.innerHTML = out.replaceAll("\n", "<br>") + cursor;
-    setButtonsDisabled(false);
-  }
-
-  // ----------------------
-  // API calls
-  // ----------------------
-  async function apiTurn(){
-    const r = await fetch(API_BASE + "/api/turn", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ state })
+    // Idle bob
+    this.tweens.add({
+      targets: gfx, y: -2,
+      duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
     });
+  }
 
-    const json = await r.json().catch(()=> null);
-    if(!r.ok){
-      throw new Error(json?.message || "turn_failed");
+  setupParticles(type, stats, W, H) {
+    if (type !== 'death') {
+      for (let i = 0; i < 8; i++) {
+        const p = this.add.graphics();
+        p.fillStyle(0xffffff, Phaser.Math.FloatBetween(0.05, 0.15));
+        p.fillCircle(0, 0, Phaser.Math.Between(1, 3));
+        p.x = Phaser.Math.Between(0, W);
+        p.y = Phaser.Math.Between(0, H*0.6);
+        this.particles.push({ gfx:p, vx:Phaser.Math.FloatBetween(-0.3,0.3), vy:Phaser.Math.FloatBetween(0.1,0.4), maxY:H });
+      }
     }
-    return json;
+    if (stats.stress > 0.7) {
+      for (let i = 0; i < 20; i++) {
+        const r = this.add.graphics();
+        r.lineStyle(1, 0x7ec8e3, 0.3);
+        r.lineBetween(0, 0, -2, 8);
+        r.x = Phaser.Math.Between(0, W);
+        r.y = Phaser.Math.Between(-20, H);
+        this.particles.push({ gfx:r, vx:-1, vy:6, maxY:H+20, wrap:true });
+      }
+    }
   }
 
-  async function apiApply(effects){
-    const r = await fetch(API_BASE + "/api/apply", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        age: state.age,
-        stats: state.stats,
-        effects,
-        session_id: state.session_id,
-        run_id: state.run_id,
-        death_cause_hint: currentScenario?.death_cause_hint || ""
-      })
-    });
-
-    const json = await r.json().catch(()=> null);
-    if(!r.ok) throw new Error(json?.error || "apply_failed");
-    return json;
+  animateParticles() {
+    const W = this.cameras.main.width;
+    for (const p of this.particles) {
+      p.gfx.x += p.vx;
+      p.gfx.y += p.vy;
+      if (p.gfx.y > p.maxY) { p.gfx.y = -10; if (p.wrap) p.gfx.x = Phaser.Math.Between(0, W); }
+      if (p.gfx.x < -10) p.gfx.x = W+10;
+      if (p.gfx.x > W+10) p.gfx.x = -10;
+    }
   }
+}
 
-  async function apiEpilogue(cause){
-    const r = await fetch(API_BASE + "/api/epilogue", {
-      method: "POST",
-      headers: { "Content-Type":"application/json" },
-      body: JSON.stringify({
-        age: state.age,
-        gender: state.gender,
-        city: state.city,
-        desire: state.desire,
-        relationships: state.relationships || [],
-        history: state.history.slice(-30),
-        cause
-      })
-    });
+// ═══════════════════════════════════════════════
+// Game State + API (same as Phase 0)
+// ═══════════════════════════════════════════════
 
-    const json = await r.json().catch(()=> null);
-    if(!r.ok) throw new Error(json?.error || "epilogue_failed");
-    return json;
+function newRunId() {
+  if (window.crypto?.randomUUID) return crypto.randomUUID();
+  return Date.now()+'-'+Math.random().toString(16).slice(2);
+}
+function getSessionId() {
+  let id = localStorage.getItem('lifeSimSessionId');
+  if (!id) { id = newRunId(); localStorage.setItem('lifeSimSessionId', id); }
+  return id;
+}
+
+const state = {
+  session_id: getSessionId(), run_id: newRunId(), age: 0,
+  gender:'unspecified', city:'', desire:'',
+  stats: { money:.5,stability:.5,status:.5,health:.5,stress:.5,freedom:.5,exposure:.5 },
+  relationships: [], history: []
+};
+
+let currentScenario = null, locked = false, phaserGame = null, lastFailedAction = null;
+
+const $ = id => document.getElementById(id);
+const el = {
+  hudAge:$('hud-age'), hudMeta:$('hud-meta'), hudRelations:$('hud-relations'),
+  dialogueText:$('dialogue-text'), dialogueBox:$('dialogue-box'),
+  btnA:$('btn-a'), btnB:$('btn-b'), playAgain:$('play-again'),
+  onboarding:$('onboarding-overlay'), startBtn:$('start-btn'),
+  gender:$('gender'), city:$('city'), desire:$('desire'),
+  statOverlay:$('stat-overlay'), statBars:$('stat-bars'),
+  statClose:$('stat-close'), statToggle:$('stat-toggle'),
+  loading:$('loading-overlay'), loadingText:$('loading-text'),
+  transition:$('transition-overlay'), transitionText:$('transition-text'),
+  errorBar:$('error-bar'),
+};
+
+const loadLines = ['Generating life moment…','Calculating consequences…','Locking the timeline…','Spooling the next decade…','Loading the moment…'];
+let loadTimer = null;
+
+function setLoading(on) {
+  locked = on;
+  if (on) {
+    el.loading.style.display = 'flex'; let i = 0;
+    el.loadingText.textContent = loadLines[i];
+    loadTimer = setInterval(() => { i=(i+1)%loadLines.length; el.loadingText.textContent=loadLines[i]; }, 400);
+  } else {
+    el.loading.style.display = 'none';
+    if (loadTimer) clearInterval(loadTimer);
   }
+}
 
-  // ----------------------
-  // Render
-  // ----------------------
-  function renderChoices(scenario){
-    el.a.textContent = scenario.options[0].label;
-    el.b.textContent = scenario.options[1].label;
+function setError(msg) {
+  if (!msg) { el.errorBar.style.display='none'; return; }
+  el.errorBar.innerHTML = msg;
+  el.errorBar.style.display = 'block';
+  setTimeout(() => { el.errorBar.style.display='none'; }, 8000);
+}
+
+function setButtonsDisabled(d) { el.btnA.disabled=d; el.btnB.disabled=d; }
+
+function playTransition(text) {
+  return new Promise(resolve => {
+    el.transition.style.display = 'flex';
+    el.transitionText.textContent = text;
+    el.transition.style.opacity = '0';
+    let op = 0;
+    const fi = setInterval(() => {
+      op += 0.05;
+      el.transition.style.opacity = String(Math.min(op,1));
+      if (op >= 1) {
+        clearInterval(fi);
+        setTimeout(() => {
+          const fo = setInterval(() => {
+            op -= 0.04;
+            el.transition.style.opacity = String(Math.max(op,0));
+            if (op <= 0) { clearInterval(fo); el.transition.style.display='none'; resolve(); }
+          }, 30);
+        }, 800);
+      }
+    }, 30);
+  });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function typewriter(text, speed = 18) {
+  setButtonsDisabled(true);
+  const cursor = el.dialogueBox.querySelector('.cursor-blink');
+  el.dialogueText.textContent = '';
+  if (cursor) cursor.style.display = 'inline-block';
+  for (let i = 0; i < text.length; i++) {
+    el.dialogueText.textContent += text[i];
+    el.dialogueBox.scrollTop = el.dialogueBox.scrollHeight;
+    await sleep(speed);
   }
+  setButtonsDisabled(false);
+}
 
-  function resetGameUI(){
-    currentScenario = null;
-    locked = false;
-    lastFailedAction = null;
+function showTextInstant(text) {
+  el.dialogueText.textContent = text;
+  el.dialogueBox.scrollTop = el.dialogueBox.scrollHeight;
+}
 
-    state.run_id = newRunId();
-    state.age = 0;
-    state.history = [];
-    state.relationships = [];
-    state.stats = { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 };
+function renderRelations(rels) {
+  el.hudRelations.innerHTML = '';
+  if (!rels?.length) return;
+  const colors = ['#e74c3c','#3498db','#2ecc71'];
+  rels.forEach((r, i) => {
+    if (!r?.name) return;
+    const chip = document.createElement('div');
+    chip.className = 'rel-chip';
+    const icon = document.createElement('canvas');
+    icon.className = 'rel-icon'; icon.width=18; icon.height=18;
+    const ctx = icon.getContext('2d');
+    ctx.fillStyle = colors[i%3]; ctx.fillRect(0,0,18,18);
+    ctx.fillStyle = '#d4a574'; ctx.fillRect(5,3,8,8);
+    ctx.fillStyle = colors[i%3]; ctx.fillRect(3,10,12,8);
+    const lbl = document.createElement('span');
+    lbl.textContent = r.display || `${r.name} (${r.role})`;
+    chip.appendChild(icon); chip.appendChild(lbl);
+    el.hudRelations.appendChild(chip);
+  });
+}
 
-    el.age.textContent = "Age: 0";
-    el.meta.textContent = "CHOOSE WISELY";
-    el.story.innerHTML = `Fill in info and Press Start Life above.<span class="cursor">█</span>`;
+const STAT_COLORS = {
+  money:'#f9e547', stability:'#5dade2', status:'#9b59b6',
+  health:'#4ade80', stress:'#e74c3c', freedom:'#1abc9c', exposure:'#e67e22'
+};
+const STAT_KEYS = ['money','stability','status','health','stress','freedom','exposure'];
 
-    el.a.textContent = "A";
-    el.b.textContent = "B";
+function renderStatBars() {
+  el.statBars.innerHTML = '';
+  STAT_KEYS.forEach(k => {
+    const val = Math.round((state.stats[k]||0.5)*100);
+    const row = document.createElement('div'); row.className = 'stat-row';
+    row.innerHTML = `<span class="stat-label">${k}</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:${val}%;background:${STAT_COLORS[k]}"></div></div><span class="stat-val">${val}%</span>`;
+    el.statBars.appendChild(row);
+  });
+}
 
-    setButtonsDisabled(true);
-    showPlayAgain(false);
-    setError("");
-    setLoading(false);
-    clearSave();
-  }
+function updateScene(isDeath = false) {
+  const scene = phaserGame?.scene?.scenes?.[0];
+  if (!scene) return;
+  scene.renderScene(isDeath ? 'death' : getSceneType(state.age, state.stats), state.stats, state.age);
+}
 
-  // ----------------------
-  // Restore game from sessionStorage on refresh
-  // ----------------------
-  function restoreGame(){
-    const snapshot = loadGame();
-    if(!snapshot || !snapshot.currentScenario) return false;
+// ── API ──
+async function apiTurn() {
+  const r = await fetch(API_BASE+'/api/turn', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({state}) });
+  const j = await r.json().catch(()=>null);
+  if (!r.ok) throw new Error(j?.message||'turn_failed');
+  return j;
+}
 
-    const s = snapshot.state;
+async function apiApply(effects) {
+  const r = await fetch(API_BASE+'/api/apply', { method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ age:state.age, stats:state.stats, effects, death_cause_hint:currentScenario?.death_cause_hint||'' })
+  });
+  const j = await r.json().catch(()=>null);
+  if (!r.ok) throw new Error(j?.error||'apply_failed');
+  return j;
+}
 
-    // Restore state
-    state.session_id = s.session_id || getSessionId();
-    state.run_id = s.run_id || newRunId();
-    state.age = s.age || 0;
-    state.gender = s.gender || "unspecified";
-    state.city = s.city || "";
-    state.desire = s.desire || "";
-    state.stats = s.stats || { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 };
-    state.relationships = s.relationships || [];
-    state.history = s.history || [];
+async function apiEpilogue(cause) {
+  const r = await fetch(API_BASE+'/api/epilogue', { method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ age:state.age, gender:state.gender, city:state.city, desire:state.desire,
+      relationships:state.relationships||[], history:state.history.slice(-30), cause })
+  });
+  const j = await r.json().catch(()=>null);
+  if (!r.ok) throw new Error(j?.error||'epilogue_failed');
+  return j;
+}
 
-    currentScenario = snapshot.currentScenario;
+function logEvent(event, data={}) {
+  fetch(API_BASE+'/api/analytics', { method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ event, session_id:state.session_id, run_id:state.run_id, ...data })
+  }).catch(()=>{});
+}
 
-    // Restore UI
-    el.age.textContent = `Age: ${state.age}`;
-    el.meta.textContent = `${state.city.toUpperCase()} • I WANT TO BE ${state.desire.toUpperCase()}`;
+function saveSession() {
+  try { sessionStorage.setItem('dreamlandState', JSON.stringify({ state:{...state}, scenario:currentScenario, ts:Date.now() })); } catch {}
+}
+function clearSave() { try { sessionStorage.removeItem('dreamlandState'); } catch {} }
 
-    // Show the story text immediately (no typewriter on restore)
-    const cursor = `<span class="cursor">█</span>`;
-    el.story.innerHTML = currentScenario.text.replaceAll("\n", "<br>") + cursor;
-
-    renderChoices(currentScenario);
-    setButtonsDisabled(false);
-
-    // Fill in form fields too
-    el.gender.value = state.gender;
-    el.city.value = state.city;
-    el.desire.value = state.desire;
-
+function restoreSession() {
+  try {
+    const raw = sessionStorage.getItem('dreamlandState');
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    if (Date.now()-saved.ts > 2*60*60*1000) { clearSave(); return false; }
+    Object.assign(state, saved.state);
+    currentScenario = saved.scenario;
     return true;
+  } catch { return false; }
+}
+
+// ── Game flow ──
+async function startGame() {
+  setError('');
+  state.run_id = newRunId(); state.age = 0; state.history = []; state.relationships = [];
+  state.stats = { money:.5,stability:.5,status:.5,health:.5,stress:.5,freedom:.5,exposure:.5 };
+  state.gender = (el.gender.value||'unspecified').trim();
+  state.city = (el.city.value||'').trim();
+  state.desire = (el.desire.value||'').trim();
+
+  if (!state.city || !state.desire) { setError('Enter a city and what you want to become.'); return; }
+
+  el.onboarding.style.display = 'none';
+  el.hudMeta.textContent = `${state.city.toUpperCase()} · ${state.desire.toUpperCase()}`;
+  el.playAgain.style.display = 'none';
+  el.btnA.style.display = ''; el.btnB.style.display = '';
+  setLoading(true); setButtonsDisabled(true);
+
+  try {
+    const data = await apiTurn();
+    if (data.birth_stats) state.stats = data.birth_stats;
+    if (data.relationships?.length === 3) state.relationships = data.relationships;
+    state.age = data.age_to;
+    currentScenario = data.scenario;
+    el.hudAge.textContent = `AGE ${state.age}`;
+    el.btnA.textContent = currentScenario.options[0].label;
+    el.btnB.textContent = currentScenario.options[1].label;
+    renderRelations(state.relationships); renderStatBars(); updateScene(); saveSession();
+    logEvent('game_start', { city:state.city, desire:state.desire, gender:state.gender });
+    setLoading(false);
+    await typewriter(currentScenario.text, 18);
+  } catch (e) {
+    setLoading(false);
+    lastFailedAction = startGame;
+    setError(`Start failed: ${e.message} — <a onclick="retryLast()">RETRY</a>`);
+    setButtonsDisabled(true);
   }
+}
 
-  // ----------------------
-  // Game flow
-  // ----------------------
-  async function startGame(){
-    showPlayAgain(false);
-    setError("");
+async function choose(index) {
+  if (locked || !currentScenario) return;
+  setError(''); setLoading(true); setButtonsDisabled(true);
 
-    state.run_id = newRunId();
-    state.age = 0;
-    state.history = [];
-    state.relationships = [];
-    state.stats = { money:.5, stability:.5, status:.5, health:.5, stress:.5, freedom:.5, exposure:.5 };
+  try {
+    const chosen = currentScenario.options[index];
+    state.history.push(chosen.label);
+    logEvent('choice', { age:state.age, choice:index, label:chosen.label });
 
-    state.gender = (el.gender.value || "unspecified").trim();
-    state.city = (el.city.value || "").trim();
-    state.desire = (el.desire.value || "").trim();
+    const applied = await apiApply(chosen.effects||{});
+    state.stats = applied.next_stats;
 
-    if(!state.city || !state.desire){
-      setError("Enter a city and what you want to be.");
+    if (applied.died) {
+      setLoading(false);
+      const cause = (currentScenario.death_cause_hint||'complications').trim()||'complications';
+      await playTransition(`AGE ${state.age}`);
+
+      let endingText = `You die at ${state.age}. Cause: ${cause}.`;
+      try { const ep = await apiEpilogue(cause); endingText = ep?.text||endingText; } catch {}
+
+      el.hudAge.textContent = `✝ AGE ${state.age}`;
+      el.btnA.style.display = 'none'; el.btnB.style.display = 'none';
+      updateScene(true); clearSave();
+      logEvent('death', { age:state.age, cause });
+      await typewriter(endingText, 22);
+      el.playAgain.style.display = 'block';
       return;
     }
 
-    el.meta.textContent = `${state.city.toUpperCase()} • I WANT TO BE ${state.desire.toUpperCase()}`;
+    const prevAge = state.age;
+    const next = await apiTurn();
+    if (next.relationships?.length === 3) state.relationships = next.relationships;
+    state.age = next.age_to;
+    currentScenario = next.scenario;
 
-    setLoading(true);
-    setButtonsDisabled(true);
+    setLoading(false);
+    const diff = state.age - prevAge;
+    await playTransition(diff > 0 ? `${diff} YEARS LATER...` : `AGE ${state.age}`);
 
-    try{
-      const data = await apiTurn();
-
-      if (data.birth_stats) state.stats = data.birth_stats;
-      if (data.relationships && data.relationships.length === 3) state.relationships = data.relationships;
-
-      state.age = data.age_to;
-      currentScenario = data.scenario;
-
-      el.age.textContent = `Age: ${state.age}`;
-      renderChoices(currentScenario);
-
-      setLoading(false);
-      saveGame();
-      logAnalytics("game_start", { gender: state.gender, city: state.city, desire: state.desire });
-
-      await typewriter(currentScenario.text, 14);
-
-    }catch(e){
-      setLoading(false);
-      setError("Start failed: " + (e.message || "Model error"), startGame);
-      setButtonsDisabled(true);
-    }
+    el.hudAge.textContent = `AGE ${state.age}`;
+    el.btnA.textContent = currentScenario.options[0].label;
+    el.btnB.textContent = currentScenario.options[1].label;
+    renderRelations(state.relationships); renderStatBars(); updateScene(); saveSession();
+    await typewriter(currentScenario.text, 18);
+  } catch (e) {
+    setLoading(false);
+    lastFailedAction = () => choose(index);
+    setError(`Turn failed: ${e.message} — <a onclick="retryLast()">RETRY</a>`);
+    setButtonsDisabled(false);
   }
+}
 
-  async function choose(index){
-    if(locked || !currentScenario) return;
+window.retryLast = function() { if (lastFailedAction) lastFailedAction(); };
 
-    setError("");
-    setLoading(true);
-    setButtonsDisabled(true);
+function resetGame() {
+  currentScenario = null; locked = false;
+  state.run_id = newRunId(); state.age = 0; state.history = []; state.relationships = [];
+  state.stats = { money:.5,stability:.5,status:.5,health:.5,stress:.5,freedom:.5,exposure:.5 };
+  el.hudAge.textContent = 'AGE 0'; el.hudMeta.textContent = '';
+  el.hudRelations.innerHTML = ''; el.dialogueText.textContent = '';
+  el.btnA.textContent = 'A'; el.btnB.textContent = 'B';
+  el.btnA.style.display = ''; el.btnB.style.display = '';
+  setButtonsDisabled(true); el.playAgain.style.display = 'none';
+  el.onboarding.style.display = 'flex';
+  setError(''); setLoading(false); clearSave(); updateScene();
+}
 
-    try{
-      const chosen = currentScenario.options[index];
-      state.history.push(chosen.label);
+// ── Init ──
+window.addEventListener('DOMContentLoaded', () => {
+  phaserGame = new Phaser.Game({
+    type: Phaser.AUTO,
+    parent: 'phaser-canvas',
+    width: 960, height: 600,
+    backgroundColor: '#1a1a2e',
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    scene: [LifeScene],
+    pixelArt: true, antialias: false, roundPixels: true,
+  });
 
-      // Log choice analytics
-      logAnalytics("choice", { age: state.age, choice_index: index, label: chosen.label });
+  el.startBtn.addEventListener('click', e => { e.preventDefault(); startGame(); });
+  el.btnA.addEventListener('click', () => choose(0));
+  el.btnB.addEventListener('click', () => choose(1));
+  el.playAgain.querySelector('button').addEventListener('click', resetGame);
 
-      const applied = await apiApply(chosen.effects || {});
-      state.stats = applied.next_stats;
+  el.statToggle.addEventListener('click', () => { renderStatBars(); el.statOverlay.style.display='flex'; });
+  el.statClose.addEventListener('click', () => { el.statOverlay.style.display='none'; });
 
-      if(applied.died){
-        setLoading(false);
+  document.addEventListener('keydown', e => {
+    if (e.key==='Escape') el.statOverlay.style.display='none';
+    if (el.onboarding.style.display!=='none') return;
+    if (e.key==='1'||e.key==='a') el.btnA.click();
+    if (e.key==='2'||e.key==='b') el.btnB.click();
+    if (e.key==='s'||e.key==='S') el.statToggle.click();
+  });
 
-        const cause = (currentScenario.death_cause_hint || "complications").trim() || "complications";
-        let endingText = `You die at ${state.age}. Cause: ${cause}.`;
-
-        try{
-          const ep = await apiEpilogue(cause);
-          endingText = ep?.text || endingText;
-        }catch(_){}
-
-        el.age.textContent = `RIP AGE: ${state.age}`;
-        el.a.classList.add("hidden");
-        el.b.classList.add("hidden");
-
-        logAnalytics("death", { age: state.age, cause });
-        clearSave(); // game over, clear save
-
-        await typewriter(endingText, 14);
-        showPlayAgain(true);
-        return;
-      }
-
-      const next = await apiTurn();
-
-      if (next.relationships && next.relationships.length === 3) state.relationships = next.relationships;
-
-      state.age = next.age_to;
-      currentScenario = next.scenario;
-
-      el.age.textContent = `Age: ${state.age}`;
-      renderChoices(currentScenario);
-
-      setLoading(false);
-      saveGame();
-
-      await typewriter(currentScenario.text, 14);
-
-    }catch(e){
-      setLoading(false);
-      setError("Turn failed: " + (e.message || "bad_request"), () => choose(index));
+  if (restoreSession()) {
+    el.onboarding.style.display = 'none';
+    el.hudAge.textContent = `AGE ${state.age}`;
+    el.hudMeta.textContent = `${state.city.toUpperCase()} · ${state.desire.toUpperCase()}`;
+    renderRelations(state.relationships); renderStatBars(); updateScene();
+    if (currentScenario) {
+      showTextInstant(currentScenario.text);
+      el.btnA.textContent = currentScenario.options[0].label;
+      el.btnB.textContent = currentScenario.options[1].label;
       setButtonsDisabled(false);
     }
   }
-
-  // ----------------------
-  // Event handlers
-  // ----------------------
-  window.addEventListener("DOMContentLoaded", () => {
-    // Try to restore a saved game first
-    const restored = restoreGame();
-
-    if(restored) {
-      // Hide the intro if game was in progress
-      const intro = document.getElementById("intro");
-      if(intro) intro.classList.add("hidden");
-    }
-
-    el.start.addEventListener("click", (e) => {
-      e.preventDefault();
-      startGame();
-    });
-
-    el.a.addEventListener("click", () => choose(0));
-    el.b.addEventListener("click", () => choose(1));
-
-    el.playAgain.addEventListener("click", () => {
-      el.a.classList.remove("hidden");
-      el.b.classList.remove("hidden");
-      resetGameUI();
-    });
-  });
+});
 </script>
 </body>
 </html>
