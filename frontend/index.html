@@ -165,6 +165,13 @@
       font-size: 6px; color: var(--gb2); cursor: pointer; pointer-events: auto;
     }
     #stat-toggle:hover { color: var(--gb3); border-color: var(--gb3); }
+    #snd-toggle {
+      position: absolute; top: 4px; left: calc(50% + 44px);
+      z-index: 25; background: var(--gb0); border: 1px solid var(--gb1);
+      padding: 2px 8px; font-family: 'Press Start 2P', monospace;
+      font-size: 6px; color: var(--gb2); cursor: pointer; pointer-events: auto;
+    }
+    #snd-toggle:hover { color: var(--gb3); border-color: var(--gb3); }
 
     #loading-overlay {
       position: absolute; inset: 0; background: rgba(15,56,15,0.85);
@@ -215,6 +222,7 @@
   <div id="ui-overlay">
     <div id="hud"><div id="hud-age">AGE 0</div><div id="hud-meta"></div></div>
     <button id="stat-toggle">STATS</button>
+    <button id="snd-toggle">♪ ON</button>
     <div id="hud-relations"></div>
     <div id="dialogue-area">
       <div id="dialogue-box"><span id="dialogue-text"></span><span class="cursor-blink"></span></div>
@@ -1428,6 +1436,138 @@ class LifeScene extends Phaser.Scene {
 // Game State + API
 // ═══════════════════════════════════════════════
 
+// ── GB Sound Engine (Web Audio API chiptune) ──
+const SFX = (() => {
+  let ctx = null;
+  let muted = false;
+  const vol = 0.15; // master volume (gentle)
+
+  function ensure() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function osc(type, freq, start, dur, v=vol, detune=0) {
+    const c = ensure();
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    if (detune) o.detune.value = detune;
+    g.gain.setValueAtTime(v, c.currentTime + start);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + start + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(c.currentTime + start);
+    o.stop(c.currentTime + start + dur + 0.05);
+  }
+
+  function noise(start, dur, v=vol*0.4) {
+    const c = ensure();
+    const bufSize = c.sampleRate * dur;
+    const buf = c.createBuffer(1, bufSize, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const g = c.createGain();
+    g.gain.setValueAtTime(v, c.currentTime + start);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + start + dur);
+    src.connect(g); g.connect(c.destination);
+    src.start(c.currentTime + start);
+    src.stop(c.currentTime + start + dur + 0.05);
+  }
+
+  return {
+    get muted() { return muted; },
+    toggle() { muted = !muted; return muted; },
+
+    // UI click — short square blip (Game Boy menu select)
+    click() {
+      if (muted) return;
+      osc('square', 880, 0, 0.06, vol*0.6);
+    },
+
+    // Choice confirm — two ascending square notes
+    confirm() {
+      if (muted) return;
+      osc('square', 523, 0, 0.08, vol*0.7);
+      osc('square', 784, 0.08, 0.12, vol*0.7);
+    },
+
+    // Typewriter tick — tiny high click (very quiet, rapid)
+    tick() {
+      if (muted) return;
+      osc('square', 1200, 0, 0.015, vol*0.15);
+    },
+
+    // Transition whoosh — descending sweep + noise
+    transition() {
+      if (muted) return;
+      osc('square', 440, 0, 0.12, vol*0.5);
+      osc('square', 330, 0.06, 0.12, vol*0.4);
+      osc('square', 220, 0.12, 0.15, vol*0.3);
+      noise(0, 0.25, vol*0.15);
+    },
+
+    // New turn arrival — bright ascending arpeggio (Pokémon encounter feel)
+    newTurn() {
+      if (muted) return;
+      osc('square', 392, 0, 0.09, vol*0.5);     // G4
+      osc('square', 494, 0.08, 0.09, vol*0.5);   // B4
+      osc('square', 587, 0.16, 0.09, vol*0.5);   // D5
+      osc('square', 784, 0.24, 0.14, vol*0.6);   // G5
+    },
+
+    // Game start — triumphant little fanfare
+    start() {
+      if (muted) return;
+      osc('square', 523, 0, 0.1, vol*0.6);       // C5
+      osc('square', 659, 0.1, 0.1, vol*0.6);     // E5
+      osc('square', 784, 0.2, 0.1, vol*0.6);     // G5
+      osc('square', 1047, 0.3, 0.2, vol*0.7);    // C6
+      // harmony
+      osc('square', 392, 0.3, 0.2, vol*0.3);     // G4
+    },
+
+    // Death — somber descending tone + low rumble
+    death() {
+      if (muted) return;
+      osc('triangle', 392, 0, 0.3, vol*0.6);     // G4
+      osc('triangle', 330, 0.25, 0.3, vol*0.5);   // E4
+      osc('triangle', 262, 0.5, 0.3, vol*0.5);    // C4
+      osc('triangle', 196, 0.75, 0.6, vol*0.5);   // G3
+      // low rumble
+      osc('sawtooth', 65, 0.7, 0.8, vol*0.15);
+      noise(0.8, 0.5, vol*0.08);
+    },
+
+    // Stat up — quick happy chirp
+    statUp() {
+      if (muted) return;
+      osc('square', 660, 0, 0.06, vol*0.4);
+      osc('square', 880, 0.06, 0.1, vol*0.5);
+    },
+
+    // Error — buzzy low tone
+    error() {
+      if (muted) return;
+      osc('square', 150, 0, 0.12, vol*0.5);
+      osc('square', 120, 0.1, 0.15, vol*0.4);
+    },
+
+    // Play again — hopeful restart jingle
+    playAgain() {
+      if (muted) return;
+      osc('square', 262, 0, 0.1, vol*0.5);       // C4
+      osc('square', 330, 0.12, 0.1, vol*0.5);     // E4
+      osc('square', 392, 0.24, 0.1, vol*0.5);     // G4
+      osc('square', 523, 0.36, 0.18, vol*0.6);    // C5
+      osc('square', 659, 0.5, 0.25, vol*0.5);     // E5
+    },
+  };
+})();
+
 function newRunId() {
   if (window.crypto?.randomUUID) return crypto.randomUUID();
   return Date.now()+'-'+Math.random().toString(16).slice(2);
@@ -1455,7 +1595,7 @@ const el = {
   onboarding:$('onboarding-overlay'), startBtn:$('start-btn'),
   gender:$('gender'), city:$('city'), desire:$('desire'),
   statOverlay:$('stat-overlay'), statBars:$('stat-bars'),
-  statClose:$('stat-close'), statToggle:$('stat-toggle'),
+  statClose:$('stat-close'), statToggle:$('stat-toggle'), sndToggle:$('snd-toggle'),
   loading:$('loading-overlay'), loadingText:$('loading-text'),
   transition:$('transition-overlay'), transitionText:$('transition-text'),
   errorBar:$('error-bar'),
@@ -1477,6 +1617,7 @@ function setError(msg) {
 function setButtonsDisabled(d){el.btnA.disabled=d;el.btnB.disabled=d;}
 
 function playTransition(text) {
+  SFX.transition();
   return new Promise(resolve => {
     el.transition.style.display='flex'; el.transitionText.textContent=text; el.transition.style.opacity='0';
     let op=0;
@@ -1490,7 +1631,7 @@ async function typewriter(text,speed=18){
   const cursor=el.dialogueBox.querySelector('.cursor-blink');
   el.dialogueText.textContent='';
   if(cursor)cursor.style.display='inline-block';
-  for(let i=0;i<text.length;i++){el.dialogueText.textContent+=text[i];el.dialogueBox.scrollTop=el.dialogueBox.scrollHeight;await sleep(speed);}
+  for(let i=0;i<text.length;i++){el.dialogueText.textContent+=text[i];if(i%3===0)SFX.tick();el.dialogueBox.scrollTop=el.dialogueBox.scrollHeight;await sleep(speed);}
   setButtonsDisabled(false);
 }
 function showTextInstant(text){el.dialogueText.textContent=text;el.dialogueBox.scrollTop=el.dialogueBox.scrollHeight;}
@@ -1750,12 +1891,14 @@ async function startGame(){
     renderRelations(state.relationships);renderStatBars();updateScene();saveSession();
     logEvent('game_start',{city:state.city,desire:state.desire,gender:state.gender});
     setLoading(false);
+    SFX.start();
     await typewriter(currentScenario.text,18);
   }catch(e){setLoading(false);lastFailedAction=startGame;setError(`Start failed: ${e.message} — <a onclick="retryLast()">RETRY</a>`);setButtonsDisabled(true);}
 }
 
 async function choose(index){
   if(locked||!currentScenario)return;
+  SFX.confirm();
   setError('');setLoading(true);setButtonsDisabled(true);
   try{
     const chosen=currentScenario.options[index];
@@ -1767,6 +1910,7 @@ async function choose(index){
       setLoading(false);
       const cause=(currentScenario.death_cause_hint||'complications').trim()||'complications';
       await playTransition(`AGE ${state.age}`);
+      SFX.death();
       let endingText=`You die at ${state.age}. Cause: ${cause}.`;
       try{const ep=await apiEpilogue(cause);endingText=ep?.text||endingText;}catch{}
       el.hudAge.textContent=`RIP AGE ${state.age}`;
@@ -1774,6 +1918,7 @@ async function choose(index){
       updateScene(true);clearSave();
       logEvent('death',{age:state.age,cause});
       await typewriter(endingText,22);
+      SFX.playAgain();
       el.playAgain.style.display='block';
       return;
     }
@@ -1784,12 +1929,13 @@ async function choose(index){
     setLoading(false);
     const diff=state.age-prevAge;
     await playTransition(diff>0?`${diff} YEARS LATER...`:`AGE ${state.age}`);
+    SFX.newTurn();
     el.hudAge.textContent=`AGE ${state.age}`;
     el.btnA.textContent=currentScenario.options[0].label;
     el.btnB.textContent=currentScenario.options[1].label;
     renderRelations(state.relationships);renderStatBars();updateScene();saveSession();
     await typewriter(currentScenario.text,18);
-  }catch(e){setLoading(false);lastFailedAction=()=>choose(index);setError(`Turn failed: ${e.message} — <a onclick="retryLast()">RETRY</a>`);setButtonsDisabled(false);}
+  }catch(e){SFX.error();setLoading(false);lastFailedAction=()=>choose(index);setError(`Turn failed: ${e.message} — <a onclick="retryLast()">RETRY</a>`);setButtonsDisabled(false);}
 }
 
 window.retryLast=function(){if(lastFailedAction)lastFailedAction();};
@@ -1814,14 +1960,20 @@ window.addEventListener('DOMContentLoaded',()=>{
     scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},
     scene:[LifeScene],pixelArt:true,antialias:false,roundPixels:true,
   });
-  el.startBtn.addEventListener('click',e=>{e.preventDefault();startGame();});
-  el.btnA.addEventListener('click',()=>choose(0));
-  el.btnB.addEventListener('click',()=>choose(1));
+  el.startBtn.addEventListener('click',e=>{e.preventDefault();SFX.click();startGame();});
+  el.btnA.addEventListener('click',()=>{SFX.click();choose(0);});
+  el.btnB.addEventListener('click',()=>{SFX.click();choose(1);});
   el.playAgain.querySelector('button').addEventListener('click',resetGame);
-  el.statToggle.addEventListener('click',()=>{renderStatBars();el.statOverlay.style.display='flex';});
-  el.statClose.addEventListener('click',()=>{el.statOverlay.style.display='none';});
+  el.statToggle.addEventListener('click',()=>{SFX.click();renderStatBars();el.statOverlay.style.display='flex';});
+  el.statClose.addEventListener('click',()=>{SFX.click();el.statOverlay.style.display='none';});
+  el.sndToggle.addEventListener('click',()=>{
+    const m=SFX.toggle();
+    el.sndToggle.textContent=m?'♪ OFF':'♪ ON';
+    if(!m)SFX.click();
+  });
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape')el.statOverlay.style.display='none';
+    if(e.key==='m'||e.key==='M'){el.sndToggle.click();return;}
     if(el.onboarding.style.display!=='none')return;
     if(e.key==='1'||e.key==='a')el.btnA.click();
     if(e.key==='2'||e.key==='b')el.btnB.click();
