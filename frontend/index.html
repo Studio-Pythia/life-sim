@@ -37,7 +37,7 @@
 
     #game-wrapper::after {
       content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 999;
-      background: repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
+      background: repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px);
       mix-blend-mode: multiply;
     }
 
@@ -243,6 +243,7 @@ const API_BASE = "https://life-sim-production.up.railway.app";
 
 // Game Boy 4 shades
 const GB = { BLACK: 0x0f380f, DARK: 0x306230, LIGHT: 0x8bac0f, WHITE: 0x9bbc0f };
+const P = 2; // base pixel unit
 
 function getSceneType(age, stats) {
   if (age <= 5)  return 'nursery';
@@ -257,7 +258,7 @@ function getSceneType(age, stats) {
   return 'home';
 }
 
-// ── Pixel helpers ──
+// ── Drawing helpers ──
 function fillDither(gfx, x, y, w, h, c1, c2, pat) {
   const ps = 2;
   gfx.fillStyle(c1, 1); gfx.fillRect(x, y, w, h);
@@ -276,13 +277,7 @@ function fillDither(gfx, x, y, w, h, c1, c2, pat) {
   }
 }
 
-function px(gfx, x, y, s, shade) {
-  gfx.fillStyle(shade, 1);
-  gfx.fillRect(x, y, s, s);
-}
-
-// ── Sprite map renderer ──
-// chars: 0=BLACK 1=DARK 2=LIGHT 3=WHITE .=transparent
+// Sprite map renderer: 0=BLACK 1=DARK 2=LIGHT 3=WHITE .=transparent
 function drawSprite(gfx, map, ox, oy, s) {
   const rows = map.trim().split('\n');
   for (let r = 0; r < rows.length; r++) {
@@ -297,8 +292,21 @@ function drawSprite(gfx, map, ox, oy, s) {
   }
 }
 
+// Draw a filled rounded rect (pixel art approximation)
+function pxRect(g, x, y, w, h, color) {
+  g.fillStyle(color, 1);
+  g.fillRect(x, y, w, h);
+}
+function pxBorder(g, x, y, w, h, color, t=2) {
+  g.fillStyle(color, 1);
+  g.fillRect(x, y, w, t);       // top
+  g.fillRect(x, y+h-t, w, t);   // bottom
+  g.fillRect(x, y, t, h);       // left
+  g.fillRect(x+w-t, y, t, h);   // right
+}
+
 // ═══════════════════════════════════════════════
-// PHASER SCENE — Game Boy rooms
+// PHASER SCENE — Detailed Game Boy rooms
 // ═══════════════════════════════════════════════
 class LifeScene extends Phaser.Scene {
   constructor() { super({ key: 'LifeScene' }); }
@@ -306,72 +314,100 @@ class LifeScene extends Phaser.Scene {
   create() {
     this.particles = [];
     this.renderScene('nursery', {money:.5,stability:.5,status:.5,health:.5,stress:.5,freedom:.5,exposure:.5}, 0);
-    this.time.addEvent({ delay: 100, callback: () => this.tickParticles(), loop: true });
+    this.time.addEvent({ delay: 80, callback: () => this.tickParticles(), loop: true });
   }
 
   renderScene(type, stats, age) {
     this.children.removeAll(true); this.tweens.killAll(); this.particles = [];
     const W = this.cameras.main.width, H = this.cameras.main.height;
-    const P = 2;
-    const floorY = Math.floor(H * 0.62);
+    const floorY = Math.floor(H * 0.64);
     const wallTop = Math.floor(H * 0.06);
+    const ceilH = 12;
 
     // ── BG ──
     const bg = this.add.graphics();
-    bg.fillStyle(GB.WHITE, 1); bg.fillRect(0, 0, W, H);
+    pxRect(bg, 0, 0, W, H, GB.WHITE);
 
-    // ── Ceiling ──
+    // ── Ceiling with molding ──
     const ceil = this.add.graphics();
-    ceil.fillStyle(GB.DARK, 1); ceil.fillRect(0, wallTop, W, 8);
-    ceil.fillStyle(GB.BLACK, 1);
-    ceil.fillRect(0, wallTop, W, P);
-    ceil.fillRect(0, wallTop+6, W, P);
+    pxRect(ceil, 0, wallTop, W, ceilH, GB.DARK);
+    pxRect(ceil, 0, wallTop, W, P, GB.BLACK);
+    pxRect(ceil, 0, wallTop+ceilH-P, W, P, GB.BLACK);
+    // Crown molding detail
+    pxRect(ceil, 0, wallTop+ceilH, W, 4, GB.LIGHT);
+    pxRect(ceil, 0, wallTop+ceilH+4, W, P, GB.DARK);
 
-    // ── Wall ──
+    // ── Wall with texture ──
     const wall = this.add.graphics();
-    wall.fillStyle(GB.WHITE, 1);
-    wall.fillRect(0, wallTop+8, W, floorY-wallTop-8);
-    // Wallpaper lines
+    pxRect(wall, 0, wallTop+ceilH+5, W, floorY-wallTop-ceilH-5, GB.WHITE);
+    // Subtle wallpaper stripe pattern
     wall.fillStyle(GB.LIGHT, 1);
-    for (let y = wallTop+8; y < floorY; y += 14) wall.fillRect(0, y, W, P);
-    // Baseboard
-    wall.fillStyle(GB.DARK, 1); wall.fillRect(0, floorY-8, W, 8);
-    wall.fillStyle(GB.BLACK, 1); wall.fillRect(0, floorY-8, W, P);
-    wall.fillRect(0, floorY-P, W, P);
+    for (let y = wallTop+ceilH+5; y < floorY-12; y += 16) {
+      wall.fillRect(0, y, W, P);
+    }
+    // Wainscoting / lower wall panel
+    const panelTop = floorY - 52;
+    pxRect(wall, 0, panelTop, W, P, GB.DARK);
+    // Panel rectangles
+    wall.fillStyle(GB.LIGHT, 0.5);
+    for (let x = 20; x < W-40; x += 120) {
+      pxBorder(wall, x, panelTop+6, 100, 34, GB.LIGHT, P);
+    }
+
+    // ── Baseboard ──
+    pxRect(wall, 0, floorY-12, W, 12, GB.DARK);
+    pxRect(wall, 0, floorY-12, W, P, GB.BLACK);
+    pxRect(wall, 0, floorY-6, W, P, GB.BLACK);
+    pxRect(wall, 0, floorY-P, W, P, GB.BLACK);
 
     // ── Floor ──
     const fl = this.add.graphics();
     if (type === 'hospital') {
+      pxRect(fl, 0, floorY, W, H-floorY, GB.WHITE);
       fillDither(fl, 0, floorY, W, H-floorY, GB.WHITE, GB.LIGHT, 'check');
-      fl.fillStyle(GB.DARK, 1);
-      for (let x = 0; x < W; x += 32) fl.fillRect(x, floorY, P, H-floorY);
-      for (let y = floorY; y < H; y += 32) fl.fillRect(0, y, W, P);
+      fl.fillStyle(GB.DARK, 0.6);
+      for (let x = 0; x < W; x += 48) fl.fillRect(x, floorY, P, H-floorY);
+      for (let y = floorY; y < H; y += 48) fl.fillRect(0, y, W, P);
     } else if (type === 'school') {
-      fl.fillStyle(GB.LIGHT, 1); fl.fillRect(0, floorY, W, H-floorY);
+      pxRect(fl, 0, floorY, W, H-floorY, GB.LIGHT);
       fl.fillStyle(GB.DARK, 1);
-      for (let y = floorY; y < H; y += 10) fl.fillRect(0, y, W, P);
-      for (let y = floorY; y < H; y += 10) {
-        const off = (Math.floor((y-floorY)/10)%2)*40;
-        for (let x = off; x < W; x += 80) fl.fillRect(x, y, P, 10);
+      for (let y = floorY; y < H; y += 14) fl.fillRect(0, y, W, P);
+      for (let y = floorY; y < H; y += 14) {
+        const off = (Math.floor((y-floorY)/14)%2)*60;
+        for (let x = off; x < W; x += 120) fl.fillRect(x, y, P, 14);
       }
     } else {
-      fillDither(fl, 0, floorY, W, H-floorY, GB.LIGHT, GB.DARK, 'check');
+      // Wood plank floor
+      pxRect(fl, 0, floorY, W, H-floorY, GB.LIGHT);
+      fl.fillStyle(GB.DARK, 1);
+      for (let y = floorY; y < H; y += 18) {
+        fl.fillRect(0, y, W, P);
+        const off = (Math.floor((y-floorY)/18)%2)*80;
+        for (let x = off; x < W; x += 160) fl.fillRect(x, y, P, 18);
+      }
+      // Grain details
+      fl.fillStyle(GB.DARK, 0.3);
+      for (let y = floorY+4; y < H; y += 18) {
+        for (let x = 10; x < W; x += 40) {
+          fl.fillRect(x, y, 12, P);
+        }
+      }
     }
-    fl.fillStyle(GB.BLACK, 1); fl.fillRect(0, floorY, W, P);
+    pxRect(fl, 0, floorY, W, P, GB.BLACK);
 
     // ── Window ──
-    this.drawWindow(Math.floor(W*0.08), wallTop+16, 60, 74, age, type);
+    this.drawWindow(Math.floor(W*0.06), wallTop+22, 100, 130, age, type);
 
     // ── Room contents ──
     this.drawRoom(type, stats, age, W, H, floorY);
 
-    // ── Character sprite ──
-    this.drawChar(age, stats, Math.floor(W*0.42), floorY);
+    // ── Character ──
+    this.drawChar(age, stats, Math.floor(W*0.38), floorY);
 
     // ── Particles ──
     this.spawnParticles(type, stats, W, H, floorY);
 
-    // ── Death dither ──
+    // ── Death overlay ──
     if (type === 'death') {
       const d = this.add.graphics();
       fillDither(d, 0, 0, W, H, GB.BLACK, GB.DARK, 'check');
@@ -379,622 +415,953 @@ class LifeScene extends Phaser.Scene {
     }
   }
 
-  // ── Window with detail ──
+  // ══════════════════════════════════════
+  // Window — large, detailed
+  // ══════════════════════════════════════
   drawWindow(x, y, w, h, age, type) {
-    const gfx = this.add.graphics(), P = 2;
+    const g = this.add.graphics();
+    // Outer frame shadow
+    pxRect(g, x-2, y-2, w+4, h+4, GB.BLACK);
     // Frame
-    gfx.fillStyle(GB.BLACK, 1); gfx.fillRect(x-4, y-4, w+8, h+8);
-    gfx.fillStyle(GB.DARK, 1); gfx.fillRect(x-2, y-2, w+4, h+4);
+    pxRect(g, x, y, w, h, GB.DARK);
+    // Inner frame
+    pxRect(g, x+6, y+6, w-12, h-12, GB.BLACK);
 
     const night = ((age*7+10)%24) < 6 || ((age*7+10)%24) > 20;
-    gfx.fillStyle(night ? GB.BLACK : GB.WHITE, 1);
-    gfx.fillRect(x, y, w, h);
+    pxRect(g, x+8, y+8, w-16, h-16, night ? GB.BLACK : GB.WHITE);
 
     if (night) {
-      gfx.fillStyle(GB.WHITE, 1);
-      [[6,6],[22,14],[44,10],[14,36],[38,48],[50,28],[10,56],[32,64]].forEach(([sx,sy]) => {
-        if (sx < w && sy < h) gfx.fillRect(x+sx, y+sy, P, P);
+      g.fillStyle(GB.LIGHT, 1);
+      // Stars
+      const stars = [[12,10],[28,18],[52,8],[70,22],[18,50],[44,38],[66,56],[30,72],[56,68],[14,84],[48,90],[72,44],[38,16],[62,82]];
+      stars.forEach(([sx,sy]) => {
+        if (sx < w-20 && sy < h-20) g.fillRect(x+8+sx, y+8+sy, P, P);
       });
-      // Crescent moon
-      gfx.fillStyle(GB.LIGHT, 1);
-      gfx.fillRect(x+w-18, y+6, 10, 10);
-      gfx.fillStyle(GB.BLACK, 1);
-      gfx.fillRect(x+w-14, y+6, 8, 8);
+      // Moon - larger crescent
+      g.fillStyle(GB.LIGHT, 1);
+      for (let dy = 0; dy < 18; dy++) {
+        for (let dx = 0; dx < 18; dx++) {
+          const cx = dx-9, cy = dy-9;
+          if (cx*cx+cy*cy <= 81 && !((cx-4)*(cx-4)+cy*cy <= 49)) {
+            g.fillRect(x+w-34+dx*P, y+14+dy*P, P, P);
+          }
+        }
+      }
     } else {
-      gfx.fillStyle(GB.LIGHT, 1);
+      // Clouds
+      g.fillStyle(GB.LIGHT, 1);
       // Cloud 1
-      gfx.fillRect(x+8, y+14, 18, 4); gfx.fillRect(x+12, y+10, 10, 4);
+      g.fillRect(x+16, y+24, 30, 8); g.fillRect(x+20, y+18, 22, 6);
+      g.fillRect(x+28, y+14, 10, 4);
       // Cloud 2
-      gfx.fillRect(x+34, y+22, 14, 4); gfx.fillRect(x+36, y+18, 8, 4);
+      g.fillRect(x+54, y+44, 24, 6); g.fillRect(x+58, y+38, 14, 6);
+      // Sun hints
+      g.fillStyle(GB.WHITE, 1);
+      g.fillRect(x+w-36, y+16, 16, 16);
+      g.fillStyle(GB.LIGHT, 1);
+      g.fillRect(x+w-40, y+22, 4, 4);
+      g.fillRect(x+w-18, y+22, 4, 4);
+      g.fillRect(x+w-30, y+12, 4, 4);
+      g.fillRect(x+w-30, y+34, 4, 4);
     }
 
-    // Crossbars
-    gfx.fillStyle(GB.DARK, 1);
-    gfx.fillRect(x+Math.floor(w/2)-1, y, 3, h);
-    gfx.fillRect(x, y+Math.floor(h/2)-1, w, 3);
+    // Crossbars - thick
+    g.fillStyle(GB.DARK, 1);
+    g.fillRect(x+8+Math.floor((w-16)/2)-3, y+6, 6, h-12);
+    g.fillRect(x+6, y+8+Math.floor((h-16)/2)-3, w-12, 6);
+    // Crossbar inner
+    g.fillStyle(GB.BLACK, 1);
+    g.fillRect(x+8+Math.floor((w-16)/2)-1, y+8, 2, h-16);
+    g.fillRect(x+8, y+8+Math.floor((h-16)/2)-1, w-16, 2);
 
     // Sill
-    gfx.fillStyle(GB.DARK, 1); gfx.fillRect(x-6, y+h+2, w+12, 6);
-    gfx.fillStyle(GB.BLACK, 1); gfx.fillRect(x-6, y+h+2, w+12, P);
+    pxRect(g, x-8, y+h+2, w+16, 10, GB.DARK);
+    pxRect(g, x-8, y+h+2, w+16, P, GB.BLACK);
+    pxRect(g, x-8, y+h+10, w+16, P, GB.BLACK);
+    // Sill bracket details
+    pxRect(g, x+6, y+h+12, 6, 8, GB.DARK);
+    pxRect(g, x+w-12, y+h+12, 6, 8, GB.DARK);
 
-    // Window light on floor
+    // Light beam on floor
     if (!night && type !== 'hospital' && type !== 'death') {
       const gl = this.add.graphics();
-      fillDither(gl, x-6, y+h+50, w+20, 36, GB.WHITE, GB.LIGHT, 'sparse');
-      gl.setAlpha(0.35);
+      // Angled light trapezoid
+      gl.fillStyle(GB.WHITE, 1);
+      gl.beginPath();
+      gl.moveTo(x-4, y+h+60);
+      gl.lineTo(x+w+20, y+h+60);
+      gl.lineTo(x+w+40, y+h+120);
+      gl.lineTo(x-20, y+h+120);
+      gl.closePath();
+      gl.fill();
+      fillDither(gl, x-20, y+h+60, w+60, 60, GB.WHITE, GB.LIGHT, 'sparse');
+      gl.setAlpha(0.3);
     }
+
+    // Curtains
+    const cg = this.add.graphics();
+    // Left curtain
+    pxRect(cg, x+8, y+6, 14, h-10, GB.DARK);
+    cg.fillStyle(GB.BLACK, 1);
+    for (let cy = y+10; cy < y+h-8; cy += 8) {
+      cg.fillRect(x+8, cy, P, 4);
+      cg.fillRect(x+14, cy+4, P, 4);
+    }
+    // Right curtain
+    pxRect(cg, x+w-22, y+6, 14, h-10, GB.DARK);
+    cg.fillStyle(GB.BLACK, 1);
+    for (let cy = y+10; cy < y+h-8; cy += 8) {
+      cg.fillRect(x+w-10, cy, P, 4);
+      cg.fillRect(x+w-16, cy+4, P, 4);
+    }
+    // Curtain rod
+    pxRect(cg, x-4, y+2, w+8, 4, GB.BLACK);
+    // Rod finials
+    pxRect(cg, x-8, y, 6, 8, GB.BLACK);
+    pxRect(cg, x+w+2, y, 6, 8, GB.BLACK);
   }
 
   // ══════════════════════════════════════
-  // Room furniture — high detail, GB style
+  // Room furniture — LARGE detailed GB art
   // ══════════════════════════════════════
   drawRoom(type, stats, age, W, H, floorY) {
-    const g = this.add.graphics(), P = 2;
+    const g = this.add.graphics();
 
     switch(type) {
       case 'nursery': {
-        // ── Crib with detailed slats ──
-        const cx = Math.floor(W*0.60), cw = 90, ch = 64;
-        // Outer frame
-        g.fillStyle(GB.BLACK, 1); g.fillRect(cx-2, floorY-ch-2, cw+4, ch+2);
-        g.fillStyle(GB.DARK, 1); g.fillRect(cx, floorY-ch, cw, ch);
-        g.fillStyle(GB.LIGHT, 1); g.fillRect(cx+4, floorY-ch+4, cw-8, ch-8);
+        // ── LARGE Crib ──
+        const cx = Math.floor(W*0.52), cw = 200, ch = 140;
+        const cTop = floorY - ch;
+        // Crib body
+        pxRect(g, cx, cTop, cw, ch, GB.LIGHT);
+        pxBorder(g, cx, cTop, cw, ch, GB.BLACK, 3);
+        // Inner rail panels
+        pxRect(g, cx+3, cTop+3, cw-6, ch-3, GB.LIGHT);
+        // Slats - detailed with shadow
+        g.fillStyle(GB.DARK, 1);
+        for (let i = 0; i < 14; i++) {
+          const sx = cx + 12 + i * 13;
+          g.fillRect(sx, cTop+6, 4, ch-44);
+          g.fillStyle(GB.BLACK, 1);
+          g.fillRect(sx+4, cTop+8, P, ch-48);
+          g.fillStyle(GB.DARK, 1);
+        }
+        // Top rail
+        pxRect(g, cx, cTop, cw, 8, GB.DARK);
+        pxRect(g, cx, cTop, cw, P, GB.BLACK);
+        pxRect(g, cx, cTop+6, cw, P, GB.BLACK);
+        // Bottom rail
+        pxRect(g, cx+3, floorY-40, cw-6, 4, GB.BLACK);
         // Mattress
-        g.fillStyle(GB.WHITE, 1); g.fillRect(cx+6, floorY-22, cw-12, 18);
-        g.fillStyle(GB.LIGHT, 1); g.fillRect(cx+8, floorY-20, cw-16, 14);
+        pxRect(g, cx+10, floorY-38, cw-20, 30, GB.WHITE);
+        pxBorder(g, cx+10, floorY-38, cw-20, 30, GB.DARK, P);
+        // Mattress quilting
+        g.fillStyle(GB.LIGHT, 1);
+        for (let mx = cx+20; mx < cx+cw-24; mx += 24) {
+          g.fillRect(mx, floorY-30, P, 14);
+        }
         // Pillow
-        g.fillStyle(GB.WHITE, 1); g.fillRect(cx+8, floorY-30, 22, 10);
-        // Slats
-        g.fillStyle(GB.DARK, 1);
-        for (let i = 0; i < 10; i++) g.fillRect(cx+8+i*8, floorY-ch+2, P, ch-24);
-        // Corner posts
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(cx, floorY-ch-8, 6, ch+8);
-        g.fillRect(cx+cw-6, floorY-ch-8, 6, ch+8);
-        // Post tops (knobs)
-        g.fillStyle(GB.DARK, 1);
-        g.fillRect(cx-1, floorY-ch-12, 8, 6);
-        g.fillRect(cx+cw-7, floorY-ch-12, 8, 6);
-        // Legs
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(cx+2, floorY-4, 4, 4);
-        g.fillRect(cx+cw-6, floorY-4, 4, 4);
+        pxRect(g, cx+16, floorY-46, 44, 12, GB.WHITE);
+        pxBorder(g, cx+16, floorY-46, 44, 12, GB.LIGHT, P);
+        // Corner posts with knobs
+        pxRect(g, cx-6, cTop-20, 14, ch+20, GB.BLACK);
+        pxRect(g, cx+cw-8, cTop-20, 14, ch+20, GB.BLACK);
+        pxRect(g, cx-4, cTop-18, 10, 6, GB.DARK); // left knob
+        pxRect(g, cx+cw-6, cTop-18, 10, 6, GB.DARK); // right knob
+        // Round tops
+        pxRect(g, cx-2, cTop-24, 6, 6, GB.DARK);
+        pxRect(g, cx+cw-4, cTop-24, 6, 6, GB.DARK);
+        // Crib legs
+        pxRect(g, cx+4, floorY-6, 8, 6, GB.BLACK);
+        pxRect(g, cx+cw-12, floorY-6, 8, 6, GB.BLACK);
 
-        // ── Teddy bear ──
-        const tx = Math.floor(W*0.28), ty = floorY;
+        // ── Large Teddy Bear ──
         drawSprite(g, `
-..011110..
-.01111110.
-.01300310.
-.01100110.
-.01011010.
-.01111110.
-..011110..
-.00111100.
-0011111100
-0011111100
-.00111100.
-..01..10..
-..00..00..`, tx, ty-40, P);
+.....0000.....
+....001100....
+...00011000...
+..0001001000..
+.00013001300.
+.00010001000.
+.00010101000.
+..0001110000.
+...00000000..
+....011110...
+...01111110..
+..0111111110.
+..0111111110.
+.01111111110.
+.01111111110.
+..0111111110.
+..0111001110.
+...011..110..
+...011..110..
+...000..000..`, Math.floor(W*0.25), floorY-62, 3);
 
-        // ── Mobile hanging from ceiling ──
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(cx+40, floorY-ch-60, P, 48);
-        // Star shapes on mobile
-        g.fillStyle(GB.DARK, 1);
-        g.fillRect(cx+34, floorY-ch-18, 6, 6);
-        g.fillRect(cx+46, floorY-ch-22, 6, 6);
-        g.fillRect(cx+38, floorY-ch-26, 6, 6);
-        // Strings
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(cx+36, floorY-ch-12, P, 6);
-        g.fillRect(cx+48, floorY-ch-16, P, 6);
+        // ── Mobile from ceiling (larger) ──
+        const mobX = cx + cw/2;
+        pxRect(g, mobX-1, 0, P, cTop-16, GB.BLACK);
+        // Crossbar
+        pxRect(g, mobX-40, cTop-22, 80, 4, GB.DARK);
+        pxRect(g, mobX-40, cTop-22, 80, P, GB.BLACK);
+        // Hanging shapes
+        const shapes = [
+          {dx:-32, dy:-8, type:'star'},
+          {dx:0, dy:-14, type:'moon'},
+          {dx:28, dy:-6, type:'star'}
+        ];
+        shapes.forEach(s => {
+          pxRect(g, mobX+s.dx, cTop+s.dy, P, Math.abs(s.dy)+6, GB.BLACK);
+          if (s.type === 'star') {
+            drawSprite(g, `
+..00..
+.0110.
+011110
+.0110.
+..00..`, mobX+s.dx-5, cTop+s.dy+Math.abs(s.dy)+6, P);
+          } else {
+            drawSprite(g, `
+.000.
+01110
+01110
+.010.
+.000.`, mobX+s.dx-4, cTop+s.dy+Math.abs(s.dy)+6, P);
+          }
+        });
 
-        // Rug
-        const rug = this.add.graphics();
-        fillDither(rug, Math.floor(W*0.26), floorY+8, 130, 26, GB.LIGHT, GB.DARK, 'horiz');
+        // ── Rug ──
+        const rugX = Math.floor(W*0.22), rugW = 200, rugH = 32;
+        fillDither(g, rugX, floorY+6, rugW, rugH, GB.DARK, GB.LIGHT, 'horiz');
+        pxBorder(g, rugX, floorY+6, rugW, rugH, GB.BLACK, P);
+        // Rug fringe
         g.fillStyle(GB.DARK, 1);
-        g.fillRect(Math.floor(W*0.26), floorY+8, 130, P);
-        g.fillRect(Math.floor(W*0.26), floorY+32, 130, P);
+        for (let fx = rugX+4; fx < rugX+rugW-4; fx += 6) {
+          g.fillRect(fx, floorY+6+rugH, 2, 6);
+        }
         break;
       }
 
       case 'school': {
-        // ── Blackboard — detailed ──
-        const bx = Math.floor(W*0.28), by = H*0.12, bw = 180, bh = 90;
-        g.fillStyle(GB.BLACK, 1); g.fillRect(bx-6, by-6, bw+12, bh+12);
-        g.fillStyle(GB.DARK, 1); g.fillRect(bx-3, by-3, bw+6, bh+6);
-        g.fillStyle(GB.BLACK, 1); g.fillRect(bx, by, bw, bh);
-        // Chalk writing — "2+2=4"
-        g.fillStyle(GB.LIGHT, 1);
+        // ── LARGE Blackboard ──
+        const bx = Math.floor(W*0.22), by = H*0.10, bw = 320, bh = 160;
+        // Frame
+        pxRect(g, bx-8, by-8, bw+16, bh+16, GB.DARK);
+        pxBorder(g, bx-8, by-8, bw+16, bh+16, GB.BLACK, 3);
+        // Inner frame bevel
+        pxRect(g, bx-3, by-3, bw+6, bh+6, GB.BLACK);
+        // Board surface
+        pxRect(g, bx, by, bw, bh, GB.BLACK);
+        // Chalk text: "HELLO CLASS" in large pixel font
         drawSprite(g, `
-33.33..33
-.3.3.3..3
-.3.33..33
-.3...3.3.
-.3.33..33`, bx+12, by+12, P);
-        // More chalk lines
-        g.fillRect(bx+12, by+38, 60, P);
-        g.fillRect(bx+12, by+46, 44, P);
-        g.fillRect(bx+12, by+54, 72, P);
-        g.fillRect(bx+12, by+62, 36, P);
+0.0..0000.0....0.....000.
+0.0..0....0....0....0...0
+000..000..0....0....0...0
+0.0..0....0....0....0...0
+0.0..0000.0000.0000..000.`, bx+20, by+16, 3);
+        // Math underneath
+        drawSprite(g, `
+.33..33..33..33.333.
+33...33.33..33..33..
+.33..3333...33..333.
+..33.33.33..33....33
+33...33..33.3333.333`, bx+20, by+64, 2);
+        // Chalk lines (notes)
+        g.fillStyle(GB.LIGHT, 0.7);
+        g.fillRect(bx+20, by+100, 120, P);
+        g.fillRect(bx+20, by+110, 80, P);
+        g.fillRect(bx+20, by+120, 140, P);
+        g.fillRect(bx+20, by+130, 60, P);
+        g.fillRect(bx+180, by+100, 100, P);
+        g.fillRect(bx+180, by+110, 70, P);
         // Chalk tray
-        g.fillStyle(GB.DARK, 1); g.fillRect(bx-3, by+bh+4, bw+6, 6);
-        g.fillStyle(GB.LIGHT, 1); g.fillRect(bx+10, by+bh+5, 8, 3);
-        g.fillRect(bx+24, by+bh+5, 12, 3);
+        pxRect(g, bx-8, by+bh+8, bw+16, 10, GB.DARK);
+        pxRect(g, bx-8, by+bh+8, bw+16, P, GB.BLACK);
+        // Chalk pieces
+        pxRect(g, bx+20, by+bh+10, 16, 4, GB.LIGHT);
+        pxRect(g, bx+44, by+bh+10, 12, 4, GB.WHITE);
+        pxRect(g, bx+64, by+bh+10, 8, 4, GB.LIGHT);
+        // Eraser
+        pxRect(g, bx+bw-40, by+bh+9, 24, 6, GB.DARK);
+        pxRect(g, bx+bw-40, by+bh+9, 24, P, GB.BLACK);
 
-        // ── Student desk ──
-        const dx = Math.floor(W*0.58), dy = floorY;
-        g.fillStyle(GB.DARK, 1); g.fillRect(dx, dy-38, 100, 6);
-        g.fillStyle(GB.BLACK, 1); g.fillRect(dx, dy-38, 100, P);
-        g.fillRect(dx+6, dy-32, 4, 32);
-        g.fillRect(dx+90, dy-32, 4, 32);
-        // Desk panel
-        g.fillStyle(GB.DARK, 1); g.fillRect(dx+8, dy-32, 80, 14);
+        // ── Student desk + chair (larger) ──
+        const dx = Math.floor(W*0.62), dy = floorY;
+        // Desk top
+        pxRect(g, dx, dy-68, 180, 10, GB.DARK);
+        pxRect(g, dx, dy-68, 180, P, GB.BLACK);
+        pxRect(g, dx, dy-60, 180, P, GB.BLACK);
+        // Desk front panel
+        pxRect(g, dx+8, dy-58, 164, 24, GB.DARK);
+        pxBorder(g, dx+8, dy-58, 164, 24, GB.BLACK, P);
+        // Desk legs
+        pxRect(g, dx+8, dy-34, 6, 34, GB.BLACK);
+        pxRect(g, dx+166, dy-34, 6, 34, GB.BLACK);
+        // Cross brace
+        pxRect(g, dx+14, dy-18, 152, P, GB.BLACK);
 
-        // Book stack
-        g.fillStyle(GB.BLACK, 1); g.fillRect(dx+24, dy-54, 28, 16);
-        g.fillStyle(GB.DARK, 1); g.fillRect(dx+26, dy-52, 24, 4);
-        g.fillRect(dx+26, dy-46, 24, 4);
-        g.fillRect(dx+26, dy-40, 24, 4);
+        // Books on desk
+        pxRect(g, dx+20, dy-88, 50, 20, GB.BLACK);
+        pxRect(g, dx+22, dy-86, 14, 16, GB.DARK);
+        pxRect(g, dx+38, dy-88, 14, 18, GB.LIGHT);
+        pxRect(g, dx+54, dy-84, 14, 14, GB.DARK);
+        // Book spines
         g.fillStyle(GB.LIGHT, 1);
-        g.fillRect(dx+48, dy-52, P, 14);
+        g.fillRect(dx+36, dy-86, P, 16);
+        g.fillRect(dx+52, dy-86, P, 14);
 
         // Pencil
-        g.fillStyle(GB.BLACK, 1); g.fillRect(dx+60, dy-46, 20, P);
-        g.fillStyle(GB.DARK, 1); g.fillRect(dx+58, dy-48, 4, 4);
+        pxRect(g, dx+100, dy-76, 40, 3, GB.BLACK);
+        pxRect(g, dx+100, dy-76, 6, 3, GB.DARK); // eraser end
+        pxRect(g, dx+138, dy-75, 4, P, GB.LIGHT); // tip
 
-        // ── Chair ──
-        g.fillStyle(GB.DARK, 1); g.fillRect(dx+26, dy-24, 44, 4);
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(dx+28, dy-20, 4, 20);
-        g.fillRect(dx+64, dy-20, 4, 20);
-        g.fillRect(dx+62, dy-56, 6, 36);
-        g.fillRect(dx+56, dy-56, 16, 4);
+        // Apple on desk
+        drawSprite(g, `
+..0..
+.010.
+01110
+11111
+11111
+01110
+.111.`, dx+150, dy-88, 2);
 
-        // ── Clock on wall ──
-        const clx = Math.floor(W*0.78), cly = H*0.14;
-        g.fillStyle(GB.BLACK, 1); g.fillRect(clx, cly, 24, 24);
-        g.fillStyle(GB.LIGHT, 1); g.fillRect(clx+2, cly+2, 20, 20);
+        // Chair
+        pxRect(g, dx+50, dy-42, 70, 6, GB.DARK); // seat
+        pxRect(g, dx+50, dy-42, 70, P, GB.BLACK);
+        pxRect(g, dx+54, dy-36, 6, 36, GB.BLACK); // front legs
+        pxRect(g, dx+110, dy-36, 6, 36, GB.BLACK);
+        // Chair back
+        pxRect(g, dx+108, dy-90, 8, 54, GB.BLACK);
+        pxRect(g, dx+96, dy-92, 24, 6, GB.DARK);
+        pxRect(g, dx+96, dy-92, 24, P, GB.BLACK);
+        pxRect(g, dx+96, dy-74, 24, 4, GB.DARK);
+
+        // ── Wall clock (larger) ──
+        const clx = Math.floor(W*0.88), cly = H*0.10;
+        pxRect(g, clx, cly, 48, 48, GB.DARK);
+        pxBorder(g, clx, cly, 48, 48, GB.BLACK, 3);
+        pxRect(g, clx+6, cly+6, 36, 36, GB.LIGHT);
+        pxBorder(g, clx+6, cly+6, 36, 36, GB.BLACK, P);
+        // Hour markers
         g.fillStyle(GB.BLACK, 1);
-        g.fillRect(clx+11, cly+4, P, 9);   // minute hand
-        g.fillRect(clx+11, cly+11, 6, P);   // hour hand
-        g.fillRect(clx+11, cly+11, P, P);   // center dot
+        [[23,8],[36,12],[40,23],[36,34],[23,38],[10,34],[6,23],[10,12]].forEach(([mx,my])=>{
+          g.fillRect(clx+mx, cly+my, 3, 3);
+        });
+        // Hands
+        g.fillRect(clx+23, cly+10, P, 14); // minute
+        g.fillRect(clx+23, cly+23, 10, P); // hour
+        g.fillRect(clx+23, cly+23, 3, 3); // center
         break;
       }
 
       case 'bedroom': {
-        // ── Bed ──
-        const bx = Math.floor(W*0.56), by = floorY;
-        g.fillStyle(GB.BLACK, 1); g.fillRect(bx-2, by-42, 122, 42);
-        g.fillStyle(GB.DARK, 1); g.fillRect(bx, by-40, 118, 38);
-        // Blanket with dither
-        fillDither(g, bx+4, by-32, 110, 24, GB.LIGHT, GB.DARK, 'horiz');
+        // ── LARGE Bed ──
+        const bx = Math.floor(W*0.50), by = floorY;
+        const bedW = 240, bedH = 80;
+        // Bed frame
+        pxRect(g, bx, by-bedH, bedW, bedH, GB.DARK);
+        pxBorder(g, bx, by-bedH, bedW, bedH, GB.BLACK, 3);
+        // Mattress
+        pxRect(g, bx+6, by-bedH+6, bedW-12, bedH-12, GB.WHITE);
+        // Blanket
+        fillDither(g, bx+6, by-bedH+20, bedW-12, bedH-28, GB.LIGHT, GB.DARK, 'horiz');
+        pxRect(g, bx+6, by-bedH+20, bedW-12, 4, GB.DARK);
         // Pillow
-        g.fillStyle(GB.WHITE, 1); g.fillRect(bx+6, by-38, 26, 10);
-        g.fillStyle(GB.LIGHT, 1); g.fillRect(bx+8, by-36, 22, 6);
-        // Headboard (tall, wooden)
-        g.fillStyle(GB.BLACK, 1); g.fillRect(bx-2, by-80, 10, 80);
-        g.fillRect(bx-2, by-80, 50, 8);
-        g.fillStyle(GB.DARK, 1); g.fillRect(bx, by-78, 6, 38);
+        pxRect(g, bx+12, by-bedH+8, 60, 18, GB.WHITE);
+        pxBorder(g, bx+12, by-bedH+8, 60, 18, GB.LIGHT, P);
+        pxRect(g, bx+14, by-bedH+12, 4, 10, GB.LIGHT); // pillow crease
+        // Second pillow
+        pxRect(g, bx+78, by-bedH+10, 50, 16, GB.WHITE);
+        pxBorder(g, bx+78, by-bedH+10, 50, 16, GB.LIGHT, P);
+        // Headboard - tall, detailed
+        pxRect(g, bx-6, by-bedH-60, bedW+12, 64, GB.DARK);
+        pxBorder(g, bx-6, by-bedH-60, bedW+12, 64, GB.BLACK, 3);
+        // Headboard panels
+        pxBorder(g, bx+10, by-bedH-52, 60, 44, GB.BLACK, P);
+        pxBorder(g, bx+80, by-bedH-52, 80, 44, GB.BLACK, P);
+        pxBorder(g, bx+170, by-bedH-52, 60, 44, GB.BLACK, P);
+        // Headboard top detail
+        pxRect(g, bx-6, by-bedH-64, bedW+12, 6, GB.BLACK);
         // Legs
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(bx+2, by-4, 4, 4);
-        g.fillRect(bx+114, by-4, 4, 4);
+        pxRect(g, bx+4, by-6, 8, 6, GB.BLACK);
+        pxRect(g, bx+bedW-12, by-6, 8, 6, GB.BLACK);
 
-        // ── Poster ──
-        const px = Math.floor(W*0.20), py = H*0.14;
-        g.fillStyle(GB.BLACK, 1); g.fillRect(px-2, py-2, 48, 58);
-        g.fillStyle(GB.DARK, 1); g.fillRect(px, py, 44, 54);
-        // Band poster art — skull/star
+        // ── Large Poster ──
+        const px2 = Math.floor(W*0.16), py2 = H*0.11;
+        pxRect(g, px2-3, py2-3, 86, 110, GB.BLACK);
+        pxRect(g, px2, py2, 80, 104, GB.DARK);
+        // Poster art - skull/band
         drawSprite(g, `
-...0000...
-..010010..
-..001100..
-..011110..
-.01001010.
-..010010..
-...0110...
-..000000..
-.0.0..0.0.
-...0..0...`, px+12, py+6, P);
-        // Text
+....0000....
+...001100...
+..00100100..
+.0010000100.
+.0011001100.
+..00111100..
+...011110...
+..01111110..
+.0111111110.
+0111111111110
+.0110110110.
+..010.010..
+...01.10...`, px2+14, py2+8, 4);
+        // Band name
         g.fillStyle(GB.LIGHT, 1);
-        g.fillRect(px+8, py+36, 28, P);
-        g.fillRect(px+12, py+42, 20, P);
-        g.fillRect(px+10, py+48, 24, P);
+        g.fillRect(px2+10, py2+72, 60, 3);
+        g.fillRect(px2+18, py2+80, 44, 3);
+        g.fillRect(px2+14, py2+88, 52, 3);
 
-        // ── Desk + lamp ──
-        const dx = Math.floor(W*0.16), dy = floorY;
-        g.fillStyle(GB.DARK, 1); g.fillRect(dx, dy-34, 66, 4);
-        g.fillStyle(GB.BLACK, 1); g.fillRect(dx, dy-34, 66, P);
-        g.fillRect(dx+4, dy-30, 4, 30);
-        g.fillRect(dx+58, dy-30, 4, 30);
-        // Lamp
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(dx+48, dy-58, 16, 10); // shade
-        g.fillRect(dx+48, dy-60, P, 4);   // shade top left
-        g.fillRect(dx+62, dy-60, P, 4);   // shade top right
-        g.fillRect(dx+54, dy-48, 4, 14);  // stem
-        g.fillRect(dx+50, dy-36, 12, P);  // base
-        // Lamp glow
+        // ── Desk with lamp ──
+        const dx = Math.floor(W*0.14), dy = floorY;
+        // Desk
+        pxRect(g, dx, dy-60, 110, 8, GB.DARK);
+        pxRect(g, dx, dy-60, 110, P, GB.BLACK);
+        pxRect(g, dx, dy-54, 110, P, GB.BLACK);
+        pxRect(g, dx+6, dy-52, 6, 52, GB.BLACK);
+        pxRect(g, dx+98, dy-52, 6, 52, GB.BLACK);
+        // Drawer
+        pxRect(g, dx+60, dy-52, 42, 26, GB.DARK);
+        pxBorder(g, dx+60, dy-52, 42, 26, GB.BLACK, P);
+        pxRect(g, dx+76, dy-42, 10, P, GB.LIGHT); // handle
+
+        // Lamp (taller)
+        pxRect(g, dx+20, dy-100, 30, 16, GB.BLACK); // shade
+        g.fillStyle(GB.DARK, 1);
+        g.fillRect(dx+22, dy-98, 26, 12); // shade inner
+        pxRect(g, dx+33, dy-84, 4, 22, GB.BLACK); // stem
+        pxRect(g, dx+26, dy-64, 18, 4, GB.BLACK); // base
+        // Glow
         const gl = this.add.graphics();
-        fillDither(gl, dx+34, dy-66, 44, 34, GB.WHITE, GB.LIGHT, 'sparse');
-        gl.setAlpha(0.25);
+        fillDither(gl, dx+4, dy-108, 60, 50, GB.WHITE, GB.LIGHT, 'sparse');
+        gl.setAlpha(0.2);
 
         // ── Shoes by bed ──
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(bx+30, by-6, 10, 6);
-        g.fillRect(bx+44, by-6, 10, 6);
+        drawSprite(g, `
+.000..000.
+01110.1110
+01110.1110
+.000..000.`, bx+40, by-10, 2);
         break;
       }
 
       case 'apartment': {
         const nice = stats.money > 0.5;
-        // ── Couch ──
-        const sx = Math.floor(W*0.52), sy = floorY;
-        g.fillStyle(GB.BLACK, 1); g.fillRect(sx-2, sy-54, 134, 54);
+        // ── LARGE Couch ──
+        const sx = Math.floor(W*0.46), sy = floorY;
+        const couchW = 260, couchH = 110;
         // Back
-        g.fillStyle(GB.DARK, 1); g.fillRect(sx, sy-52, 130, 20);
+        pxRect(g, sx, sy-couchH, couchW, 36, GB.DARK);
+        pxBorder(g, sx, sy-couchH, couchW, 36, GB.BLACK, 3);
         // Seat
-        g.fillStyle(nice?GB.DARK:GB.BLACK, 1); g.fillRect(sx, sy-32, 130, 20);
+        pxRect(g, sx+3, sy-couchH+36, couchW-6, 50, nice?GB.DARK:GB.BLACK);
         if (nice) {
-          g.fillStyle(GB.LIGHT, 1);
-          g.fillRect(sx+6, sy-28, 38, 12);
-          g.fillRect(sx+48, sy-28, 38, 12);
-          g.fillRect(sx+90, sy-28, 34, 12);
+          // Cushions
+          pxRect(g, sx+10, sy-couchH+40, 74, 40, GB.LIGHT);
+          pxBorder(g, sx+10, sy-couchH+40, 74, 40, GB.DARK, P);
+          pxRect(g, sx+90, sy-couchH+40, 74, 40, GB.LIGHT);
+          pxBorder(g, sx+90, sy-couchH+40, 74, 40, GB.DARK, P);
+          pxRect(g, sx+170, sy-couchH+40, 80, 40, GB.LIGHT);
+          pxBorder(g, sx+170, sy-couchH+40, 80, 40, GB.DARK, P);
+          // Cushion creases
+          g.fillStyle(GB.DARK, 1);
+          [sx+46, sx+126, sx+210].forEach(cx => {
+            g.fillRect(cx, sy-couchH+48, P, 24);
+          });
         }
         // Armrests
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(sx-8, sy-44, 10, 32);
-        g.fillRect(sx+128, sy-44, 10, 32);
+        pxRect(g, sx-14, sy-couchH+10, 18, couchH-18, GB.BLACK);
+        pxRect(g, sx+couchW-4, sy-couchH+10, 18, couchH-18, GB.BLACK);
+        pxRect(g, sx-12, sy-couchH+12, 14, 10, GB.DARK);
+        pxRect(g, sx+couchW-2, sy-couchH+12, 14, 10, GB.DARK);
+        // Front panel
+        pxRect(g, sx+3, sy-24, couchW-6, 16, GB.BLACK);
         // Legs
-        g.fillRect(sx+4, sy-12, 4, 12);
-        g.fillRect(sx+122, sy-12, 4, 12);
+        pxRect(g, sx+8, sy-8, 8, 8, GB.BLACK);
+        pxRect(g, sx+couchW-16, sy-8, 8, 8, GB.BLACK);
 
-        // ── Coffee table ──
-        const tx = Math.floor(W*0.34);
-        g.fillStyle(GB.DARK, 1); g.fillRect(tx, sy-20, 60, 4);
-        g.fillStyle(GB.BLACK, 1); g.fillRect(tx, sy-20, 60, P);
-        g.fillRect(tx+4, sy-16, 4, 16);
-        g.fillRect(tx+52, sy-16, 4, 16);
-        // Mug
-        g.fillStyle(GB.BLACK, 1); g.fillRect(tx+24, sy-30, 10, 10);
-        g.fillStyle(GB.LIGHT, 1); g.fillRect(tx+26, sy-28, 6, 6);
+        // ── Coffee table (larger) ──
+        const tx = Math.floor(W*0.26);
+        pxRect(g, tx, sy-42, 120, 8, GB.DARK);
+        pxRect(g, tx, sy-42, 120, P, GB.BLACK);
+        pxRect(g, tx, sy-36, 120, P, GB.BLACK);
+        pxRect(g, tx+8, sy-34, 6, 34, GB.BLACK);
+        pxRect(g, tx+106, sy-34, 6, 34, GB.BLACK);
+        // Shelf under
+        pxRect(g, tx+12, sy-18, 96, 4, GB.DARK);
+        // Mug (larger)
+        pxRect(g, tx+40, sy-60, 18, 18, GB.BLACK);
+        pxRect(g, tx+42, sy-58, 14, 14, GB.LIGHT);
+        pxRect(g, tx+58, sy-56, 6, 10, GB.BLACK); // handle
+        pxRect(g, tx+60, sy-54, 2, 6, GB.LIGHT);
         // Steam
-        g.fillStyle(GB.DARK, 1);
-        g.fillRect(tx+28, sy-36, P, 4);
-        g.fillRect(tx+32, sy-38, P, 4);
+        g.fillStyle(GB.DARK, 0.6);
+        g.fillRect(tx+46, sy-68, P, 6);
+        g.fillRect(tx+50, sy-72, P, 8);
+        g.fillRect(tx+54, sy-66, P, 4);
+        // Magazine
+        pxRect(g, tx+70, sy-52, 30, 8, GB.BLACK);
+        pxRect(g, tx+72, sy-50, 26, 4, GB.LIGHT);
 
-        // ── Wall art ──
-        const fx = Math.floor(W*0.60), fy = H*0.14;
-        g.fillStyle(GB.BLACK, 1); g.fillRect(fx-2, fy-2, 52, 38);
-        g.fillStyle(GB.LIGHT, 1); g.fillRect(fx, fy, 48, 34);
-        // Landscape
-        g.fillStyle(GB.DARK, 1);
-        g.fillRect(fx+4, fy+20, 40, 10);
-        g.fillRect(fx+14, fy+8, 8, 14);
-        g.fillRect(fx+8, fy+4, 20, 8);
+        // ── Wall art (larger) ──
+        const fx = Math.floor(W*0.56), fy = H*0.10;
+        pxRect(g, fx-4, fy-4, 94, 68, GB.BLACK);
+        pxRect(g, fx, fy, 86, 60, GB.LIGHT);
+        // Landscape painting
+        pxRect(g, fx+4, fy+34, 78, 22, GB.DARK);
+        // Mountains
+        g.fillStyle(GB.BLACK, 1);
+        for (let i = 0; i < 40; i++) {
+          const mh = Math.sin(i*0.15)*18 + Math.sin(i*0.3)*8;
+          g.fillRect(fx+4+i*2, fy+34-Math.max(0,mh), 2, Math.max(0,mh));
+        }
+        // Sun in painting
+        pxRect(g, fx+62, fy+8, 12, 12, GB.WHITE);
 
         if (nice) {
-          // ── Potted plant ──
-          const plx = Math.floor(W*0.86);
-          drawSprite(g, `
-....00....
-...0110...
-..011110..
-.01111110.
-0112112110
-.01111110.
-..011110..
-...1001...
-...1001...
-..000000..
-..011110..
-..011110..
-..011110..
-...0000...`, plx, floorY-44, P);
+          // ── Floor lamp ──
+          const lx = Math.floor(W*0.84);
+          pxRect(g, lx+2, sy-180, P, 130, GB.BLACK); // pole
+          // Shade
+          pxRect(g, lx-12, sy-186, 30, 20, GB.DARK);
+          pxBorder(g, lx-12, sy-186, 30, 20, GB.BLACK, P);
+          pxRect(g, lx-10, sy-184, 26, 16, GB.LIGHT);
+          // Base
+          pxRect(g, lx-10, sy-50, 24, 6, GB.BLACK);
+          pxRect(g, lx-6, sy-44, 16, 44, GB.BLACK);
+          // Glow
+          const lg = this.add.graphics();
+          fillDither(lg, lx-20, sy-186, 46, 50, GB.WHITE, GB.LIGHT, 'sparse');
+          lg.setAlpha(0.15);
         }
 
         // ── Rug ──
-        fillDither(g, Math.floor(W*0.32), floorY+6, 140, 24, GB.LIGHT, GB.DARK, 'horiz');
+        fillDither(g, Math.floor(W*0.24), floorY+6, 240, 36, GB.DARK, GB.LIGHT, 'horiz');
+        pxBorder(g, Math.floor(W*0.24), floorY+6, 240, 36, GB.BLACK, P);
         break;
       }
 
       case 'office': {
-        // ── Desk ──
-        const dx = Math.floor(W*0.44), dy = floorY;
-        g.fillStyle(GB.DARK, 1); g.fillRect(dx, dy-38, 150, 6);
-        g.fillStyle(GB.BLACK, 1); g.fillRect(dx, dy-38, 150, P);
-        g.fillRect(dx+4, dy-32, 4, 32);
-        g.fillRect(dx+142, dy-32, 4, 32);
-        // Drawer block
-        g.fillStyle(GB.DARK, 1); g.fillRect(dx+90, dy-32, 52, 24);
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(dx+90, dy-32, 52, P);
-        g.fillRect(dx+90, dy-20, 52, P);
-        g.fillStyle(GB.LIGHT, 1);
-        g.fillRect(dx+112, dy-28, 8, P);
-        g.fillRect(dx+112, dy-16, 8, P);
+        // ── LARGE Desk ──
+        const dx = Math.floor(W*0.36), dy = floorY;
+        const deskW = 280, deskH = 12;
+        pxRect(g, dx, dy-76, deskW, deskH, GB.DARK);
+        pxRect(g, dx, dy-76, deskW, P, GB.BLACK);
+        pxRect(g, dx, dy-66, deskW, P, GB.BLACK);
+        // Desk legs
+        pxRect(g, dx+8, dy-64, 8, 64, GB.BLACK);
+        pxRect(g, dx+deskW-16, dy-64, 8, 64, GB.BLACK);
+        // Drawer unit
+        pxRect(g, dx+deskW-90, dy-64, 80, 50, GB.DARK);
+        pxBorder(g, dx+deskW-90, dy-64, 80, 50, GB.BLACK, P);
+        // Individual drawers
+        pxBorder(g, dx+deskW-86, dy-60, 72, 14, GB.BLACK, P);
+        pxBorder(g, dx+deskW-86, dy-44, 72, 14, GB.BLACK, P);
+        pxRect(g, dx+deskW-56, dy-54, 16, P, GB.LIGHT); // handle
+        pxRect(g, dx+deskW-56, dy-38, 16, P, GB.LIGHT); // handle
+        // Cross brace
+        pxRect(g, dx+16, dy-24, deskW-112, P, GB.BLACK);
 
-        // ── Monitor ──
-        g.fillStyle(GB.BLACK, 1); g.fillRect(dx+40, dy-76, 64, 38);
-        g.fillStyle(GB.LIGHT, 1); g.fillRect(dx+44, dy-72, 56, 30);
-        // Screen text
+        // ── Monitor (large) ──
+        const mx = dx + 60;
+        pxRect(g, mx, dy-152, 120, 76, GB.BLACK);
+        pxBorder(g, mx, dy-152, 120, 76, GB.BLACK, 4);
+        pxRect(g, mx+6, dy-148, 108, 64, GB.LIGHT);
+        // Screen content - code
         g.fillStyle(GB.DARK, 1);
-        for (let i = 0; i < 5; i++) {
-          const lw = 20 + (i*7)%24;
-          g.fillRect(dx+48, dy-68+i*6, lw, P);
-        }
-        // Stand
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(dx+64, dy-40, 18, 4);
-        g.fillRect(dx+58, dy-38, 30, P);
+        const lines = [40,60,30,50,70,20,55,35,45,65];
+        lines.forEach((lw,i) => {
+          g.fillRect(mx+12, dy-142+i*6, lw, P);
+        });
+        // Blinking cursor
+        pxRect(g, mx+12+lines[lines.length-1]+4, dy-142+(lines.length-1)*6, 4, 4, GB.BLACK);
+        // Monitor stand
+        pxRect(g, mx+44, dy-76, 32, 10, GB.BLACK);
+        pxRect(g, mx+36, dy-68, 48, 4, GB.DARK);
+        pxRect(g, mx+36, dy-68, 48, P, GB.BLACK);
 
         // ── Keyboard ──
-        g.fillStyle(GB.BLACK, 1); g.fillRect(dx+50, dy-44, 46, 6);
-        g.fillStyle(GB.DARK, 1);
-        g.fillRect(dx+52, dy-42, 42, P);
-
-        // ── Chair ──
-        g.fillStyle(GB.DARK, 1); g.fillRect(dx+56, dy-26, 34, 4);
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(dx+84, dy-58, 8, 36);
-        g.fillRect(dx+78, dy-60, 18, 4);
-        g.fillRect(dx+72, dy-22, P, 22);
-        g.fillRect(dx+64, dy-4, 8, 4);
-        g.fillRect(dx+78, dy-4, 8, 4);
-
-        // ── Filing cabinet ──
-        const fc = Math.floor(W*0.84);
-        g.fillStyle(GB.DARK, 1); g.fillRect(fc, dy-84, 44, 84);
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(fc, dy-84, 44, P); g.fillRect(fc, dy-84, P, 84); g.fillRect(fc+42, dy-84, P, 84);
-        g.fillRect(fc, dy-56, 44, P); g.fillRect(fc, dy-28, 44, P);
+        pxRect(g, mx-10, dy-84, 80, 10, GB.BLACK);
+        pxRect(g, mx-8, dy-82, 76, 6, GB.DARK);
+        // Key rows
         g.fillStyle(GB.LIGHT, 1);
-        g.fillRect(fc+18, dy-74, 8, P);
-        g.fillRect(fc+18, dy-46, 8, P);
-        g.fillRect(fc+18, dy-18, 8, P);
+        for (let row = 0; row < 2; row++) {
+          for (let k = 0; k < 12; k++) {
+            g.fillRect(mx-6+k*6, dy-80+row*3, 4, P);
+          }
+        }
 
-        // ── Clock ──
-        const clx = Math.floor(W*0.22), cly = H*0.16;
-        g.fillStyle(GB.BLACK, 1); g.fillRect(clx, cly, 26, 26);
-        g.fillStyle(GB.LIGHT, 1); g.fillRect(clx+2, cly+2, 22, 22);
+        // ── Mouse ──
+        pxRect(g, mx+78, dy-82, 12, 8, GB.BLACK);
+        pxRect(g, mx+80, dy-80, 8, 4, GB.DARK);
+
+        // ── Office chair (large, detailed) ──
+        const chx = dx + 100;
+        // Seat
+        pxRect(g, chx, dy-50, 80, 10, GB.DARK);
+        pxBorder(g, chx, dy-50, 80, 10, GB.BLACK, P);
+        // Back
+        pxRect(g, chx+60, dy-110, 16, 64, GB.BLACK);
+        pxRect(g, chx+56, dy-114, 24, 8, GB.DARK);
+        pxBorder(g, chx+56, dy-114, 24, 8, GB.BLACK, P);
+        pxRect(g, chx+56, dy-82, 24, 6, GB.DARK);
+        // Center pole
+        pxRect(g, chx+36, dy-40, 6, 28, GB.BLACK);
+        // Wheels
+        pxRect(g, chx+22, dy-12, 34, 6, GB.BLACK);
+        pxRect(g, chx+20, dy-6, 8, 6, GB.BLACK);
+        pxRect(g, chx+50, dy-6, 8, 6, GB.BLACK);
+
+        // ── Filing cabinet (large) ──
+        const fc = Math.floor(W*0.82);
+        pxRect(g, fc, dy-160, 70, 160, GB.DARK);
+        pxBorder(g, fc, dy-160, 70, 160, GB.BLACK, 3);
+        // 3 drawers
+        for (let d = 0; d < 3; d++) {
+          const ddy = dy-156+d*50;
+          pxBorder(g, fc+8, ddy, 54, 42, GB.BLACK, P);
+          pxRect(g, fc+28, ddy+18, 14, 3, GB.LIGHT); // handle
+        }
+        // Label slots
+        g.fillStyle(GB.LIGHT, 1);
+        for (let d = 0; d < 3; d++) {
+          g.fillRect(fc+30, dy-156+d*50+6, 10, 8);
+        }
+
+        // ── Wall clock ──
+        const clx = Math.floor(W*0.18), cly = H*0.12;
+        pxRect(g, clx, cly, 48, 48, GB.DARK);
+        pxBorder(g, clx, cly, 48, 48, GB.BLACK, 3);
+        pxRect(g, clx+6, cly+6, 36, 36, GB.LIGHT);
+        pxBorder(g, clx+6, cly+6, 36, 36, GB.BLACK, P);
         g.fillStyle(GB.BLACK, 1);
-        g.fillRect(clx+12, cly+4, P, 10);
-        g.fillRect(clx+12, cly+12, 7, P);
-        g.fillRect(clx+12, cly+12, P, P);
+        g.fillRect(clx+23, cly+10, P, 14);
+        g.fillRect(clx+23, cly+23, 10, P);
+        g.fillRect(clx+23, cly+23, 3, 3);
         break;
       }
 
       case 'home': {
         const nice = stats.money > 0.5;
-        // ── Sofa ──
-        const sx = Math.floor(W*0.50), sy = floorY;
-        g.fillStyle(GB.BLACK, 1); g.fillRect(sx-2, sy-58, 140, 58);
-        g.fillStyle(GB.DARK, 1);
-        g.fillRect(sx, sy-56, 136, 22);
-        g.fillRect(sx, sy-34, 136, 22);
-        g.fillStyle(GB.LIGHT, 1);
-        g.fillRect(sx+6, sy-30, 40, 14);
-        g.fillRect(sx+50, sy-30, 40, 14);
-        g.fillRect(sx+94, sy-30, 36, 14);
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(sx-8, sy-46, 10, 34);
-        g.fillRect(sx+134, sy-46, 10, 34);
-        g.fillRect(sx+4, sy-12, 4, 12);
-        g.fillRect(sx+128, sy-12, 4, 12);
+        // ── LARGE Sofa ──
+        const sx = Math.floor(W*0.42), sy = floorY;
+        const sofaW = 280, sofaH = 120;
+        // Back
+        pxRect(g, sx, sy-sofaH, sofaW, 40, GB.DARK);
+        pxBorder(g, sx, sy-sofaH, sofaW, 40, GB.BLACK, 3);
+        // Seat area
+        pxRect(g, sx+3, sy-sofaH+40, sofaW-6, 54, GB.DARK);
+        // Cushions
+        pxRect(g, sx+10, sy-sofaH+44, 82, 44, GB.LIGHT);
+        pxBorder(g, sx+10, sy-sofaH+44, 82, 44, GB.DARK, P);
+        pxRect(g, sx+98, sy-sofaH+44, 82, 44, GB.LIGHT);
+        pxBorder(g, sx+98, sy-sofaH+44, 82, 44, GB.DARK, P);
+        pxRect(g, sx+186, sy-sofaH+44, 82, 44, GB.LIGHT);
+        pxBorder(g, sx+186, sy-sofaH+44, 82, 44, GB.DARK, P);
+        // Throw pillows
+        drawSprite(g, `
+.0000.
+011110
+111111
+111111
+011110
+.0000.`, sx+16, sy-sofaH+16, 3);
+        drawSprite(g, `
+.1111.
+100001
+100001
+.1111.`, sx+sofaW-60, sy-sofaH+20, 3);
+        // Armrests
+        pxRect(g, sx-16, sy-sofaH+14, 20, sofaH-22, GB.BLACK);
+        pxRect(g, sx+sofaW-4, sy-sofaH+14, 20, sofaH-22, GB.BLACK);
+        pxRect(g, sx-14, sy-sofaH+16, 16, 14, GB.DARK);
+        pxRect(g, sx+sofaW-2, sy-sofaH+16, 16, 14, GB.DARK);
+        // Front
+        pxRect(g, sx+3, sy-26, sofaW-6, 18, GB.BLACK);
+        // Legs
+        pxRect(g, sx+10, sy-8, 10, 8, GB.BLACK);
+        pxRect(g, sx+sofaW-20, sy-8, 10, 8, GB.BLACK);
 
         // ── Coffee table ──
-        const tx = Math.floor(W*0.32);
-        g.fillStyle(GB.DARK, 1); g.fillRect(tx, sy-20, 64, 4);
-        g.fillStyle(GB.BLACK, 1); g.fillRect(tx, sy-20, 64, P);
-        g.fillRect(tx+4, sy-16, 4, 16);
-        g.fillRect(tx+56, sy-16, 4, 16);
-        // Magazine
-        g.fillStyle(GB.BLACK, 1); g.fillRect(tx+20, sy-28, 18, 8);
-        g.fillStyle(GB.LIGHT, 1); g.fillRect(tx+22, sy-26, 14, 4);
+        const tx = Math.floor(W*0.26);
+        pxRect(g, tx, sy-44, 120, 8, GB.DARK);
+        pxRect(g, tx, sy-44, 120, P, GB.BLACK);
+        pxRect(g, tx, sy-38, 120, P, GB.BLACK);
+        pxRect(g, tx+8, sy-36, 6, 36, GB.BLACK);
+        pxRect(g, tx+106, sy-36, 6, 36, GB.BLACK);
+        // Books on table
+        pxRect(g, tx+20, sy-58, 36, 14, GB.BLACK);
+        pxRect(g, tx+22, sy-56, 10, 10, GB.DARK);
+        pxRect(g, tx+34, sy-58, 10, 12, GB.LIGHT);
+        pxRect(g, tx+46, sy-54, 8, 8, GB.DARK);
+        // Remote
+        pxRect(g, tx+70, sy-52, 20, 8, GB.BLACK);
+        pxRect(g, tx+72, sy-50, 4, P, GB.LIGHT);
+        pxRect(g, tx+78, sy-50, 4, P, GB.LIGHT);
 
-        // ── Bookshelf ──
-        const bx = Math.floor(W*0.82), bs = floorY-H*0.12;
-        g.fillStyle(GB.DARK, 1); g.fillRect(bx, H*0.12, 54, bs);
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(bx, H*0.12, 54, P); g.fillRect(bx, H*0.12, P, bs); g.fillRect(bx+52, H*0.12, P, bs);
-        for (let s = 0; s < 4; s++) {
-          const shY = H*0.12+10+s*Math.floor(bs/4);
-          g.fillStyle(GB.BLACK, 1); g.fillRect(bx, shY, 54, 3);
-          for (let b = 0; b < 5; b++) {
-            const bw = 6+(b%3)*2, bh = 14+(b%2)*6;
-            g.fillStyle(b%2===0?GB.BLACK:GB.DARK, 1);
-            g.fillRect(bx+4+b*10, shY-bh, bw, bh);
-            g.fillStyle(GB.LIGHT, 1);
-            g.fillRect(bx+5+b*10, shY-bh+2, P, bh-4);
+        // ── LARGE Bookshelf ──
+        const bkx = Math.floor(W*0.80), bky = H*0.08;
+        const bkW = 90, bkH = floorY - bky;
+        pxRect(g, bkx, bky, bkW, bkH, GB.DARK);
+        pxBorder(g, bkx, bky, bkW, bkH, GB.BLACK, 3);
+        // 5 shelves with books
+        for (let s = 0; s < 5; s++) {
+          const shY = bky + 8 + s * Math.floor((bkH-16)/5);
+          pxRect(g, bkx+3, shY, bkW-6, 4, GB.BLACK);
+          // Books - varied sizes
+          for (let b = 0; b < 6; b++) {
+            const bw = 6 + (b%3)*3;
+            const bh = 20 + (b*7)%16;
+            const bc = b%3===0?GB.BLACK:b%3===1?GB.DARK:GB.LIGHT;
+            pxRect(g, bkx+6+b*13, shY-bh, bw, bh, bc);
+            // Spine detail
+            g.fillStyle(bc===GB.BLACK?GB.DARK:GB.BLACK, 1);
+            g.fillRect(bkx+7+b*13, shY-bh+2, P, bh-4);
           }
         }
 
         if (nice) {
-          // ── Family photo ──
-          const fx = Math.floor(W*0.26), fy = H*0.16;
-          g.fillStyle(GB.BLACK, 1); g.fillRect(fx-2, fy-2, 44, 36);
-          g.fillStyle(GB.LIGHT, 1); g.fillRect(fx, fy, 40, 32);
+          // ── Family photo (larger) ──
+          const fpx = Math.floor(W*0.20), fpy = H*0.12;
+          pxRect(g, fpx-4, fpy-4, 80, 64, GB.BLACK);
+          pxRect(g, fpx, fpy, 72, 56, GB.LIGHT);
+          // Family portrait
           drawSprite(g, `
-..00..00..
-..01..01..
-.0110.110.
-..01..01..`, fx+8, fy+6, P);
+..00.....00..
+..01.....01..
+.0110...0110.
+.0100...0010.
+..01.....10..
+..011...110..
+..0111.1110..
+...01...10...
+...01...10...
+..01.0.0.10..
+..00.000.00..
+.....010.....
+.....010.....
+.....000.....`, fpx+16, fpy+6, 3);
         }
 
-        // Rug
-        fillDither(g, Math.floor(W*0.30), floorY+6, 150, 26, GB.LIGHT, GB.DARK, 'horiz');
+        // ── Rug ──
+        fillDither(g, Math.floor(W*0.24), floorY+6, 260, 38, GB.DARK, GB.LIGHT, 'horiz');
+        pxBorder(g, Math.floor(W*0.24), floorY+6, 260, 38, GB.BLACK, P);
+        // Rug pattern
+        g.fillStyle(GB.BLACK, 1);
+        g.fillRect(Math.floor(W*0.24)+8, floorY+14, 244, P);
+        g.fillRect(Math.floor(W*0.24)+8, floorY+36, 244, P);
         break;
       }
 
       case 'hospital': {
-        // ── Bed ──
-        const bx = Math.floor(W*0.32), by = floorY;
-        g.fillStyle(GB.BLACK, 1); g.fillRect(bx-2, by-40, 154, 40);
-        g.fillStyle(GB.DARK, 1); g.fillRect(bx, by-38, 150, 36);
-        g.fillStyle(GB.WHITE, 1); g.fillRect(bx+4, by-32, 142, 24);
-        fillDither(g, bx+34, by-28, 108, 18, GB.LIGHT, GB.DARK, 'horiz');
-        g.fillStyle(GB.WHITE, 1); g.fillRect(bx+8, by-34, 30, 12);
-        g.fillStyle(GB.LIGHT, 1); g.fillRect(bx+10, by-32, 26, 8);
+        // ── LARGE Hospital bed ──
+        const bx = Math.floor(W*0.24), by = floorY;
+        const bedW = 300, bedH = 80;
+        // Frame
+        pxRect(g, bx, by-bedH, bedW, bedH, GB.DARK);
+        pxBorder(g, bx, by-bedH, bedW, bedH, GB.BLACK, 3);
+        // Mattress
+        pxRect(g, bx+8, by-bedH+8, bedW-16, bedH-14, GB.WHITE);
+        // Blanket
+        fillDither(g, bx+60, by-bedH+14, bedW-76, bedH-26, GB.LIGHT, GB.DARK, 'horiz');
+        pxRect(g, bx+60, by-bedH+14, bedW-76, 4, GB.DARK);
+        // Pillow
+        pxRect(g, bx+14, by-bedH+10, 54, 22, GB.WHITE);
+        pxBorder(g, bx+14, by-bedH+10, 54, 22, GB.LIGHT, P);
         // Headboard
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(bx-2, by-66, 10, 66);
-        g.fillRect(bx-2, by-66, 46, 8);
-        // Rails
-        g.fillStyle(GB.DARK, 1);
-        g.fillRect(bx+2, by-56, P, 20);
-        g.fillRect(bx+6, by-56, P, 20);
+        pxRect(g, bx-8, by-bedH-50, 14, bedH+50, GB.BLACK);
+        pxRect(g, bx-8, by-bedH-50, 80, 8, GB.DARK);
+        pxBorder(g, bx-8, by-bedH-50, 80, 8, GB.BLACK, P);
+        // Side rails
+        pxRect(g, bx+4, by-bedH-30, P, 30, GB.BLACK);
+        pxRect(g, bx+10, by-bedH-30, P, 30, GB.BLACK);
+        pxRect(g, bx+4, by-bedH-32, 8, 4, GB.DARK);
         // Wheels
-        g.fillStyle(GB.BLACK, 1);
-        g.fillRect(bx+4, by-4, 6, 4);
-        g.fillRect(bx+140, by-4, 6, 4);
+        const wheels = [bx+8, bx+bedW-16];
+        wheels.forEach(wx => {
+          pxRect(g, wx, by-4, 12, 4, GB.BLACK);
+          // Wheel detail
+          pxRect(g, wx+2, by, 8, 4, GB.DARK);
+        });
 
-        // ── IV Stand ──
-        const ix = Math.floor(W*0.76);
+        // ── IV Stand (tall, detailed) ──
+        const ix = Math.floor(W*0.72);
+        pxRect(g, ix+3, by-240, 4, 240, GB.BLACK);
+        // Crossbar top
+        pxRect(g, ix-12, by-242, 30, 4, GB.BLACK);
+        pxRect(g, ix-12, by-242, 4, 8, GB.BLACK);
+        pxRect(g, ix+14, by-242, 4, 8, GB.BLACK);
+        // IV Bag
+        pxRect(g, ix-6, by-234, 16, 30, GB.DARK);
+        pxBorder(g, ix-6, by-234, 16, 30, GB.BLACK, P);
+        pxRect(g, ix-4, by-232, 12, 26, GB.LIGHT);
+        // Drip line
         g.fillStyle(GB.BLACK, 1);
-        g.fillRect(ix+2, by-130, P, 130);
-        g.fillRect(ix-6, by-130, 16, P);
-        // Bag
-        g.fillStyle(GB.DARK, 1); g.fillRect(ix-2, by-126, 8, 16);
-        g.fillStyle(GB.LIGHT, 1); g.fillRect(ix, by-124, 4, 12);
-        // Line
-        g.fillStyle(GB.DARK, 1);
-        g.fillRect(ix+2, by-110, P, 56);
-        g.fillRect(bx+130, by-56, ix-bx-128, P);
-        // Base
-        g.fillRect(ix-6, by-4, 16, 4);
+        g.fillRect(ix+2, by-204, P, 100);
+        // Drip chamber
+        pxRect(g, ix-1, by-206, 6, 12, GB.BLACK);
+        pxRect(g, ix, by-204, 4, 8, GB.LIGHT);
+        // Base (tripod)
+        pxRect(g, ix-14, by-10, 32, 4, GB.BLACK);
+        pxRect(g, ix-18, by-6, 6, 6, GB.BLACK);
+        pxRect(g, ix+16, by-6, 6, 6, GB.BLACK);
+        pxRect(g, ix+1, by-6, 6, 6, GB.BLACK);
 
-        // ── Heart monitor ──
-        const mx = Math.floor(W*0.82), my = by-100;
-        g.fillStyle(GB.BLACK, 1); g.fillRect(mx, my, 54, 40);
-        g.fillStyle(GB.DARK, 1); g.fillRect(mx+2, my+2, 50, 36);
-        g.fillStyle(GB.BLACK, 1); g.fillRect(mx+4, my+4, 46, 24);
-        // EKG line
+        // ── Heart monitor (large, detailed) ──
+        const hmx = Math.floor(W*0.80), hmy = by-180;
+        pxRect(g, hmx, hmy, 100, 72, GB.BLACK);
+        pxBorder(g, hmx, hmy, 100, 72, GB.BLACK, 4);
+        pxRect(g, hmx+6, hmy+6, 88, 44, GB.DARK);
+        // EKG waveform
+        const ekg = [0,0,0,0,0,-2,-4,-8,14,-6,0,0,0,0,0,0,-2,-4,-8,14,-6,0,0,0,0,0,0,0,0,-2,-4,10,-4,0,0,0,0,0,0,0];
         g.fillStyle(GB.LIGHT, 1);
-        const ekg = [0,0,0,0,0,-8,10,-4,0,0,0,0,0,0,-6,8,-2,0,0,0,0,0];
-        for (let i = 0; i < ekg.length; i++) {
-          g.fillRect(mx+6+i*P, my+16+ekg[i], P, P);
+        for (let i = 0; i < ekg.length-1; i++) {
+          const y1 = hmy+28+ekg[i], y2 = hmy+28+ekg[i+1];
+          g.fillRect(hmx+8+i*2, Math.min(y1,y2), P, Math.abs(y2-y1)+P);
         }
         // Readings
         g.fillStyle(GB.LIGHT, 1);
-        g.fillRect(mx+6, my+30, 16, P);
-        g.fillRect(mx+28, my+30, 10, P);
-        // Monitor table
-        g.fillStyle(GB.DARK, 1);
-        g.fillRect(mx-4, my+40, 62, 4);
-        g.fillRect(mx+2, my+44, 4, by-my-44);
-        g.fillRect(mx+52, my+44, 4, by-my-44);
+        g.fillRect(hmx+10, hmy+54, 24, 3);
+        g.fillRect(hmx+40, hmy+54, 16, 3);
+        g.fillRect(hmx+62, hmy+54, 30, 3);
+        g.fillRect(hmx+10, hmy+62, 18, 3);
+        // Monitor stand
+        pxRect(g, hmx-4, hmy+72, 108, 6, GB.DARK);
+        pxRect(g, hmx-4, hmy+72, 108, P, GB.BLACK);
+        pxRect(g, hmx+6, hmy+78, 6, by-hmy-78, GB.BLACK);
+        pxRect(g, hmx+88, hmy+78, 6, by-hmy-78, GB.BLACK);
 
-        // ── Clipboard at foot of bed ──
-        g.fillStyle(GB.DARK, 1); g.fillRect(bx+140, by-50, 12, 16);
-        g.fillStyle(GB.LIGHT, 1); g.fillRect(bx+142, by-48, 8, 12);
+        // ── Clipboard at foot ──
+        pxRect(g, bx+bedW-8, by-100, 20, 32, GB.DARK);
+        pxBorder(g, bx+bedW-8, by-100, 20, 32, GB.BLACK, P);
+        pxRect(g, bx+bedW-4, by-96, 12, 24, GB.LIGHT);
         g.fillStyle(GB.BLACK, 1);
-        g.fillRect(bx+144, by-44, 4, P);
-        g.fillRect(bx+144, by-40, 4, P);
+        g.fillRect(bx+bedW, by-92, 6, P);
+        g.fillRect(bx+bedW, by-86, 6, P);
+        g.fillRect(bx+bedW, by-80, 4, P);
+        // Clip at top
+        pxRect(g, bx+bedW-4, by-102, 12, 6, GB.BLACK);
         break;
       }
     }
   }
 
   // ══════════════════════════════════════
-  // Character sprites — proper GB proportions
+  // Character sprites — LARGE, detailed
   // ══════════════════════════════════════
   drawChar(age, stats, x, floorY) {
     const gfx = this.add.graphics();
     let map, scale;
 
     if (age <= 3) {
-      scale = 2;
+      // Baby - round, chubby proportions
+      scale = 4;
       map = `
-...0000...
-..000000..
-.00300300.
-.00000000.
-.00011000.
-..000000..
-...0000...
-..111111..
-.11111111.
-.11111111.
-..11..11..
-..00..00..`;
+.....0000.....
+....000000....
+...00000000...
+..0003003000..
+..0003003000..
+..0000000000..
+..0000110000..
+...00000000...
+....000000....
+.....0000.....
+....111111....
+...11111111...
+...11111111...
+...11111111...
+....11..11....
+....00..00....`;
     } else if (age <= 8) {
-      scale = 2;
+      // Child - slightly taller, big head
+      scale = 4;
       map = `
-...1111...
-..111111..
-.11111111.
-.11300311.
-.11000011.
-.11011011.
-..111111..
-...0000...
-..111111..
-.11111111.
-.11111111.
-..11..11..
-..11..11..
-..00..00..`;
+....11111.....
+...1111111....
+..111111111...
+..111111111...
+..110030031...
+..111000011...
+..111011011...
+...11111111...
+....111111....
+.....0000.....
+....111111....
+...11111111...
+..1111111111..
+..1111111111..
+...11....11...
+...11....11...
+...11....11...
+...00....00...`;
     } else if (age <= 14) {
-      scale = 2;
+      // Teen - taller, thinner
+      scale = 4;
       map = `
-...1111...
-..111111..
-.11111111.
-.11300311.
-.11000011.
-.11001011.
-..111111..
-...1111...
-...0000...
-..111111..
-.11111111.
-.11111111.
-.11111111.
-..11..11..
-..11..11..
-..11..11..
-..00..00..`;
+....1111......
+...111111.....
+..11111111....
+..11111111....
+..11003003....
+..11100001....
+..11100101....
+...11111111...
+....111111....
+.....1111.....
+.....0000.....
+....111111....
+...11111111...
+..1111111111..
+..1111111111..
+..1111111111..
+...111..111...
+...111..111...
+...111..111...
+...111..111...
+...000..000...`;
     } else if (age <= 55) {
-      scale = 3;
+      // Adult - broad shoulders, full body
+      scale = 5;
       map = `
-..1111..
-.111111.
-11111111
-11300311
-11000011
-11001011
-.111111.
-..1111..
-..0000..
-.111111.
-11111111
-11111111
-11111111
-.11..11.
-.11..11.
-.00..00.`;
+...11111...
+..1111111..
+.111111111.
+.110030031.
+.111000011.
+.111001011.
+..1111111..
+...11111...
+...00000...
+..1111111..
+.111111111.
+1111111111.
+1111111111.
+.111111111.
+..11...11..
+..11...11..
+..11...11..
+..00...00..`;
     } else {
-      scale = 3;
+      // Elderly - slightly hunched, lighter tones
+      scale = 5;
       map = `
-..2222..
-.222222.
-22222222
-22300322
-22000022
-22001022
-.222222.
-..2222..
-..0000..
-.222222.
-22222222
-22222222
-22222222
-.22..22.
-.22..22.
-.00..00.`;
+...22222...
+..2222222..
+.222222222.
+.220030032.
+.222000022.
+.222001022.
+..2222222..
+...22222...
+...00000...
+..2222222..
+.222222222.
+2222222222.
+2222222222.
+.222222222.
+..22...22..
+..22...22..
+..22...22..
+..00...00..`;
     }
 
     const rows = map.trim().split('\n');
@@ -1005,34 +1372,35 @@ class LifeScene extends Phaser.Scene {
 
     drawSprite(gfx, map, ox, oy, scale);
 
-    // Shadow
+    // Shadow (larger)
     const sh = this.add.graphics();
-    fillDither(sh, ox-2, floorY+2, sprW+4, 6, GB.DARK, GB.LIGHT, 'check');
+    fillDither(sh, ox-4, floorY+2, sprW+8, 10, GB.DARK, GB.LIGHT, 'check');
     sh.setAlpha(0.3);
 
     // Idle bob
     this.tweens.add({
-      targets: gfx, y: -2,
-      duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+      targets: gfx, y: -3,
+      duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
     });
   }
 
   // ── Particles ──
   spawnParticles(type, stats, W, H, floorY) {
     if (type === 'death') return;
-    for (let i = 0; i < 4; i++) {
+    // Dust motes
+    for (let i = 0; i < 5; i++) {
       const p = this.add.graphics();
-      p.fillStyle(GB.DARK, Phaser.Math.FloatBetween(0.2, 0.4));
-      p.fillRect(0, 0, 2, 2);
+      p.fillStyle(GB.DARK, Phaser.Math.FloatBetween(0.15, 0.35));
+      p.fillRect(0, 0, 3, 3);
       p.x = Phaser.Math.Between(0, W);
       p.y = Phaser.Math.Between(floorY*0.3, floorY*0.8);
-      this.particles.push({ gfx:p, vx:Phaser.Math.FloatBetween(-0.15,0.15), vy:Phaser.Math.FloatBetween(0.05,0.15), maxY:floorY-10, wrap:false });
+      this.particles.push({ gfx:p, vx:Phaser.Math.FloatBetween(-0.12,0.12), vy:Phaser.Math.FloatBetween(0.04,0.12), maxY:floorY-10, wrap:false });
     }
     if (stats.stress > 0.7) {
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 12; i++) {
         const r = this.add.graphics();
         r.fillStyle(GB.DARK, 0.5);
-        r.fillRect(0, 0, 1, 4);
+        r.fillRect(0, 0, P, 6);
         r.x = Phaser.Math.Between(0, W);
         r.y = Phaser.Math.Between(-20, H);
         this.particles.push({ gfx:r, vx:-0.4, vy:3.5, maxY:H+10, wrap:true });
@@ -1052,7 +1420,7 @@ class LifeScene extends Phaser.Scene {
 }
 
 // ═══════════════════════════════════════════════
-// Game State + API (unchanged)
+// Game State + API
 // ═══════════════════════════════════════════════
 
 function newRunId() {
@@ -1131,8 +1499,11 @@ function renderRelations(rels) {
     const icon=document.createElement('canvas'); icon.className='rel-icon'; icon.width=16; icon.height=16;
     const ctx=icon.getContext('2d');
     ctx.fillStyle='#9bbc0f'; ctx.fillRect(0,0,16,16);
-    ctx.fillStyle='#306230'; ctx.fillRect(4,2,8,6); ctx.fillRect(2,9,12,7);
-    ctx.fillStyle='#0f380f'; ctx.fillRect(5,4,2,2); ctx.fillRect(9,4,2,2);
+    ctx.fillStyle='#306230';
+    ctx.fillRect(4,1,8,7); ctx.fillRect(2,9,12,7);
+    ctx.fillStyle='#0f380f';
+    ctx.fillRect(5,3,2,2); ctx.fillRect(9,3,2,2);
+    ctx.fillRect(6,6,4,1);
     const lbl=document.createElement('span');
     lbl.textContent=r.display||`${r.name} (${r.role})`;
     chip.appendChild(icon); chip.appendChild(lbl);
