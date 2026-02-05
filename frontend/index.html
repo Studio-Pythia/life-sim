@@ -1565,6 +1565,144 @@ const SFX = (() => {
       osc('square', 523, 0.36, 0.18, vol*0.6);    // C5
       osc('square', 659, 0.5, 0.25, vol*0.5);     // E5
     },
+
+    // ── Title screen BGM — dreamy Game Boy loop ──
+    _bgmTimer: null,
+    _bgmPlaying: false,
+    _bgmGain: null,
+
+    bgmStart() {
+      if (this._bgmPlaying) return;
+      this._bgmPlaying = true;
+      const playLoop = () => {
+        if (!this._bgmPlaying) return;
+        if (muted) { this._bgmTimer = setTimeout(playLoop, 8400); return; }
+        const c = ensure();
+        // Master gain for BGM so we can fade it
+        const master = c.createGain();
+        master.gain.value = vol * 0.35;
+        master.connect(c.destination);
+        this._bgmGain = master;
+
+        // Dreamy melody — pentatonic, wistful (Game Boy Pokémon title vibe)
+        // 8-bar phrase, ~8.4 seconds at tempo
+        const bpm = 95;
+        const beat = 60 / bpm;
+        const melody = [
+          // [note_freq, start_beat, duration_beats]
+          // Bar 1-2: opening motif
+          [330, 0, 1.5],      // E4
+          [392, 1.5, 1],      // G4
+          [440, 2.5, 1.5],    // A4
+          [392, 4, 2],        // G4
+          [330, 6, 1],        // E4
+          [294, 7, 1],        // D4
+          // Bar 3-4: response phrase
+          [262, 8, 1.5],      // C4
+          [294, 9.5, 1],      // D4
+          [330, 10.5, 2],     // E4
+          [294, 12.5, 1.5],   // D4
+          [262, 14, 2],       // C4
+          // Bar 5-6: climb
+          [330, 16, 1],       // E4
+          [392, 17, 1],       // G4
+          [440, 18, 1.5],     // A4
+          [523, 19.5, 2],     // C5
+          [440, 21.5, 1],     // A4
+          [392, 22.5, 1.5],   // G4
+          // Bar 7-8: resolve down
+          [330, 24, 1.5],     // E4
+          [294, 25.5, 1.5],   // D4
+          [262, 27, 2],       // C4
+          [220, 29, 1.5],     // A3
+          [262, 30.5, 2.5],   // C4 (held, resolve)
+        ];
+
+        // Bass line — simple root notes, triangle wave
+        const bass = [
+          [131, 0, 3.5],     // C3
+          [147, 4, 3.5],     // D3
+          [131, 8, 3.5],     // C3
+          [110, 12, 3.5],    // A2
+          [131, 16, 3.5],    // C3
+          [165, 20, 3.5],    // E3
+          [131, 24, 3.5],    // C3
+          [110, 28, 4.5],    // A2 (held)
+        ];
+
+        // Arpeggio layer — quiet pulsing (square, very low vol)
+        const arp = [
+          [523, 0], [659, 0.5], [784, 1], [659, 1.5],
+          [523, 2], [659, 2.5], [784, 3], [659, 3.5],
+          [587, 4], [698, 4.5], [880, 5], [698, 5.5],
+          [587, 6], [698, 6.5], [880, 7], [698, 7.5],
+          [523, 8], [659, 8.5], [784, 9], [659, 9.5],
+          [523, 10], [659, 10.5], [784, 11], [659, 11.5],
+          [440, 12], [523, 12.5], [659, 13], [523, 13.5],
+          [440, 14], [523, 14.5], [659, 15], [523, 15.5],
+          [523, 16], [659, 16.5], [784, 17], [659, 17.5],
+          [523, 18], [659, 18.5], [784, 19], [659, 19.5],
+          [659, 20], [784, 20.5], [1047, 21], [784, 21.5],
+          [659, 22], [784, 22.5], [1047, 23], [784, 23.5],
+          [523, 24], [659, 24.5], [784, 25], [659, 25.5],
+          [523, 26], [659, 26.5], [784, 27], [659, 27.5],
+          [440, 28], [523, 28.5], [659, 29], [523, 29.5],
+          [440, 30], [523, 30.5], [659, 31], [523, 31.5],
+        ];
+
+        const t = c.currentTime + 0.05;
+        // Melody — pulse/square
+        for (const [freq, startB, durB] of melody) {
+          const o = c.createOscillator(); const g = c.createGain();
+          o.type = 'square'; o.frequency.value = freq;
+          const s = t + startB * beat; const d = durB * beat;
+          g.gain.setValueAtTime(0.001, s);
+          g.gain.linearRampToValueAtTime(vol * 0.45, s + 0.03);
+          g.gain.setValueAtTime(vol * 0.45, s + d * 0.7);
+          g.gain.exponentialRampToValueAtTime(0.001, s + d);
+          o.connect(g); g.connect(master);
+          o.start(s); o.stop(s + d + 0.05);
+        }
+        // Bass — triangle
+        for (const [freq, startB, durB] of bass) {
+          const o = c.createOscillator(); const g = c.createGain();
+          o.type = 'triangle'; o.frequency.value = freq;
+          const s = t + startB * beat; const d = durB * beat;
+          g.gain.setValueAtTime(vol * 0.5, s);
+          g.gain.setValueAtTime(vol * 0.5, s + d * 0.8);
+          g.gain.exponentialRampToValueAtTime(0.001, s + d);
+          o.connect(g); g.connect(master);
+          o.start(s); o.stop(s + d + 0.05);
+        }
+        // Arpeggio — quiet square pulse
+        for (const [freq, startB] of arp) {
+          const o = c.createOscillator(); const g = c.createGain();
+          o.type = 'square'; o.frequency.value = freq;
+          const s = t + startB * beat; const d = beat * 0.35;
+          g.gain.setValueAtTime(vol * 0.08, s);
+          g.gain.exponentialRampToValueAtTime(0.001, s + d);
+          o.connect(g); g.connect(master);
+          o.start(s); o.stop(s + d + 0.05);
+        }
+
+        const loopLen = 33 * beat * 1000;
+        this._bgmTimer = setTimeout(playLoop, loopLen);
+      };
+      playLoop();
+    },
+
+    bgmStop() {
+      this._bgmPlaying = false;
+      if (this._bgmTimer) { clearTimeout(this._bgmTimer); this._bgmTimer = null; }
+      // Fade out current BGM
+      if (this._bgmGain) {
+        try {
+          const c = this._bgmGain.context;
+          this._bgmGain.gain.linearRampToValueAtTime(0.001, c.currentTime + 0.5);
+        } catch(e) {}
+        this._bgmGain = null;
+      }
+    },
   };
 })();
 
@@ -1960,12 +2098,17 @@ window.addEventListener('DOMContentLoaded',()=>{
     scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},
     scene:[LifeScene],pixelArt:true,antialias:false,roundPixels:true,
   });
-  el.startBtn.addEventListener('click',e=>{e.preventDefault();SFX.click();startGame();});
+  el.startBtn.addEventListener('click',e=>{e.preventDefault();SFX.click();SFX.bgmStop();startGame();});
   el.btnA.addEventListener('click',()=>{SFX.click();choose(0);});
   el.btnB.addEventListener('click',()=>{SFX.click();choose(1);});
-  el.playAgain.querySelector('button').addEventListener('click',resetGame);
+  el.playAgain.querySelector('button').addEventListener('click',()=>{SFX.click();SFX.bgmStart();resetGame();});
   el.statToggle.addEventListener('click',()=>{SFX.click();renderStatBars();el.statOverlay.style.display='flex';});
   el.statClose.addEventListener('click',()=>{SFX.click();el.statOverlay.style.display='none';});
+  // Start BGM on first user interaction with onboarding screen
+  const bgmKick = () => { SFX.bgmStart(); document.removeEventListener('click', bgmKick); document.removeEventListener('keydown', bgmKick); };
+  document.addEventListener('click', bgmKick, { once: false });
+  document.addEventListener('keydown', bgmKick, { once: false });
+
   el.sndToggle.addEventListener('click',()=>{
     const m=SFX.toggle();
     el.sndToggle.textContent=m?'♪ OFF':'♪ ON';
@@ -1980,6 +2123,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     if(e.key==='s'||e.key==='S')el.statToggle.click();
   });
   if(restoreSession()){
+    SFX.bgmStop();
     el.onboarding.style.display='none';
     el.hudAge.textContent=`AGE ${state.age}`;
     el.hudMeta.textContent=`${state.city.toUpperCase()} · ${state.desire.toUpperCase()}`;
