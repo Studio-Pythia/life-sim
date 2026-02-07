@@ -54,8 +54,14 @@ function randomInt(min, maxInclusive) {
   return Math.floor(min + Math.random() * (maxInclusive - min + 1));
 }
 
-function jumpYears() {
-  return randomInt(5, 15);
+function jumpYears(currentAge) {
+  // More granular in the dramatic years, wider jumps in childhood and old age
+  if (currentAge < 1) return randomInt(4, 8);       // birth → childhood
+  if (currentAge < 14) return randomInt(4, 8);       // childhood → teen
+  if (currentAge < 25) return randomInt(2, 5);       // teen/young adult — most drama, tight turns
+  if (currentAge < 40) return randomInt(3, 7);       // prime years — still eventful
+  if (currentAge < 60) return randomInt(4, 10);      // middle age — wider swings
+  return randomInt(3, 8);                             // elderly — tighter again as mortality rises
 }
 
 function runNonce() {
@@ -342,40 +348,76 @@ const BirthJSONSchema = {
 // ----------------------
 function systemPrompt() {
   return `
-You generate volatile life moments for a binary-choice simulator.
+You generate raw, unpredictable life moments for a binary-choice simulator. Every life should feel singular — strange, beautiful, ugly, surprising. You are writing a life, not a career plan.
 
-Hard rules:
-- Always address the player as "you".
-- First names only.
-- Every time you mention a person in prose, format exactly: Name (role).
-  Example: "Maya (mother)", "Sam (friend)". Role must come AFTER name.
-- No headings, no lists, no tables, no labels.
-- Never use the word "pivot".
-- One paragraph of prose, max ~900 characters.
-- Prose must include: living situation, source of income, lifestyle, and what happens next.
-- Moment must be critical and time-sensitive.
-- Exactly 2 choices labeled A and B as explicit actions.
-- Each option.effects must include ALL keys:
-  money, stability, status, health, stress, freedom, exposure.
-- Effects must be realistic and each value between -0.25 and +0.25.
-- Output must be valid JSON matching the schema exactly.
+TONE:
+- Gritty literary fiction, not YA or self-help. Think: Denis Johnson, Ottessa Moshfegh, Hanya Yanagihara, Roberto Bolaño.
+- Lives should feel messy, contradictory, and real. People make terrible decisions. Good things happen to bad people. Kindness appears in unexpected places.
+- Not every moment is dramatic — sometimes the most important scenes are quiet (a conversation at 3am, a letter never sent, the smell of a kitchen).
+- But also: do NOT be boring. These lives should make players lean forward.
+
+VOLATILITY RULES — follow these closely:
+- ~25% of turns should involve something DRASTICALLY unexpected: sudden wealth, devastating loss, a crime, a betrayal, an accident, falling in love with the wrong person, a secret revealed, getting fired, a pregnancy, an arrest, a windfall, an addiction spiral, fleeing a country, a viral moment, a natural disaster, a diagnosis.
+- ~25% should be slow-burn turning points: a relationship quietly souring, realizing you hate your career, noticing your parent is getting old, an opportunity that requires sacrifice.
+- ~25% should involve genuine moral dilemmas with no clean answer.
+- ~25% should be character-driven: someone in your life does something that forces you to react.
+- NEVER generate a "your career is going well, do you want to push harder or relax?" turn. That is boring. Find the conflict.
+- Choices should NEVER both be "sensible." At least one choice should be reckless, emotional, or morally grey.
+
+RELATIONSHIP RULES — CRITICAL:
+- You have 3 relationship slots. These are the most important people in the player's life RIGHT NOW.
+- People MUST change over time. A 40-year-old should NOT still have "mother" and "father" as 2 of their 3 slots unless those relationships are actively central to the drama.
+- USE relationship_changes to rotate characters in and out:
+  • Parents should die (realistically by age 50-70 for the player, sometimes earlier). When a parent dies, set replace_index to their slot and new_person to null. Then in a LATER turn, fill that slot with someone new (a partner, a child, a colleague, an enemy).
+  • Friendships end. Partners leave. Children grow distant. Mentors disappear.
+  • New people arrive: lovers, rivals, cellmates, business partners, neighbors who change your life, a child you didn't expect.
+  • When setting new_person to null, the death/departure MUST be referenced in the prose text.
+  • Aim to rotate at least 1 relationship every 2-3 turns after age 20.
+- Relationship roles should be specific and evocative: not just "friend" but "childhood friend," "cellmate," "business rival," "estranged sister," "AA sponsor," "affair."
+
+PROSE RULES:
+- Always address the player as "you."
+- First names only. Every person mentioned: Name (role). Role AFTER name.
+- One paragraph, max ~900 characters. No headings, no lists, no tables.
+- Include sensory details: a sound, a smell, a texture, a weather detail, a specific object.
+- The prose should make the player FEEL something — dread, hope, guilt, nostalgia, excitement, shame.
+- Include the player's living situation, how they survive financially, and what's happening RIGHT NOW.
+- Never use the word "pivot."
+
+CHOICE RULES:
+- Exactly 2 choices. Keep labels SHORT (under 65 chars). Start with a verb.
+- Choices should be genuinely different paths, not "good option vs slightly different good option."
+- At least one choice should have real consequences — moral, financial, relational, physical.
+- Effects: all 7 keys required (money, stability, status, health, stress, freedom, exposure). Values between -0.25 and +0.25, realistic.
+- Bold choices should have bold effects. A choice to "rob the warehouse" should not have +0.02 money.
+
+DEATH_CAUSE_HINT:
+- Always provide a plausible cause of death relevant to the current scenario.
+- Make it specific: not "health complications" but "liver failure," "car accident on the coast road," "overdose in a motel bathroom," "heart attack while arguing."
+
+Output must be valid JSON matching the schema exactly.
 `.trim();
 }
 
 function birthInstruction() {
   return `
-This is the birth turn (Age 0).
+This is the BIRTH turn (Age 0). The player has just entered their city, gender, and what they want to become.
+
 You must:
-- Infer plausible starting context from city + gender + desire (free text).
-- Generate 3 relationships (first name + role) that make sense at birth.
-  Example roles: mother, father, guardian, older sibling, grandparent.
-- Compute birth_stats (0..1) for all 7 stats.
-- Write prose describing the birth context and the first defining decision.
-- Provide 2 choices (A/B) that shape the entire trajectory.
+- Infer a vivid, specific starting context from city + gender + desire.
+- Don't be generic. A birth in Lagos is different from a birth in Oslo. A kid who wants to be "free" is different from one who wants to be "rich."
+- Generate 3 relationships (first name + role). These must make sense at birth:
+  Example roles: mother, father, grandmother, guardian, older sibling, family friend, midwife, neighbor.
+  Give them PERSONALITY through the prose — one sentence about each that hints at who they are.
+- Compute birth_stats (0..1) for all 7 stats. These should reflect the starting circumstances:
+  A birth into poverty in a war zone ≠ a birth into stability in suburban Connecticut.
+- Write prose describing the birth context. Make it atmospheric — the room, the sounds, who's there, what the city smells like.
+- The first choice should be meaningful and hint at the life to come. Not trivial.
 
 Remember: any person mentioned must be "Name (role)".
 `.trim();
 }
+
 
 // ----------------------
 // OpenAI wrapper (with retry)
@@ -391,7 +433,7 @@ async function generateTurn({ isBirth, payload }) {
         ...(isBirth ? [{ role: "user", content: birthInstruction() }] : []),
         { role: "user", content: JSON.stringify(payload) },
       ],
-      max_output_tokens: 950,
+      max_output_tokens: 1200,
       text: {
         format: {
           type: "json_schema",
@@ -542,7 +584,7 @@ app.post("/api/turn", async (req, res) => {
       }
     }
 
-    const age_to = isBirth ? 0 : Math.min(112, age_from + jumpYears());
+    const age_to = isBirth ? 0 : Math.min(112, age_from + jumpYears(age_from));
 
     const payload = {
       nonce: runNonce(),
@@ -646,8 +688,8 @@ app.post("/api/turn", async (req, res) => {
         const nextStatsA = applyEffects(baseStats, scenario.options[0].effects);
         const nextStatsB = applyEffects(baseStats, scenario.options[1].effects);
 
-        const yearsA = jumpYears();
-        const yearsB = jumpYears();
+        const yearsA = jumpYears(age_to);
+        const yearsB = jumpYears(age_to);
 
         const payloadA = {
           ...payload,
@@ -655,8 +697,8 @@ app.post("/api/turn", async (req, res) => {
           stats: nextStatsA,
           relationships,
           history: [...payload.history, scenario.options[0].label].slice(-18),
-          age_from,
-          age_to: Math.min(112, age_from + yearsA),
+          age_from: age_to,
+          age_to: Math.min(112, age_to + yearsA),
         };
 
         const payloadB = {
@@ -665,8 +707,8 @@ app.post("/api/turn", async (req, res) => {
           stats: nextStatsB,
           relationships,
           history: [...payload.history, scenario.options[1].label].slice(-18),
-          age_from,
-          age_to: Math.min(112, age_from + yearsB),
+          age_from: age_to,
+          age_to: Math.min(112, age_to + yearsB),
         };
 
         const outA = await generateTurn({ isBirth: false, payload: payloadA });
@@ -692,13 +734,13 @@ app.post("/api/turn", async (req, res) => {
           death_cause_hint: String(outB.death_cause_hint || ""),
         };
 
-        setPrefetch(prefetchKey(session_id, run_id, age_from, "A"), {
+        setPrefetch(prefetchKey(session_id, run_id, age_to, "A"), {
           age_to: payloadA.age_to,
           scenario: scA,
           relationships,
         });
 
-        setPrefetch(prefetchKey(session_id, run_id, age_from, "B"), {
+        setPrefetch(prefetchKey(session_id, run_id, age_to, "B"), {
           age_to: payloadB.age_to,
           scenario: scB,
           relationships,
@@ -815,18 +857,20 @@ app.post("/api/epilogue", async (req, res) => {
     const history = Array.isArray(req.body?.history) ? req.body.history.slice(-20) : [];
 
     const sys = `
-Write a short death epilogue (1 paragraph) for a life simulator.
+Write a death epilogue for a life simulator. This is the final screen the player sees. Make it count.
 
-Hard rules:
-- Address the player as "you".
-- Any person mentioned must be formatted: Name (role).
-- No headings, no lists, no odds, no moralising.
-- 450–800 characters max.
-- It must feel relatable and grounded: include 2–3 ordinary details (a room, a smell, a habit, a small routine).
-- You MUST explicitly state the cause of death in a plain sentence:
-  "You die from <cause>."
-- Make it emotionally legible (regret, relief, unfinishedness, tenderness), not melodramatic.
-- Do not use metaphors like "the universe" or "fate".
+Rules:
+- Address the player as "you."
+- Any person mentioned: Name (role).
+- No headings, no lists, no moralising, no "lessons learned."
+- 500–900 characters.
+- Open with the immediate moment of death — where you are, what you see, who's there (or who isn't).
+- Include 2–3 specific sensory details from the life: a recurring smell, a room you always returned to, a song, a piece of clothing, a food, a view from a window.
+- Reference at least one relationship — what they meant, what was left unsaid, or where they are now.
+- State the cause of death plainly in one sentence.
+- The emotional register should fit the life: a wild life gets a wild death. A quiet life gets a quiet one. A tragic life gets tenderness.
+- End with one image — not a moral, not a summary, just a single concrete image that lingers.
+- Do NOT use phrases like "the universe," "your story," "your journey," "chapter." This is not a book report.
 `.trim();
 
     const user = JSON.stringify({
@@ -847,7 +891,7 @@ Hard rules:
           { role: "system", content: sys },
           { role: "user", content: user },
         ],
-        max_output_tokens: 260,
+        max_output_tokens: 400,
       });
       return (r.output_text || "").trim() || `You die at ${age}. Cause: ${cause}.`;
     });
