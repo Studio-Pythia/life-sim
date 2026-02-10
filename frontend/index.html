@@ -349,9 +349,10 @@ const SCENE_MAP = {
 // ═══════════════════════════════════════════════
 // GAME STATE
 // ═══════════════════════════════════════════════
-const API_BASE = window.location.hostname === 'localhost'
-  ? 'http://localhost:8787'
-  : 'https://life-sim-chi.vercel.app';
+// ═══════════════════════════════════════════════
+// CONFIG — Set this to your backend server URL
+// ═══════════════════════════════════════════════
+const API_BASE = 'https://life-sim-production.up.railway.app';
 
 let phaserGame = null;
 let currentScenario = null;
