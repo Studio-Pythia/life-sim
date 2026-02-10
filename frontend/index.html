@@ -203,6 +203,7 @@
       position: absolute; inset: 0; background: #000; z-index: 150;
       display: none; align-items: center; justify-content: center;
       opacity: 0; pointer-events: none;
+      transition: opacity 0.4s ease;
     }
 
     #transition-text { font-size: 14px; color: var(--gb3); letter-spacing: 3px; }
@@ -357,7 +358,7 @@ let currentScenario = null;
 let locked = false;
 
 const state = {
-  run_id: '', age: 0, gender: '', city: '', desire: '',
+  run_id: '', session_id: '', age: 0, gender: '', city: '', desire: '',
   history: [], relationships: [],
   stats: { money: 0.5, stability: 0.5, status: 0.5, health: 0.5, stress: 0.5, freedom: 0.5, exposure: 0.5 },
 };
@@ -642,18 +643,64 @@ function clearSave() {
 }
 
 // ═══════════════════════════════════════════════
-// API CALLS
+// API CALLS (3-endpoint flow: /turn → /apply → /epilogue)
 // ═══════════════════════════════════════════════
-let prefetchCache = {};
+let lastFailedAction = null;
 
-async function apiCall(endpoint, body) {
-  const res = await fetch(`${API_BASE}${endpoint}`, {
+async function apiTurn() {
+  const r = await fetch(API_BASE + '/api/turn', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ state }),
   });
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  return res.json();
+  const j = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(j?.message || 'turn_failed');
+  return j;
+}
+
+async function apiApply(effects) {
+  const r = await fetch(API_BASE + '/api/apply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      age: state.age,
+      stats: state.stats,
+      effects,
+      session_id: state.session_id || '',
+      run_id: state.run_id,
+      death_cause_hint: currentScenario?.death_cause_hint || '',
+    }),
+  });
+  const j = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(j?.error || 'apply_failed');
+  return j;
+}
+
+async function apiEpilogue(cause) {
+  const r = await fetch(API_BASE + '/api/epilogue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      age: state.age,
+      gender: state.gender,
+      city: state.city,
+      desire: state.desire,
+      relationships: state.relationships || [],
+      history: state.history.slice(-30),
+      cause,
+    }),
+  });
+  const j = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(j?.error || 'epilogue_failed');
+  return j;
+}
+
+function logAnalytics(eventType, data = {}) {
+  fetch(API_BASE + '/api/analytics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: eventType, session_id: state.session_id || '', run_id: state.run_id, data }),
+  }).catch(() => {});
 }
 
 async function startGame() {
@@ -661,6 +708,7 @@ async function startGame() {
   state.city = document.getElementById('city').value || 'New York';
   state.desire = document.getElementById('desire').value || 'a happy life';
   state.run_id = newRunId();
+  state.session_id = newRunId();
   state.age = 0;
   state.history = [];
   state.relationships = [];
@@ -676,41 +724,34 @@ async function startGame() {
   setError('');
   updateScene();
 
-  await fetchNext(null);
+  logAnalytics('game_start', { gender: state.gender, city: state.city, desire: state.desire });
+  await doTurn();
 }
 
-async function fetchNext(choiceLabel) {
+async function doTurn() {
   setLoading(true);
+  setError('');
   try {
-    const payload = {
-      run_id: state.run_id,
-      gender: state.gender,
-      city: state.city,
-      desire: state.desire,
-      age: state.age,
-      history: state.history.slice(-20),
-      relationships: state.relationships,
-      stats: state.stats,
-    };
-    if (choiceLabel) payload.choice = choiceLabel;
+    const turnData = await apiTurn();
+    if (turnData.error) throw new Error(turnData.error);
 
-    // Check prefetch cache
-    const cacheKey = `${state.age}_${choiceLabel||'init'}`;
-    let data = prefetchCache[cacheKey];
+    // Update state from turn response
+    const ageTo = turnData.age_to ?? turnData.age ?? state.age;
+    state.age = ageTo;
 
-    if (!data) {
-      data = await apiCall('/api/generate', payload);
+    // Handle birth stats
+    if (turnData.birth_stats) {
+      Object.assign(state.stats, turnData.birth_stats);
     }
-    prefetchCache = {}; // Clear cache after use
+    // Handle relationships
+    if (turnData.relationships) {
+      state.relationships = turnData.relationships;
+    }
 
-    if (data.error) throw new Error(data.error);
+    // Store the scenario
+    currentScenario = turnData.scenario || turnData;
+    const scenarioText = currentScenario.text || currentScenario.scenario || 'Something happened...';
 
-    // Update state from response
-    if (data.age !== undefined) state.age = data.age;
-    if (data.stats) Object.assign(state.stats, data.stats);
-    if (data.relationships) state.relationships = data.relationships;
-
-    currentScenario = data;
     el.hudAge.textContent = `AGE ${state.age}`;
     renderRelations(state.relationships);
     renderStatBars();
@@ -720,89 +761,132 @@ async function fetchNext(choiceLabel) {
     await playTransition(`AGE ${state.age}`);
 
     // Show scenario text
-    showText(data.text || data.scenario || 'Something happened...', () => {
-      if (data.options && data.options.length >= 2) {
-        el.btnA.textContent = data.options[0].label || 'Option A';
-        el.btnB.textContent = data.options[1].label || 'Option B';
+    showText(scenarioText, () => {
+      const opts = currentScenario.options;
+      if (opts && opts.length >= 2) {
+        el.btnA.textContent = opts[0].label || 'Option A';
+        el.btnB.textContent = opts[1].label || 'Option B';
         setButtonsDisabled(false);
       }
-
-      // Check for death
-      if (data.dead || state.stats.health <= 0) {
-        handleDeath(data);
-        return;
-      }
-
       saveSession();
-
-      // Prefetch both choices
-      prefetchChoices(data);
     });
 
   } catch (err) {
-    console.error('API error:', err);
-    setError(`Connection error. <a onclick="fetchNext('${choiceLabel||''}')">Retry</a>`);
+    console.error('Turn error:', err);
+    lastFailedAction = () => doTurn();
+    setError('Connection error. <a onclick="retryLast()">Retry</a>');
   } finally {
     setLoading(false);
   }
 }
 
-async function prefetchChoices(scenario) {
-  if (!scenario || !scenario.options) return;
-  for (const opt of scenario.options) {
-    const key = `${state.age}_${opt.label}`;
-    try {
-      const payload = {
-        run_id: state.run_id,
-        gender: state.gender,
-        city: state.city,
-        desire: state.desire,
-        age: state.age,
-        history: [...state.history.slice(-20), { age: state.age, scenario: scenario.text, choice: opt.label }],
-        relationships: state.relationships,
-        stats: state.stats,
-        choice: opt.label,
-      };
-      apiCall('/api/generate', payload).then(d => { prefetchCache[key] = d; }).catch(() => {});
-    } catch(e) {}
+function retryLast() {
+  if (lastFailedAction) {
+    lastFailedAction();
+    lastFailedAction = null;
   }
 }
+window.retryLast = retryLast;
 
-function choose(idx) {
+async function choose(idx) {
   if (locked || !currentScenario || !currentScenario.options) return;
   locked = true;
   setButtonsDisabled(true);
+  setError('');
 
   const opt = currentScenario.options[idx];
+
+  // Record history
   state.history.push({
     age: state.age,
-    scenario: currentScenario.text || currentScenario.scenario,
+    scenario: currentScenario.text || '',
     choice: opt.label,
   });
 
-  fetchNext(opt.label).finally(() => { locked = false; });
+  logAnalytics('choice', { age: state.age, choice: opt.label });
+
+  // Apply effects via /api/apply
+  setLoading(true);
+  try {
+    const applyData = await apiApply(opt.effects || {});
+
+    // Update stats from apply response
+    if (applyData.stats) {
+      Object.assign(state.stats, applyData.stats);
+    }
+    renderStatBars();
+    updateScene();
+
+    // Check for death
+    if (applyData.died) {
+      logAnalytics('death', { age: state.age, cause: applyData.death_cause || 'unknown' });
+      await handleDeath(applyData.death_cause || currentScenario.death_cause_hint || '');
+      return;
+    }
+
+    // Relationship changes from scenario
+    if (currentScenario.relationship_changes) {
+      const rc = currentScenario.relationship_changes;
+      if (rc.replace_index !== null && rc.replace_index !== undefined) {
+        const i = Number(rc.replace_index);
+        if (i >= 0 && i < state.relationships.length) {
+          if (rc.new_person === null) {
+            const old = state.relationships[i];
+            state.relationships[i] = { name: old.name, role: (old.role || '') + ', deceased', display: `${old.name} (deceased)` };
+          } else if (rc.new_person) {
+            state.relationships[i] = {
+              name: rc.new_person.name || '',
+              role: rc.new_person.role || '',
+              display: `${rc.new_person.name} (${rc.new_person.role})`,
+            };
+          }
+          renderRelations(state.relationships);
+        }
+      }
+    }
+
+    saveSession();
+
+    // Next turn
+    await doTurn();
+
+  } catch (err) {
+    console.error('Apply error:', err);
+    lastFailedAction = () => choose(idx);
+    setError('Connection error. <a onclick="retryLast()">Retry</a>');
+  } finally {
+    setLoading(false);
+    locked = false;
+  }
 }
 
-function handleDeath(data) {
+async function handleDeath(cause) {
   setButtonsDisabled(true);
   el.btnA.style.display = 'none';
   el.btnB.style.display = 'none';
   el.playAgain.style.display = 'block';
-  updateScene(); // Trigger death overlay
+  state.stats.health = 0;
+  updateScene();
   clearSave();
 
-  if (data.epitaph) {
-    setTimeout(() => {
-      showText(data.epitaph);
-    }, 1500);
+  // Try to get an epitaph
+  try {
+    const epilogueData = await apiEpilogue(cause);
+    if (epilogueData.epitaph) {
+      setTimeout(() => showText(epilogueData.epitaph), 1500);
+    }
+  } catch (e) {
+    console.error('Epilogue failed:', e);
+    setTimeout(() => showText(`You lived to age ${state.age}. Rest in peace.`), 1500);
   }
 }
 
 function resetGame() {
   currentScenario = null;
   locked = false;
-  prefetchCache = {};
+  lastFailedAction = null;
   state.run_id = newRunId();
+  state.session_id = newRunId();
   state.age = 0;
   state.history = [];
   state.relationships = [];
