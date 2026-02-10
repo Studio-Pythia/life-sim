@@ -1,4 +1,5 @@
 <!doctype html>
+
 <html>
 <head>
   <meta charset="utf-8" />
@@ -8,212 +9,215 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
-    :root {
-      --gb0: #0f380f;
-      --gb1: #306230;
-      --gb2: #8bac0f;
-      --gb3: #9bbc0f;
-    }
+```
+:root {
+  --gb0: #0f380f;
+  --gb1: #306230;
+  --gb2: #8bac0f;
+  --gb3: #9bbc0f;
+}
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      background: #0a0a0a;
-      color: var(--gb3);
-      font-family: 'Press Start 2P', monospace;
-      overflow: hidden;
-      width: 100vw; height: 100vh;
-      display: flex; align-items: center; justify-content: center;
-      image-rendering: pixelated;
-    }
+body {
+  background: #0a0a0a;
+  color: var(--gb3);
+  font-family: 'Press Start 2P', monospace;
+  overflow: hidden;
+  width: 100vw; height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  image-rendering: pixelated;
+}
 
-    #game-wrapper {
-      position: relative; width: 100%; max-width: 960px;
-      aspect-ratio: 16/10; max-height: 100vh;
-      background: var(--gb0); overflow: hidden;
-      border: 4px solid var(--gb1);
-      box-shadow: 0 0 60px rgba(155,188,15,0.08), inset 0 0 80px rgba(0,0,0,0.4);
-    }
+#game-wrapper {
+  position: relative; width: 100%; max-width: 960px;
+  aspect-ratio: 16/10; max-height: 100vh;
+  background: var(--gb0); overflow: hidden;
+  border: 4px solid var(--gb1);
+  box-shadow: 0 0 60px rgba(155,188,15,0.08), inset 0 0 80px rgba(0,0,0,0.4);
+}
 
-    #game-wrapper::after {
-      content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 999;
-      background: repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px);
-      mix-blend-mode: multiply;
-    }
+#game-wrapper::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 999;
+  background: repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px);
+  mix-blend-mode: multiply;
+}
 
-    #phaser-canvas { width: 100%; height: 100%; display: block; }
-    #phaser-canvas canvas { width: 100% !important; height: 100% !important; }
+#phaser-canvas { width: 100%; height: 100%; display: block; }
+#phaser-canvas canvas { width: 100% !important; height: 100% !important; }
 
-    #ui-overlay {
-      position: absolute; inset: 0; pointer-events: none;
-      display: flex; flex-direction: column; justify-content: flex-end; z-index: 10;
-    }
+#ui-overlay {
+  position: absolute; inset: 0; pointer-events: none;
+  display: flex; flex-direction: column; justify-content: flex-end; z-index: 10;
+}
 
-    #hud {
-      position: absolute; top: 0; left: 0; right: 0;
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 6px 10px; background: var(--gb0);
-      border-bottom: 2px solid var(--gb1); font-size: 10px; z-index: 20;
-    }
-    #hud-age { font-size: 12px; color: var(--gb3); }
-    #hud-meta { color: var(--gb2); font-size: 7px; text-align: right; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hud {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 10px; background: var(--gb0);
+  border-bottom: 2px solid var(--gb1); font-size: 10px; z-index: 20;
+}
+#hud-age { font-size: 12px; color: var(--gb3); }
+#hud-meta { color: var(--gb2); font-size: 7px; text-align: right; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    #hud-relations {
-      position: absolute; top: 28px; right: 6px;
-      display: flex; flex-direction: column; gap: 4px; z-index: 20;
-    }
-    .rel-chip {
-      display: flex; align-items: center; gap: 6px;
-      background: var(--gb0); border: 2px solid var(--gb1);
-      padding: 3px 8px 3px 3px; font-size: 7px; color: var(--gb2);
-      min-width: 100px;
-    }
-    .rel-chip .rel-name { display: block; color: var(--gb3); font-size: 7px; line-height: 1.2; }
-    .rel-chip .rel-role { display: block; color: var(--gb2); font-size: 5.5px; opacity: 0.8; margin-top: 1px; }
-    .rel-icon { width: 28px; height: 28px; border: 2px solid var(--gb1); image-rendering: pixelated; flex-shrink: 0; }
+#hud-relations {
+  position: absolute; top: 28px; right: 6px;
+  display: flex; flex-direction: column; gap: 4px; z-index: 20;
+}
+.rel-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--gb0); border: 2px solid var(--gb1);
+  padding: 3px 8px 3px 3px; font-size: 7px; color: var(--gb2);
+  min-width: 100px;
+}
+.rel-chip .rel-name { display: block; color: var(--gb3); font-size: 7px; line-height: 1.2; }
+.rel-chip .rel-role { display: block; color: var(--gb2); font-size: 5.5px; opacity: 0.8; margin-top: 1px; }
+.rel-icon { width: 28px; height: 28px; border: 2px solid var(--gb1); image-rendering: pixelated; flex-shrink: 0; }
 
-    #dialogue-area { pointer-events: auto; padding: 0 6px 6px 6px; display: flex; flex-direction: column; gap: 4px; }
+#dialogue-area { pointer-events: auto; padding: 0 6px 6px 6px; display: flex; flex-direction: column; gap: 4px; }
 
-    #dialogue-box {
-      background: var(--gb3); border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
-      padding: 12px 14px; min-height: 90px; max-height: 140px; overflow-y: auto;
-      font-size: 10px; line-height: 1.9; color: var(--gb0);
-    }
-    #dialogue-box::-webkit-scrollbar { width: 6px; }
-    #dialogue-box::-webkit-scrollbar-track { background: var(--gb2); }
-    #dialogue-box::-webkit-scrollbar-thumb { background: var(--gb1); }
-    #dialogue-text { white-space: pre-wrap; }
+#dialogue-box {
+  background: var(--gb3); border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
+  padding: 12px 14px; min-height: 90px; max-height: 140px; overflow-y: auto;
+  font-size: 10px; line-height: 1.9; color: var(--gb0);
+}
+#dialogue-box::-webkit-scrollbar { width: 6px; }
+#dialogue-box::-webkit-scrollbar-track { background: var(--gb2); }
+#dialogue-box::-webkit-scrollbar-thumb { background: var(--gb1); }
+#dialogue-text { white-space: pre-wrap; }
 
-    .cursor-blink {
-      display: inline-block; width: 8px; height: 10px;
-      background: var(--gb0); animation: blink 0.7s steps(1) infinite;
-      vertical-align: middle; margin-left: 2px;
-    }
-    @keyframes blink { 50% { opacity: 0; } }
+.cursor-blink {
+  display: inline-block; width: 8px; height: 10px;
+  background: var(--gb0); animation: blink 0.7s steps(1) infinite;
+  vertical-align: middle; margin-left: 2px;
+}
+@keyframes blink { 50% { opacity: 0; } }
 
-    #choices { display: flex; gap: 4px; }
-    .choice-btn {
-      flex: 1; background: var(--gb3); border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
-      padding: 10px 10px 10px 20px;
-      font-family: 'Press Start 2P', monospace; font-size: 8px; line-height: 1.5;
-      color: var(--gb0); cursor: pointer; text-align: left;
-      transition: background 0.1s; position: relative; pointer-events: auto;
-    }
-    .choice-btn::before {
-      content: '▶'; position: absolute; left: 6px; top: 50%;
-      transform: translateY(-50%); opacity: 0; color: var(--gb0); font-size: 7px;
-    }
-    .choice-btn:hover, .choice-btn:focus { background: var(--gb2); }
-    .choice-btn:hover::before, .choice-btn:focus::before { opacity: 1; }
-    .choice-btn:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+#choices { display: flex; gap: 4px; }
+.choice-btn {
+  flex: 1; background: var(--gb3); border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
+  padding: 10px 10px 10px 20px;
+  font-family: 'Press Start 2P', monospace; font-size: 8px; line-height: 1.5;
+  color: var(--gb0); cursor: pointer; text-align: left;
+  transition: background 0.1s; position: relative; pointer-events: auto;
+}
+.choice-btn::before {
+  content: '▶'; position: absolute; left: 6px; top: 50%;
+  transform: translateY(-50%); opacity: 0; color: var(--gb0); font-size: 7px;
+}
+.choice-btn:hover, .choice-btn:focus { background: var(--gb2); }
+.choice-btn:hover::before, .choice-btn:focus::before { opacity: 1; }
+.choice-btn:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
 
-    #play-again { display: none; pointer-events: auto; }
-    #play-again button {
-      width: 100%; background: var(--gb3); border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
-      padding: 12px; font-family: 'Press Start 2P', monospace; font-size: 10px;
-      color: var(--gb0); cursor: pointer; text-align: center; letter-spacing: 2px;
-    }
-    #play-again button:hover { background: var(--gb2); }
+#play-again { display: none; pointer-events: auto; }
+#play-again button {
+  width: 100%; background: var(--gb3); border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
+  padding: 12px; font-family: 'Press Start 2P', monospace; font-size: 10px;
+  color: var(--gb0); cursor: pointer; text-align: center; letter-spacing: 2px;
+}
+#play-again button:hover { background: var(--gb2); }
 
-    #onboarding-overlay {
-      position: absolute; inset: 0; background: var(--gb0); z-index: 100;
-      display: flex; align-items: center; justify-content: center; pointer-events: auto;
-    }
-    #onboarding-box { max-width: 420px; width: 90%; display: flex; flex-direction: column; gap: 10px; }
-    #onboarding-box h1 { font-size: 18px; color: var(--gb3); letter-spacing: 6px; text-align: center; margin-bottom: 2px; }
-    #onboarding-box p { font-size: 7px; color: var(--gb2); line-height: 2; text-align: center; }
-    .ob-field { display: flex; flex-direction: column; gap: 3px; }
-    .ob-field label { font-size: 7px; color: var(--gb2); letter-spacing: 1px; text-transform: uppercase; }
-    .ob-field select, .ob-field input {
-      padding: 10px; background: var(--gb3); border: 2px solid var(--gb1);
-      color: var(--gb0); font-family: 'Press Start 2P', monospace; font-size: 9px; outline: none;
-    }
-    .ob-field input::placeholder { color: var(--gb1); }
-    .ob-field input:focus, .ob-field select:focus { border-color: var(--gb0); outline: 1px solid var(--gb0); }
-    #start-btn {
-      margin-top: 4px; padding: 14px; background: var(--gb3);
-      border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
-      color: var(--gb0); font-family: 'Press Start 2P', monospace;
-      font-size: 9px; cursor: pointer; letter-spacing: 2px;
-    }
-    #start-btn:hover { background: var(--gb2); }
+#onboarding-overlay {
+  position: absolute; inset: 0; background: var(--gb0); z-index: 100;
+  display: flex; align-items: center; justify-content: center; pointer-events: auto;
+}
+#onboarding-box { max-width: 420px; width: 90%; display: flex; flex-direction: column; gap: 10px; }
+#onboarding-box h1 { font-size: 18px; color: var(--gb3); letter-spacing: 6px; text-align: center; margin-bottom: 2px; }
+#onboarding-box p { font-size: 7px; color: var(--gb2); line-height: 2; text-align: center; }
+.ob-field { display: flex; flex-direction: column; gap: 3px; }
+.ob-field label { font-size: 7px; color: var(--gb2); letter-spacing: 1px; text-transform: uppercase; }
+.ob-field select, .ob-field input {
+  padding: 10px; background: var(--gb3); border: 2px solid var(--gb1);
+  color: var(--gb0); font-family: 'Press Start 2P', monospace; font-size: 9px; outline: none;
+}
+.ob-field input::placeholder { color: var(--gb1); }
+.ob-field input:focus, .ob-field select:focus { border-color: var(--gb0); outline: 1px solid var(--gb0); }
+#start-btn {
+  margin-top: 4px; padding: 14px; background: var(--gb3);
+  border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
+  color: var(--gb0); font-family: 'Press Start 2P', monospace;
+  font-size: 9px; cursor: pointer; letter-spacing: 2px;
+}
+#start-btn:hover { background: var(--gb2); }
 
-    #stat-overlay {
-      position: absolute; inset: 0; background: rgba(15,56,15,0.94); z-index: 50;
-      display: none; align-items: center; justify-content: center; pointer-events: auto;
-    }
-    #stat-card {
-      background: var(--gb3); border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
-      padding: 16px; max-width: 340px; width: 85%;
-    }
-    #stat-card h2 { font-size: 10px; color: var(--gb0); margin-bottom: 12px; text-align: center; letter-spacing: 2px; }
-    .stat-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-    .stat-label { font-size: 6px; color: var(--gb0); width: 65px; text-transform: uppercase; }
-    .stat-bar-bg { flex: 1; height: 6px; background: var(--gb2); border: 1px solid var(--gb1); overflow: hidden; }
-    .stat-bar-fill { height: 100%; background: var(--gb0); transition: width 0.5s ease; }
-    .stat-val { font-size: 6px; color: var(--gb0); width: 26px; text-align: right; }
-    #stat-close {
-      margin-top: 12px; width: 100%; padding: 8px;
-      background: var(--gb2); border: 2px solid var(--gb1);
-      color: var(--gb0); font-family: 'Press Start 2P', monospace; font-size: 7px; cursor: pointer;
-    }
-    #stat-close:hover { background: var(--gb3); }
-    #stat-toggle {
-      position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
-      z-index: 25; background: var(--gb0); border: 1px solid var(--gb1);
-      padding: 2px 8px; font-family: 'Press Start 2P', monospace;
-      font-size: 6px; color: var(--gb2); cursor: pointer; pointer-events: auto;
-    }
-    #stat-toggle:hover { color: var(--gb3); border-color: var(--gb3); }
-    #snd-toggle {
-      position: absolute; top: 4px; left: calc(50% + 44px);
-      z-index: 25; background: var(--gb0); border: 1px solid var(--gb1);
-      padding: 2px 8px; font-family: 'Press Start 2P', monospace;
-      font-size: 6px; color: var(--gb2); cursor: pointer; pointer-events: auto;
-    }
-    #snd-toggle:hover { color: var(--gb3); border-color: var(--gb3); }
+#stat-overlay {
+  position: absolute; inset: 0; background: rgba(15,56,15,0.94); z-index: 50;
+  display: none; align-items: center; justify-content: center; pointer-events: auto;
+}
+#stat-card {
+  background: var(--gb3); border: 3px solid var(--gb0); outline: 2px solid var(--gb1);
+  padding: 16px; max-width: 340px; width: 85%;
+}
+#stat-card h2 { font-size: 10px; color: var(--gb0); margin-bottom: 12px; text-align: center; letter-spacing: 2px; }
+.stat-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.stat-label { font-size: 6px; color: var(--gb0); width: 65px; text-transform: uppercase; }
+.stat-bar-bg { flex: 1; height: 6px; background: var(--gb2); border: 1px solid var(--gb1); overflow: hidden; }
+.stat-bar-fill { height: 100%; background: var(--gb0); transition: width 0.5s ease; }
+.stat-val { font-size: 6px; color: var(--gb0); width: 26px; text-align: right; }
+#stat-close {
+  margin-top: 12px; width: 100%; padding: 8px;
+  background: var(--gb2); border: 2px solid var(--gb1);
+  color: var(--gb0); font-family: 'Press Start 2P', monospace; font-size: 7px; cursor: pointer;
+}
+#stat-close:hover { background: var(--gb3); }
+#stat-toggle {
+  position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+  z-index: 25; background: var(--gb0); border: 1px solid var(--gb1);
+  padding: 2px 8px; font-family: 'Press Start 2P', monospace;
+  font-size: 6px; color: var(--gb2); cursor: pointer; pointer-events: auto;
+}
+#stat-toggle:hover { color: var(--gb3); border-color: var(--gb3); }
+#snd-toggle {
+  position: absolute; top: 4px; left: calc(50% + 44px);
+  z-index: 25; background: var(--gb0); border: 1px solid var(--gb1);
+  padding: 2px 8px; font-family: 'Press Start 2P', monospace;
+  font-size: 6px; color: var(--gb2); cursor: pointer; pointer-events: auto;
+}
+#snd-toggle:hover { color: var(--gb3); border-color: var(--gb3); }
 
-    #loading-overlay {
-      position: absolute; inset: 0; background: rgba(15,56,15,0.85);
-      z-index: 200; display: none; align-items: center; justify-content: center;
-      flex-direction: column; gap: 10px; pointer-events: auto;
-    }
-    .lds-ring { width: 28px; height: 28px; position: relative; }
-    .lds-ring div {
-      width: 22px; height: 22px; border: 3px solid var(--gb3);
-      border-color: var(--gb3) transparent transparent transparent;
-      border-radius: 50%; position: absolute;
-      animation: lds-ring 1s cubic-bezier(0.5,0,0.5,1) infinite;
-    }
-    @keyframes lds-ring { to { transform: rotate(360deg); } }
-    #loading-text { font-size: 8px; color: var(--gb2); }
+#loading-overlay {
+  position: absolute; inset: 0; background: rgba(15,56,15,0.85);
+  z-index: 200; display: none; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px; pointer-events: auto;
+}
+.lds-ring { width: 28px; height: 28px; position: relative; }
+.lds-ring div {
+  width: 22px; height: 22px; border: 3px solid var(--gb3);
+  border-color: var(--gb3) transparent transparent transparent;
+  border-radius: 50%; position: absolute;
+  animation: lds-ring 1s cubic-bezier(0.5,0,0.5,1) infinite;
+}
+@keyframes lds-ring { to { transform: rotate(360deg); } }
+#loading-text { font-size: 8px; color: var(--gb2); }
 
-    #transition-overlay {
-      position: absolute; inset: 0; background: var(--gb0); z-index: 150;
-      display: none; align-items: center; justify-content: center; opacity: 0; pointer-events: none;
-    }
-    #transition-text { font-size: 12px; color: var(--gb3); letter-spacing: 3px; }
+#transition-overlay {
+  position: absolute; inset: 0; background: var(--gb0); z-index: 150;
+  display: none; align-items: center; justify-content: center; opacity: 0; pointer-events: none;
+}
+#transition-text { font-size: 12px; color: var(--gb3); letter-spacing: 3px; }
 
-    #error-bar {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      background: var(--gb0); border-top: 2px solid var(--gb3);
-      padding: 6px 10px; font-size: 7px; color: var(--gb3); z-index: 300; display: none; pointer-events: auto;
-    }
-    #error-bar a { color: var(--gb3); cursor: pointer; text-decoration: underline; }
+#error-bar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: var(--gb0); border-top: 2px solid var(--gb3);
+  padding: 6px 10px; font-size: 7px; color: var(--gb3); z-index: 300; display: none; pointer-events: auto;
+}
+#error-bar a { color: var(--gb3); cursor: pointer; text-decoration: underline; }
 
-    @media (max-width: 640px) {
-      #game-wrapper { border-width: 2px; aspect-ratio: auto; height: 100vh; max-height: 100vh; }
-      #hud { padding: 4px 6px; }
-      #hud-age { font-size: 10px; }
-      #dialogue-box { font-size: 8px; min-height: 70px; max-height: 110px; padding: 8px 10px; }
-      .choice-btn { font-size: 7px; padding: 8px 8px 8px 16px; }
-      .rel-chip { font-size: 5.5px; min-width: 80px; }
-      .rel-icon { width: 22px; height: 22px; }
-      .rel-chip .rel-name { font-size: 5.5px; }
-      .rel-chip .rel-role { font-size: 4.5px; }
-      #onboarding-box h1 { font-size: 14px; }
-    }
-    @media (max-height: 500px) { #dialogue-box { min-height: 50px; max-height: 80px; } }
+@media (max-width: 640px) {
+  #game-wrapper { border-width: 2px; aspect-ratio: auto; height: 100vh; max-height: 100vh; }
+  #hud { padding: 4px 6px; }
+  #hud-age { font-size: 10px; }
+  #dialogue-box { font-size: 8px; min-height: 70px; max-height: 110px; padding: 8px 10px; }
+  .choice-btn { font-size: 7px; padding: 8px 8px 8px 16px; }
+  .rel-chip { font-size: 5.5px; min-width: 80px; }
+  .rel-icon { width: 22px; height: 22px; }
+  .rel-chip .rel-name { font-size: 5.5px; }
+  .rel-chip .rel-role { font-size: 4.5px; }
+  #onboarding-box h1 { font-size: 14px; }
+}
+@media (max-height: 500px) { #dialogue-box { min-height: 50px; max-height: 80px; } }
+```
+
   </style>
 </head>
 <body>
@@ -256,6 +260,42 @@ const API_BASE = "https://life-sim-production.up.railway.app";
 
 // Game Boy 4 shades
 const GB = { BLACK: 0x0f380f, DARK: 0x306230, LIGHT: 0x8bac0f, WHITE: 0x9bbc0f };
+
+// ═══════════════════════════════════════════════════════════════
+// SCENE BACKGROUNDS - Pixel Art Sprites
+// ═══════════════════════════════════════════════════════════════
+// Game Boy DMG Scene Backgrounds (160×144 native, scaled 6× to 960×864)
+const SCENE_BACKGROUNDS = {
+  'nursery': 'data:image/png;base64,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',
+  'kitchen': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA8AAAANgCAIAAABsqJYiAAASOklEQVR4nO3cIW4rVwCG0aYa3jUMDfI6ugSXhZoaGgaGGhXXSyjqOkq9ldLXRHrJFyVzPZ5zoGUpv3zt6NMF8/DnP7/9AgAAfMyvowcAAMCaCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQTKMHfMb5Mo+eAKt02F9HTwCA1XMDDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAwTR6wHIO++voCXfoeHr/PS/P379je86XefQEANgoN9AAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQDCNHgAA8HnH0+gFfLWX59EL3uMGGgAAAgENAACBgAYAgEBAAwBAIKABACDwFA4A4K6cjqMXUDy/jF7QuYEGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBgGj1gOcfT6AVb5ZP/DvPj6AUAsFVuoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAim0QOW8/I8esE9Op7ef49P/jucL6MXAMBWuYEGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBgGj1gOefLPHrCHZof33/P+fL9OwAAluIGGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAgmn0gM847K+jJwAAsFFuoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAACCafQA+Erny/zuew776wJLAD7H/zG4fW6gAQAgENAAABAIaAAACAQ0AAAEAhoAAAJP4QAA7srzy+gF3Ds30AAAEAhoAAAIBDQAAAQCGgAAAgENAACBp3AAAHfldBy9gGKNT01xAw0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAwjR4AW3e+zKMnAP9z2F9HTwBumhtoAAAIBDQAAAQCGgAAAgENAACBgAYAgMBTOODm/PG7JwDAcv7625NwgMYNNAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQTKMHsEXny7yRv37YXxf7W8CS/B+DLXMDDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABBMx9PoCWzP/Dh6wVI+8vvazqcBa+GX+yOdwPJu/1vnBhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgmObHefQGuFt+X7BGfrk/uv1P4/rvdfQEvtjtf+vcQAMAQCCgAQAgENAAABAIaAAACAQ0AAAE0+gBAABf6fll9ALunRtoAAAIBDQAAAQCGgAAAgENAACBgAYAgMBTOACAFZsf59ET2Bw30AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBA8LB72o3eAAAAq+EGGgAAAgENAACBgAYAgEBAAwBAIKABACCY3r502F+X38EHnS/zq1ec1y1zXuvivNbFea2L81oX5/VzbqABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACB42D3tRm8AAIDVcAMNAACBgAYAgEBAAwBAIKABACAQ0AAAEExvXzrsr8vv4IPOl/nVK87rljmvdXFe6+K81sV5rYvz+jk30AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEDzsnnajNwAAwGq4gQYAgEBAAwBAIKABACAQ0AAAEAhoAAAIprcvHfbX5XfwQefL/OoV53XLnNe6OK91cV7r4rzWxXn9nBtoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAI/gPHeoAAyonL6AAAAABJRU5ErkJggg==',
+  'classroom': 'data:image/png;base64,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',
+  'bedroom': 'data:image/png;base64,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',
+  'dorm': 'data:image/png;base64,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',
+  'office': 'data:image/png;base64,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',
+  'nice_home': 'data:image/png;base64,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',
+  'rundown_apartment': 'data:image/png;base64,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',
+  'prison': 'data:image/png;base64,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AwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAADB/wB5Py0oldE/MwAAAABJRU5ErkJggg==',
+  'hospital_bed': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA8AAAANgCAIAAABsqJYiAAAT7UlEQVR4nO3cMXJaaRaA0fYUubUFUkUOZw1aAso6JVWoUKFSoonNEhzNOpyyBS9hwrF5tuBTI34enBNSaular0t8dau4n/7z389/AQAAx/nX6AEAAGBOBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAgsXoAd5js12OHgE+0Hq1Gz0CAPBHNtAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAsRg9wPuvVbvQIM/P0fPhrXl8+fo4522yXo0cAAE7MBhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAILF6AEAgDGenkdP8KvXl9ETwHFsoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgWowcAAC7X68v5ftZmu3zHf7Ve7U4+CbzNBhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAguKErHE/Poye4Rn6rb1vej54A4DIcc2Hj8eE99zSO+c4udXBaNtAAABAIaAAACAQ0AAAEAhoAAAIBDQAAwQ1d4QAALsf7bm4c832+fjt8lwP+CRtoAAAIBDQAAAQCGgAAAgENAACBgAYAgOCGrnC8voyeYG6eng9/jd/q2zbb0RMAjLDZ7t/BONXNjWNMf9Z0nvXqfPNwfWygAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgWIweAAC4NuvVbu+VzXa598rjw/7XnMrXb/s/azoP/BM20AAAEAhoAAAIBDQAAAQCGgAAAgENAACBKxwAwADTWxnvu8sx/T7w0WygAQAgENAAABAIaAAACAQ0AAAEAhoAAAJXOH6x2fok7/8t7w9/zWZ7mp+1Xr3nk9cAzMUxf+ff9y7sHYTzs4EGAIBAQAMAQCCgAQAgENAAABAIaAAACFzhOGD33Wd7T29579oJAIe5sMFlsoEGAIBAQAMAQCCgAQAgENAAABAIaAAACFzhyFyQqFwyAWBqs91/P3Vzg7mwgQYAgEBAAwBAIKABACAQ0AAAEAhoAAAIXOEAAD6cmxtcExtoAAAIBDQAAAQCGgAAAgENAACBgAYAgMAVjov2+LD/CeWv3/Y/xQwAl8bNDa6bDTQAAAQCGgAAAgENAACBgAYAgEBAAwBA4ArHBTnm5oa7HABcGjc3uDU20AAAEAhoAAAIBDQAAAQCGgAAAgENAACBKxwnML2M8T4fd0/jVBMew1UQgOvm5gbYQAMAQCCgAQAgENAAABAIaAAACAQ0AAAErnCcwDnvTkx/1jEXNlzGAAA4FRtoAAAIBDQAAAQCGgAAAgENAACBgAYAgMAVjivk5gYAp7LZ7r+nrFeHrz/BdbOBBgCAQEADAEAgoAEAIBDQAAAQCGgAAAhu6ArH9HPE1+E6bm5c69MBmJflvZsbcJgNNAAABAIaAAACAQ0AAIGABgCAQEADAEBwQ1c4AICfTW9u7L67uQGH2UADAEAgoAEAIBDQAAAQCGgAAAgENAAABK5wZD6hDMAcbbZubsBp2EADAEAgoAEAIBDQAAAQCGgAAAgENAAABLO8wrFefdSnhqefUOY8Pu6ZAtym6Tva9C/t0/O5poHrYgMNAACBgAYAgEBAAwBAIKABACAQ0AAAEMzyCgcA8LNjbm4Ap2IDDQAAgYAGAIBAQAMAQCCgAQAgENAAABC4wgEAM+PmBoxlAw0AAIGABgCAQEADAEAgoAEAIBDQAAAQuMJxwPJ+/5POXLKn59ETAJza9J1o933/5sb0r9/ry8dNBLfOBhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgcIXjF+vV/ueauT7PT6MnAPizr9/2b248Puy/N718P9c0wO/YQAMAQCCgAQAgENAAABAIaAAACAQ0AAAErnAAwDDH3NwALo0NNAAABAIaAAACAQ0AAIGABgCAQEADAEDgCgf85lPwAAB/YgMNAACBgAYAgEBAAwBAIKABACAQ0AAAELjCAb+xXu1GjwBcoc3WzR+4BjbQAAAQCGgAAAgENAAABAIaAAACAQ0AAIErHHAlfvwYPcEp3N2NngBOZ3pzY3rhx10OmCMbaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIDAFQ64ONdxT+N93vdvd7uDS3DMzQ3gOthAAwBAIKABACAQ0AAAEAhoAAAIBDQAAASucMBZ3fKFjY9zzG/VpQ5Oy80NuGU20AAAEAhoAAAIBDQAAAQCGgAAAgENAACBKxzwgdzcuBzTZ+EuB8dzcwP4mQ00AAAEAhoAAAIBDQAAgYAGAIBAQAMAQOAKBwD8ws0N4G020AAAEAhoAAAIBDQAAAQCGgAAAgENAACBKxzAjfrxY/QEXIav3/Zvbjw+7N/cmP7fcnf3UfMAl88GGgAAAgENAACBgAYAgEBAAwBAIKABACBwhQOAmza9uQHwNhtoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAgsXoAeCa3d2NngAAODUbaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIDAFQ74jc12OXoEAOBC2UADAEAgoAEAIBDQAAAQCGgAAAgENAAABK5wwF+PD7vRIwAAs2EDDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQLAYPQCc28vr6AkAgDmzgQYAgEBAAwBAIKABACAQ0AAAEAhoAAAIXOHgqry+jJ4AALh2NtAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEnz7/+/PoGQAAYDZsoAEAIBDQAAAQCGgAAAgENAAABAIaAACCxfJ+OXoGAGCA3ffdwa/RCTBlAw0AAIGABgCAQEADAEAgoAEAIBDQAAAQLEYPAAC365g7GGNd2oSugnAJbKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIFqMHAIDbtbxfjh4ByGygAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBgMX1pvdqdfw6OtNku917xvC6Z5zUvnte8eF7z4nnNi+f1NhtoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIBDQAAAQCGgAAAgENAACBgAYAgEBAAwBAIKABACAQ0AAAEAhoAAAIPn35+8voGQAAYDZsoAEAIBDQAAAQCGgAAAgENAAABAIaAACCxfSl9Wp3/jk40ma73HvF87pknte8eF7z4nnNi+c1L57X22ygAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAgENAAABAIaAAACAQ0AAAEAhoAAAIBDQAAgYAGAIBAQAMAQCCgAQAg+PTl7y+jZwAAgNmwgQYAgEBAAwBAIKABACAQ0AAAEAhoAAAIFtOX1qvd+efgSJvtcu8Vz+uSeV7z4nnNi+c1L57XvHheb7OBBgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCAQEADAEAgoAEAIBDQAAAQCGgAAAgENAAABAIaAAACAQ0AAIGABgCA4H/enhkUs9dS5AAAAABJRU5ErkJggg==',
+  'bar': 'data:image/png;base64,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',
+  'park': 'data:image/png;base64,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',
+};
+
+// Generated 12 scene backgrounds
+
+// Map game scene types to background image keys
+const SCENE_MAP = {
+  'nursery': 'nursery',
+  'school': 'classroom', 
+  'bedroom': 'bedroom',
+  'apartment': 'dorm',
+  'hospital': 'hospital_bed',
+  'home': 'nice_home',
+  'office': 'office',
+  'death': 'park'  // Use park for death scene with overlay
+};
+
+// Game Boy 4 shades
+const GB = { BLACK: 0x0f380f, DARK: 0x306230, LIGHT: 0x8bac0f, WHITE: 0x9bbc0f };
 const P = 2; // base pixel unit
 
 function getSceneType(age, stats) {
@@ -269,25 +309,6 @@ function getSceneType(age, stats) {
   }
   if (stats.health < 0.3) return 'hospital';
   return 'home';
-}
-
-// ── Drawing helpers ──
-function fillDither(gfx, x, y, w, h, c1, c2, pat) {
-  const ps = 2;
-  gfx.fillStyle(c1, 1); gfx.fillRect(x, y, w, h);
-  gfx.fillStyle(c2, 1);
-  for (let py = 0; py < h; py += ps) {
-    for (let px = 0; px < w; px += ps) {
-      const gx = Math.floor(px/ps), gy = Math.floor(py/ps);
-      let draw = false;
-      if (pat === 'check') draw = (gx+gy)%2===0;
-      else if (pat === 'horiz') draw = gy%2===0;
-      else if (pat === 'vert') draw = gx%2===0;
-      else if (pat === 'sparse') draw = gx%4===0 && gy%4===0;
-      else if (pat === 'dense') draw = (gx+gy)%2===0 || gx%3===0;
-      if (draw) gfx.fillRect(x+px, y+py, ps, ps);
-    }
-  }
 }
 
 // Sprite map renderer: 0=BLACK 1=DARK 2=LIGHT 3=WHITE .=transparent
@@ -305,380 +326,647 @@ function drawSprite(gfx, map, ox, oy, s) {
   }
 }
 
-// Draw a filled rounded rect (pixel art approximation)
-function pxRect(g, x, y, w, h, color) {
-  g.fillStyle(color, 1);
-  g.fillRect(x, y, w, h);
-}
-function pxBorder(g, x, y, w, h, color, t=2) {
-  g.fillStyle(color, 1);
-  g.fillRect(x, y, w, t);       // top
-  g.fillRect(x, y+h-t, w, t);   // bottom
-  g.fillRect(x, y, t, h);       // left
-  g.fillRect(x+w-t, y, t, h);   // right
+// ═══════════════════════════════════════════════════════════════
+// CHARACTER SPRITE GENERATOR
+// Returns detailed sprite based on age and stats
+// ═══════════════════════════════════════════════════════════════
+function getCharacterSprite(age, stats) {
+  const wealthy = stats.money > 0.65;
+  const poor = stats.money < 0.35;
+  const sick = stats.health < 0.3;
+  const stressed = stats.stress > 0.7;
+  const free = stats.freedom > 0.65;
+  
+  let map, scale = 5;
+
+  // AGE 0-3: Baby with detailed onesie
+  if (age <= 3) {
+    map = `
+........000000........
+.......00333300.......
+......0033333300......
+.....003333333300.....
+....00333333333300....
+...0033332332333300...
+...0033332332333300...
+...0033333333333300...
+...0033333333333300...
+...0033322222333300...
+...0033322222333300...
+....003333333300......
+.....0033330000.......
+.....0000000000.......
+....003332223300......
+...00333222233300.....
+...00333222233300.....
+...00332211223300.....
+...00333222233300.....
+...00333222233300.....
+...00333222233300.....
+....0033222330000.....
+....0033..033000......
+....0033..033000......
+....0000..000000......`;
+  }
+  
+  // AGE 4-8: Young child with backpack and messy hair
+  else if (age <= 8) {
+    map = `
+.....00.0000.00.......
+....000033330000......
+....00033333300.......
+...0003333333300......
+...0033322223330......
+...0033322223330......
+...0033333333330......
+...0033330033330......
+...0033333333330......
+....003333333000......
+.....00333300000......
+......0000000.........
+.....0022222200.......
+....002222222200......
+....002211112200......
+...00222222222200.....
+...00222211122200.....
+...00222222222200.....
+...00222222222200.....
+...00222222222200.....
+....002222222000......
+....0022..2200........
+....0022..2200........
+....0022..2200........
+....0000..0000........`;
+  }
+  
+  // AGE 9-12: Older child with detailed clothing
+  else if (age <= 12) {
+    map = `
+......00.00.00........
+.....0003333000.......
+....003333333300......
+....033333333330......
+...00333322333300.....
+...00333322333300.....
+...00333300333300.....
+...00333333333300.....
+....0033333333000.....
+.....003333330000.....
+......00000000........
+.....00222222200......
+....0022222222200.....
+....0022211122200.....
+...002222222222200....
+...002221111222200....
+...002222222222200....
+...002222222222200....
+...002222222222200....
+....00222222220000....
+.....0022.22000.......
+.....0022.22000.......
+.....0022.22000.......
+.....0022.22000.......
+.....0000.00000.......`;
+  }
+  
+  // AGE 13-17: Teen with hoodie and distinctive style
+  else if (age <= 17) {
+    if (stressed) {
+      // Stressed teen - slouched, dark clothes
+      map = `
+....000000000000......
+...00111111111000.....
+...0011111111110000...
+..001111110111111100..
+..001112222211111100..
+..001112222211111100..
+..001111111111111100..
+..001111001111111100..
+...00111111111111000..
+....0011111111110000..
+.....000111111000.....
+......0000000000......
+.....00111111100......
+....0011111111100.....
+....0011111111100.....
+...001111111111100....
+...001111111111100....
+...001111111111100....
+...001111111111100....
+...001111111111100....
+....00111.111000......
+.....0011.1100........
+.....0011.1100........
+.....0011.1100........
+.....0000.0000........`;
+    } else {
+      // Regular teen - casual style
+      map = `
+....0000000000000.....
+...00222222222000.....
+..002222222222220000..
+..022222220222222200..
+..022221111122222200..
+..022221111122222200..
+..022222002222222200..
+..022222222222222200..
+...0022222222222200...
+....002222222220000...
+.....00000000000......
+......0011111000......
+.....001111111100.....
+.....001111111100.....
+....00111111111100....
+....00111122211100....
+....00111111111100....
+....00111122211100....
+....00111111111100....
+.....0011111110000....
+......0011.11000......
+......0011.11000......
+......0011.11000......
+......0011.11000......
+......0000.00000......`;
+    }
+  }
+  
+  // AGE 18-25: Young adult with career/student variations
+  else if (age <= 25) {
+    if (wealthy) {
+      // Well-dressed young professional
+      map = `
+......0033330.........
+.....003333330........
+....00333333330.......
+....03333223333.......
+...0033332233330......
+...0033322223330......
+...0033330033330......
+...0033333333330......
+....003333333000......
+.....00000000.........
+.....0011111100.......
+....001111111100......
+....001111111100......
+...00111111111100.....
+...00111100111100.....
+...00111111111100.....
+...00111111111100.....
+...00111111111100.....
+....0011111111000.....
+.....00111.1100.......
+.....00111.1100.......
+.....00111.1100.......
+.....00111.1100.......
+.....00000.0000.......`;
+    } else if (poor) {
+      // Struggling student/worker
+      map = `
+......0033330.........
+.....003333330........
+....00333333330.......
+....03333223333.......
+...0033332233330......
+...0033322223330......
+...0033330033330......
+...0033333333330......
+....003333333000......
+.....00000000.........
+.....0022222200.......
+....002222222200......
+....002211112200......
+...00222222222200.....
+...00222222222200.....
+...00221111122200.....
+...00222222222200.....
+...00222222222200.....
+....0022222220000.....
+.....00222.22000......
+.....00222.22000......
+.....00222.22000......
+.....00222.22000......
+.....00000.00000......`;
+    } else {
+      // Average young adult
+      map = `
+......0033330.........
+.....003333330........
+....00333333330.......
+....03333223333.......
+...0033332233330......
+...0033322223330......
+...0033330033330......
+...0033333333330......
+....003333333000......
+.....00000000.........
+.....0022222200.......
+....002222222200......
+....002221112200......
+...00222222222200.....
+...00222111222200.....
+...00222222222200.....
+...00221111122200.....
+...00222222222200.....
+....0022222220000.....
+.....00222.22000......
+.....00222.22000......
+.....00222.22000......
+.....00222.22000......
+.....00000.00000......`;
+    }
+  }
+  
+  // AGE 26-40: Prime adult with career variations
+  else if (age <= 40) {
+    if (sick) {
+      // Sick - hospital gown
+      map = `
+......0033330.........
+.....003333330........
+....00333333330.......
+....03333003333.......
+...0033330033330......
+...0033322223330......
+...0033333333330......
+....003333333000......
+.....00000000.........
+.....0022222200.......
+....002222222200......
+....002222222200......
+...00222222222200.....
+...00222222222200.....
+...00222222222200.....
+...00222222222200.....
+....0022222222000.....
+.....00222.22000......
+.....00222.22000......
+.....00222.22000......
+.....00000.00000......`;
+    } else if (wealthy) {
+      // Successful - suit and tie
+      map = `
+......0033330.........
+.....003333330........
+....00333333330.......
+....03333223333.......
+...0033332233330......
+...0033320023330......
+...0033333333330......
+....003333333000......
+.....00000000.........
+.....0011110000.......
+....001111111100......
+....001110011100......
+...00111111111100.....
+...00111100111100.....
+...00111111111100.....
+...00111100111100.....
+...00111111111100.....
+....0011111111000.....
+.....00111.1100.......
+.....00111.1100.......
+.....00111.1100.......
+.....00111.1100.......
+.....00000.0000.......`;
+    } else if (stressed) {
+      // Stressed worker
+      map = `
+.....0..0330..0.......
+.....003333330........
+....00333333330.......
+....03333003333.......
+...0033332233330......
+...0033322223330......
+...0033330033330......
+...0033333333330......
+....003333333000......
+.....00000000.........
+.....0022222200.......
+....002222222200......
+....002221112200......
+...00222222222200.....
+...00222222222200.....
+...00222111222200.....
+...00222222222200.....
+....0022222220000.....
+.....00222.22000......
+.....00222.22000......
+.....00222.22000......
+.....00000.00000......`;
+    } else {
+      // Average professional
+      map = `
+......0033330.........
+.....003333330........
+....00333333330.......
+....03333223333.......
+...0033332233330......
+...0033322223330......
+...0033330033330......
+...0033333333330......
+....003333333000......
+.....00000000.........
+.....0011222200.......
+....001122222200......
+....001111111100......
+...00111111111100.....
+...00111122211100.....
+...00111111111100.....
+...00111122211100.....
+....0011111111000.....
+.....00111.1100.......
+.....00111.1100.......
+.....00111.1100.......
+.....00111.1100.......
+.....00000.0000.......`;
+    }
+  }
+  
+  // AGE 41-60: Middle age with life situation variations
+  else if (age <= 60) {
+    if (sick) {
+      // Very sick
+      map = `
+......0033330.........
+.....003333330........
+....00333333330.......
+....03330000333.......
+...0033300033330......
+...0033322223330......
+...0033333333330......
+....003333333000......
+.....00000000.........
+.....0022222200.......
+....002222222200......
+....002222222200......
+...00222222222200.....
+...00222222222200.....
+...00222222222200.....
+....0022222220000.....
+.....00222.22000......
+.....00222.22000......
+.....00000.00000......`;
+    } else if (wealthy) {
+      // Successful executive
+      map = `
+......0033330.........
+.....003333330........
+....00333333330.......
+....03333003333.......
+...0033332233330......
+...0033322223330......
+...0033320023330......
+...0033333333330......
+....003333333000......
+.....00000000.........
+.....0011111000.......
+....001111111100......
+....001111111100......
+...00111111111100.....
+...00111111111100.....
+...00111100111100.....
+...00111111111100.....
+....0011111111000.....
+.....00111.1100.......
+.....00111.1100.......
+.....00111.1100.......
+.....00000.0000.......`;
+    } else if (poor) {
+      // Struggling
+      map = `
+.....0.033330.........
+.....003333330........
+....00333333300.......
+....03333003333.......
+...0033332233330......
+...0033322223330......
+...0033330033330......
+....003333333000......
+.....00000000.........
+.....0022222200.......
+....002222222200......
+....002222222200......
+...00222222222200.....
+...00221111122200.....
+...00222222222200.....
+....0022222220000.....
+.....00222.22000......
+.....00222.22000......
+.....00222.22000......
+.....00000.00000......`;
+    } else {
+      // Average middle-aged
+      map = `
+......0033330.........
+.....003333330........
+....00333333330.......
+....03333223333.......
+...0033332233330......
+...0033322223330......
+...0033330033330......
+...0033333333330......
+....003333333000......
+.....00000000.........
+.....0011222200.......
+....001122222200......
+....001122222200......
+...00111111111100.....
+...00111122211100.....
+...00111111111100.....
+....0011111111000.....
+.....00111.1100.......
+.....00111.1100.......
+.....00111.1100.......
+.....00000.0000.......`;
+    }
+  }
+  
+  // AGE 61+: Elderly with health-based variations
+  else {
+    if (sick) {
+      // Frail elderly
+      map = `
+......0033330.........
+.....003333330........
+....00333333330.......
+....03330000333.......
+...0033300333330......
+...0033322223330......
+...0033333333330......
+....003333333000......
+.....00000000.........
+.....0022222200.......
+....002222222200......
+....002222222200......
+...00222222222200.....
+...00222222222200.....
+....0022222220000.....
+.....00222.22000......
+.....00222.22000......
+....000222.2200.......
+...00..022.220........
+..000...00.000........`;
+    } else if (wealthy) {
+      // Dignified elder
+      map = `
+......0033330.........
+.....003333330........
+....00333333330.......
+....03330003333.......
+...0033300333330......
+...0033322223330......
+...0033333333330......
+....003333333000......
+.....00000000.........
+.....0022222200.......
+....002222222200......
+....002211112200......
+...00222222222200.....
+...00222211222200.....
+...00222222222200.....
+....0022222220000.....
+.....00222.22000......
+.....00222.22000......
+.....00222.22000......
+.....00000.00000......`;
+    } else {
+      // Average elder
+      map = `
+......0033330.........
+.....003333330........
+....00333333330.......
+....03330330333.......
+...0033300033330......
+...0033322223330......
+...0033333333330......
+....003333333000......
+.....00000000.........
+.....0022222200.......
+....002222222200......
+....002222222200......
+...00222222222200.....
+...00222222222200.....
+...00222222222200.....
+....0022222220000.....
+.....00222.22000......
+.....00222.22000......
+....000222.2200.......
+...00..022.2200.......
+..000...00.0000.......`;
+    }
+  }
+
+  return { map, scale };
 }
 
 // ═══════════════════════════════════════════════
-// PHASER SCENE — Detailed Game Boy rooms
+// PHASER SCENE — Uses pixel art backgrounds
 // ═══════════════════════════════════════════════
 class LifeScene extends Phaser.Scene {
   constructor() { super({ key: 'LifeScene' }); }
 
   create() {
-    this.particles = [];
+    this.backgroundSprite = null;
+    this.characterSprite = null;
     this.renderScene('nursery', {money:.5,stability:.5,status:.5,health:.5,stress:.5,freedom:.5,exposure:.5}, 0);
-    this.time.addEvent({ delay: 80, callback: () => this.tickParticles(), loop: true });
   }
 
   renderScene(type, stats, age) {
-    this.children.removeAll(true); this.tweens.killAll(); this.particles = [];
+    this.children.removeAll(true); 
+    this.tweens.killAll(); 
+    
     const W = this.cameras.main.width, H = this.cameras.main.height;
     const floorY = Math.floor(H * 0.64);
-    const wallTop = Math.floor(H * 0.06);
-    const ceilH = 12;
 
-    // ── BG ──
-    const bg = this.add.graphics();
-    pxRect(bg, 0, 0, W, H, GB.WHITE);
-
-    // ── Ceiling with molding ──
-    const ceil = this.add.graphics();
-    pxRect(ceil, 0, wallTop, W, ceilH, GB.DARK);
-    pxRect(ceil, 0, wallTop, W, P, GB.BLACK);
-    pxRect(ceil, 0, wallTop+ceilH-P, W, P, GB.BLACK);
-    // Crown molding detail
-    pxRect(ceil, 0, wallTop+ceilH, W, 4, GB.LIGHT);
-    pxRect(ceil, 0, wallTop+ceilH+4, W, P, GB.DARK);
-
-    // ── Wall with texture ──
-    const wall = this.add.graphics();
-    pxRect(wall, 0, wallTop+ceilH+5, W, floorY-wallTop-ceilH-5, GB.WHITE);
-    // Subtle wallpaper stripe pattern
-    wall.fillStyle(GB.LIGHT, 1);
-    for (let y = wallTop+ceilH+5; y < floorY-12; y += 16) {
-      wall.fillRect(0, y, W, P);
-    }
-    // Wainscoting / lower wall panel
-    const panelTop = floorY - 52;
-    pxRect(wall, 0, panelTop, W, P, GB.DARK);
-    // Panel rectangles
-    wall.fillStyle(GB.LIGHT, 0.5);
-    for (let x = 20; x < W-40; x += 120) {
-      pxBorder(wall, x, panelTop+6, 100, 34, GB.LIGHT, P);
+    // Get the appropriate background image
+    const sceneKey = SCENE_MAP[type] || 'nursery';
+    const bgDataUrl = SCENE_BACKGROUNDS[sceneKey];
+    
+    if (!bgDataUrl) {
+      console.error('Background not found for:', sceneKey);
+      return;
     }
 
-    // ── Baseboard ──
-    pxRect(wall, 0, floorY-12, W, 12, GB.DARK);
-    pxRect(wall, 0, floorY-12, W, P, GB.BLACK);
-    pxRect(wall, 0, floorY-6, W, P, GB.BLACK);
-    pxRect(wall, 0, floorY-P, W, P, GB.BLACK);
+    // Create a unique key for this texture
+    const textureKey = `scene_${sceneKey}_${Date.now()}`;
+    
+    // Load and display the background image
+    this.textures.once('addtexture', () => {
+      // Image is now loaded, create sprite
+      this.backgroundSprite = this.add.image(W/2, H/2, textureKey);
+      this.backgroundSprite.setOrigin(0.5, 0.5);
+      
+      // Scale to fit the game window (background is 960×864, game is 960×600)
+      const scaleX = W / 960;
+      const scaleY = H / 864;
+      this.backgroundSprite.setScale(scaleX, scaleY);
+      
+      // Draw character on top of background
+      this.drawChar(age, stats, Math.floor(W*0.38), floorY);
 
-    // ── Floor ──
-    const fl = this.add.graphics();
-    if (type === 'hospital') {
-      pxRect(fl, 0, floorY, W, H-floorY, GB.WHITE);
-      fillDither(fl, 0, floorY, W, H-floorY, GB.WHITE, GB.LIGHT, 'check');
-      fl.fillStyle(GB.DARK, 0.6);
-      for (let x = 0; x < W; x += 48) fl.fillRect(x, floorY, P, H-floorY);
-      for (let y = floorY; y < H; y += 48) fl.fillRect(0, y, W, P);
-    } else if (type === 'school') {
-      pxRect(fl, 0, floorY, W, H-floorY, GB.LIGHT);
-      fl.fillStyle(GB.DARK, 1);
-      for (let y = floorY; y < H; y += 14) fl.fillRect(0, y, W, P);
-      for (let y = floorY; y < H; y += 14) {
-        const off = (Math.floor((y-floorY)/14)%2)*60;
-        for (let x = off; x < W; x += 120) fl.fillRect(x, y, P, 14);
+      // Death overlay
+      if (type === 'death') {
+        const d = this.add.graphics();
+        d.fillStyle(GB.BLACK, 0.6);
+        d.fillRect(0, 0, W, H);
       }
-    } else {
-      // Wood plank floor
-      pxRect(fl, 0, floorY, W, H-floorY, GB.LIGHT);
-      fl.fillStyle(GB.DARK, 1);
-      for (let y = floorY; y < H; y += 18) {
-        fl.fillRect(0, y, W, P);
-        const off = (Math.floor((y-floorY)/18)%2)*80;
-        for (let x = off; x < W; x += 160) fl.fillRect(x, y, P, 18);
-      }
-      // Grain details
-      fl.fillStyle(GB.DARK, 0.3);
-      for (let y = floorY+4; y < H; y += 18) {
-        for (let x = 10; x < W; x += 40) {
-          fl.fillRect(x, y, 12, P);
-        }
-      }
-    }
-    pxRect(fl, 0, floorY, W, P, GB.BLACK);
+    });
 
-    // ── Window ──
-    this.drawWindow(Math.floor(W*0.06), wallTop+22, 100, 130, age, type);
-
-    // ── Room contents ──
-    this.drawRoom(type, stats, age, W, H, floorY);
-
-    // ── Character ──
-    this.drawChar(age, stats, Math.floor(W*0.38), floorY);
-
-    // ── Particles ──
-    this.spawnParticles(type, stats, W, H, floorY);
-
-    // ── Death overlay ──
-    if (type === 'death') {
-      const d = this.add.graphics();
-      fillDither(d, 0, 0, W, H, GB.BLACK, GB.DARK, 'check');
-      d.setAlpha(0.55);
-    }
+    // Load the texture from base64 data URL
+    this.textures.addBase64(textureKey, bgDataUrl);
   }
 
-  // ══════════════════════════════════════
-  // Window — large, detailed
-  // ══════════════════════════════════════
-  drawWindow(x, y, w, h, age, type) {
-    const g = this.add.graphics();
-    // Outer frame shadow
-    pxRect(g, x-2, y-2, w+4, h+4, GB.BLACK);
-    // Frame
-    pxRect(g, x, y, w, h, GB.DARK);
-    // Inner frame
-    pxRect(g, x+6, y+6, w-12, h-12, GB.BLACK);
+  // Enhanced Character sprites
+  drawChar(age, stats, x, floorY) {
+    const gfx = this.add.graphics();
+    const sprite = getCharacterSprite(age, stats);
+    const { map, scale } = sprite;
 
-    const night = ((age*7+10)%24) < 6 || ((age*7+10)%24) > 20;
-    pxRect(g, x+8, y+8, w-16, h-16, night ? GB.BLACK : GB.WHITE);
+    const rows = map.trim().split('\n');
+    const sprH = rows.length * scale;
+    const sprW = rows[0].length * scale;
+    const ox = x - sprW/2;
+    const oy = floorY - sprH;
 
-    if (night) {
-      g.fillStyle(GB.LIGHT, 1);
-      // Stars
-      const stars = [[12,10],[28,18],[52,8],[70,22],[18,50],[44,38],[66,56],[30,72],[56,68],[14,84],[48,90],[72,44],[38,16],[62,82]];
-      stars.forEach(([sx,sy]) => {
-        if (sx < w-20 && sy < h-20) g.fillRect(x+8+sx, y+8+sy, P, P);
-      });
-      // Moon - larger crescent
-      g.fillStyle(GB.LIGHT, 1);
-      for (let dy = 0; dy < 18; dy++) {
-        for (let dx = 0; dx < 18; dx++) {
-          const cx = dx-9, cy = dy-9;
-          if (cx*cx+cy*cy <= 81 && !((cx-4)*(cx-4)+cy*cy <= 49)) {
-            g.fillRect(x+w-34+dx*P, y+14+dy*P, P, P);
-          }
-        }
-      }
-    } else {
-      // Clouds
-      g.fillStyle(GB.LIGHT, 1);
-      // Cloud 1
-      g.fillRect(x+16, y+24, 30, 8); g.fillRect(x+20, y+18, 22, 6);
-      g.fillRect(x+28, y+14, 10, 4);
-      // Cloud 2
-      g.fillRect(x+54, y+44, 24, 6); g.fillRect(x+58, y+38, 14, 6);
-      // Sun hints
-      g.fillStyle(GB.WHITE, 1);
-      g.fillRect(x+w-36, y+16, 16, 16);
-      g.fillStyle(GB.LIGHT, 1);
-      g.fillRect(x+w-40, y+22, 4, 4);
-      g.fillRect(x+w-18, y+22, 4, 4);
-      g.fillRect(x+w-30, y+12, 4, 4);
-      g.fillRect(x+w-30, y+34, 4, 4);
-    }
+    drawSprite(gfx, map, ox, oy, scale);
 
-    // Crossbars - thick
-    g.fillStyle(GB.DARK, 1);
-    g.fillRect(x+8+Math.floor((w-16)/2)-3, y+6, 6, h-12);
-    g.fillRect(x+6, y+8+Math.floor((h-16)/2)-3, w-12, 6);
-    // Crossbar inner
-    g.fillStyle(GB.BLACK, 1);
-    g.fillRect(x+8+Math.floor((w-16)/2)-1, y+8, 2, h-16);
-    g.fillRect(x+8, y+8+Math.floor((h-16)/2)-1, w-16, 2);
-
-    // Sill
-    pxRect(g, x-8, y+h+2, w+16, 10, GB.DARK);
-    pxRect(g, x-8, y+h+2, w+16, P, GB.BLACK);
-    pxRect(g, x-8, y+h+10, w+16, P, GB.BLACK);
-    // Sill bracket details
-    pxRect(g, x+6, y+h+12, 6, 8, GB.DARK);
-    pxRect(g, x+w-12, y+h+12, 6, 8, GB.DARK);
-
-    // Light beam on floor
-    if (!night && type !== 'hospital' && type !== 'death') {
-      const gl = this.add.graphics();
-      // Angled light trapezoid
-      gl.fillStyle(GB.WHITE, 1);
-      gl.beginPath();
-      gl.moveTo(x-4, y+h+60);
-      gl.lineTo(x+w+20, y+h+60);
-      gl.lineTo(x+w+40, y+h+120);
-      gl.lineTo(x-20, y+h+120);
-      gl.closePath();
-      gl.fill();
-      fillDither(gl, x-20, y+h+60, w+60, 60, GB.WHITE, GB.LIGHT, 'sparse');
-      gl.setAlpha(0.3);
-    }
-
-    // Curtains
-    const cg = this.add.graphics();
-    // Left curtain
-    pxRect(cg, x+8, y+6, 14, h-10, GB.DARK);
-    cg.fillStyle(GB.BLACK, 1);
-    for (let cy = y+10; cy < y+h-8; cy += 8) {
-      cg.fillRect(x+8, cy, P, 4);
-      cg.fillRect(x+14, cy+4, P, 4);
-    }
-    // Right curtain
-    pxRect(cg, x+w-22, y+6, 14, h-10, GB.DARK);
-    cg.fillStyle(GB.BLACK, 1);
-    for (let cy = y+10; cy < y+h-8; cy += 8) {
-      cg.fillRect(x+w-10, cy, P, 4);
-      cg.fillRect(x+w-16, cy+4, P, 4);
-    }
-    // Curtain rod
-    pxRect(cg, x-4, y+2, w+8, 4, GB.BLACK);
-    // Rod finials
-    pxRect(cg, x-8, y, 6, 8, GB.BLACK);
-    pxRect(cg, x+w+2, y, 6, 8, GB.BLACK);
+    // Enhanced shadow
+    const sh = this.add.graphics();
+    sh.fillStyle(GB.BLACK, 0.3);
+    sh.fillEllipse(x, floorY + 4, sprW*0.6, 12);
   }
+}
 
-  // ══════════════════════════════════════
-  // Room furniture — LARGE detailed GB art
-  // ══════════════════════════════════════
-  drawRoom(type, stats, age, W, H, floorY) {
-    const g = this.add.graphics();
-
-    switch(type) {
-      case 'nursery': {
-        // ── LARGE Crib ──
-        const cx = Math.floor(W*0.52), cw = 200, ch = 140;
-        const cTop = floorY - ch;
-        // Crib body
-        pxRect(g, cx, cTop, cw, ch, GB.LIGHT);
-        pxBorder(g, cx, cTop, cw, ch, GB.BLACK, 3);
-        // Inner rail panels
-        pxRect(g, cx+3, cTop+3, cw-6, ch-3, GB.LIGHT);
-        // Slats - detailed with shadow
-        g.fillStyle(GB.DARK, 1);
-        for (let i = 0; i < 14; i++) {
-          const sx = cx + 12 + i * 13;
-          g.fillRect(sx, cTop+6, 4, ch-44);
-          g.fillStyle(GB.BLACK, 1);
-          g.fillRect(sx+4, cTop+8, P, ch-48);
-          g.fillStyle(GB.DARK, 1);
         }
-        // Top rail
-        pxRect(g, cx, cTop, cw, 8, GB.DARK);
-        pxRect(g, cx, cTop, cw, P, GB.BLACK);
-        pxRect(g, cx, cTop+6, cw, P, GB.BLACK);
-        // Bottom rail
-        pxRect(g, cx+3, floorY-40, cw-6, 4, GB.BLACK);
-        // Mattress
-        pxRect(g, cx+10, floorY-38, cw-20, 30, GB.WHITE);
-        pxBorder(g, cx+10, floorY-38, cw-20, 30, GB.DARK, P);
-        // Mattress quilting
-        g.fillStyle(GB.LIGHT, 1);
-        for (let mx = cx+20; mx < cx+cw-24; mx += 24) {
-          g.fillRect(mx, floorY-30, P, 14);
-        }
-        // Pillow
-        pxRect(g, cx+16, floorY-46, 44, 12, GB.WHITE);
-        pxBorder(g, cx+16, floorY-46, 44, 12, GB.LIGHT, P);
-        // Corner posts with knobs
-        pxRect(g, cx-6, cTop-20, 14, ch+20, GB.BLACK);
-        pxRect(g, cx+cw-8, cTop-20, 14, ch+20, GB.BLACK);
-        pxRect(g, cx-4, cTop-18, 10, 6, GB.DARK); // left knob
-        pxRect(g, cx+cw-6, cTop-18, 10, 6, GB.DARK); // right knob
-        // Round tops
-        pxRect(g, cx-2, cTop-24, 6, 6, GB.DARK);
-        pxRect(g, cx+cw-4, cTop-24, 6, 6, GB.DARK);
-        // Crib legs
-        pxRect(g, cx+4, floorY-6, 8, 6, GB.BLACK);
-        pxRect(g, cx+cw-12, floorY-6, 8, 6, GB.BLACK);
-
-        // ── Large Teddy Bear ──
-        drawSprite(g, `
-.....0000.....
-....001100....
-...00011000...
-..0001001000..
-.00013001300.
-.00010001000.
-.00010101000.
-..0001110000.
-...00000000..
-....011110...
-...01111110..
-..0111111110.
-..0111111110.
-.01111111110.
-.01111111110.
-..0111111110.
-..0111001110.
-...011..110..
-...011..110..
-...000..000..`, Math.floor(W*0.25), floorY-62, 3);
-
-        // ── Mobile from ceiling (larger) ──
-        const mobX = cx + cw/2;
-        pxRect(g, mobX-1, 0, P, cTop-16, GB.BLACK);
-        // Crossbar
-        pxRect(g, mobX-40, cTop-22, 80, 4, GB.DARK);
-        pxRect(g, mobX-40, cTop-22, 80, P, GB.BLACK);
-        // Hanging shapes
-        const shapes = [
-          {dx:-32, dy:-8, type:'star'},
-          {dx:0, dy:-14, type:'moon'},
-          {dx:28, dy:-6, type:'star'}
-        ];
-        shapes.forEach(s => {
-          pxRect(g, mobX+s.dx, cTop+s.dy, P, Math.abs(s.dy)+6, GB.BLACK);
-          if (s.type === 'star') {
-            drawSprite(g, `
-..00..
-.0110.
-011110
-.0110.
-..00..`, mobX+s.dx-5, cTop+s.dy+Math.abs(s.dy)+6, P);
-          } else {
-            drawSprite(g, `
-.000.
-01110
-01110
-.010.
-.000.`, mobX+s.dx-4, cTop+s.dy+Math.abs(s.dy)+6, P);
-          }
-        });
-
-        // ── Rug ──
-        const rugX = Math.floor(W*0.22), rugW = 200, rugH = 32;
-        fillDither(g, rugX, floorY+6, rugW, rugH, GB.DARK, GB.LIGHT, 'horiz');
-        pxBorder(g, rugX, floorY+6, rugW, rugH, GB.BLACK, P);
-        // Rug fringe
-        g.fillStyle(GB.DARK, 1);
-        for (let fx = rugX+4; fx < rugX+rugW-4; fx += 6) {
-          g.fillRect(fx, floorY+6+rugH, 2, 6);
-        }
-        break;
       }
+    }
+  }
+}
 
+// Rest of rooms will continue to be enhanced (keeping original for now but with improvements)
+      
       case 'school': {
-        // ── LARGE Blackboard ──
+        // LARGE Blackboard
         const bx = Math.floor(W*0.22), by = H*0.10, bw = 320, bh = 160;
-        // Frame
         pxRect(g, bx-8, by-8, bw+16, bh+16, GB.DARK);
         pxBorder(g, bx-8, by-8, bw+16, bh+16, GB.BLACK, 3);
-        // Inner frame bevel
         pxRect(g, bx-3, by-3, bw+6, bh+6, GB.BLACK);
-        // Board surface
         pxRect(g, bx, by, bw, bh, GB.BLACK);
-        // Chalk text: "HELLO CLASS" in large pixel font
+        
         drawSprite(g, `
 0.0..0000.0....0.....000.
 0.0..0....0....0....0...0
 000..000..0....0....0...0
 0.0..0....0....0....0...0
 0.0..0000.0000.0000..000.`, bx+20, by+16, 3);
-        // Math underneath
+        
         drawSprite(g, `
 .33..33..33..33.333.
 33...33.33..33..33..
 .33..3333...33..333.
 ..33.33.33..33....33
 33...33..33.3333.333`, bx+20, by+64, 2);
-        // Chalk lines (notes)
+        
         g.fillStyle(GB.LIGHT, 0.7);
         g.fillRect(bx+20, by+100, 120, P);
         g.fillRect(bx+20, by+110, 80, P);
@@ -686,48 +974,37 @@ class LifeScene extends Phaser.Scene {
         g.fillRect(bx+20, by+130, 60, P);
         g.fillRect(bx+180, by+100, 100, P);
         g.fillRect(bx+180, by+110, 70, P);
-        // Chalk tray
+        
         pxRect(g, bx-8, by+bh+8, bw+16, 10, GB.DARK);
         pxRect(g, bx-8, by+bh+8, bw+16, P, GB.BLACK);
-        // Chalk pieces
         pxRect(g, bx+20, by+bh+10, 16, 4, GB.LIGHT);
         pxRect(g, bx+44, by+bh+10, 12, 4, GB.WHITE);
         pxRect(g, bx+64, by+bh+10, 8, 4, GB.LIGHT);
-        // Eraser
         pxRect(g, bx+bw-40, by+bh+9, 24, 6, GB.DARK);
         pxRect(g, bx+bw-40, by+bh+9, 24, P, GB.BLACK);
 
-        // ── Student desk + chair (larger) ──
         const dx = Math.floor(W*0.62), dy = floorY;
-        // Desk top
         pxRect(g, dx, dy-68, 180, 10, GB.DARK);
         pxRect(g, dx, dy-68, 180, P, GB.BLACK);
         pxRect(g, dx, dy-60, 180, P, GB.BLACK);
-        // Desk front panel
         pxRect(g, dx+8, dy-58, 164, 24, GB.DARK);
         pxBorder(g, dx+8, dy-58, 164, 24, GB.BLACK, P);
-        // Desk legs
         pxRect(g, dx+8, dy-34, 6, 34, GB.BLACK);
         pxRect(g, dx+166, dy-34, 6, 34, GB.BLACK);
-        // Cross brace
         pxRect(g, dx+14, dy-18, 152, P, GB.BLACK);
 
-        // Books on desk
         pxRect(g, dx+20, dy-88, 50, 20, GB.BLACK);
         pxRect(g, dx+22, dy-86, 14, 16, GB.DARK);
         pxRect(g, dx+38, dy-88, 14, 18, GB.LIGHT);
         pxRect(g, dx+54, dy-84, 14, 14, GB.DARK);
-        // Book spines
         g.fillStyle(GB.LIGHT, 1);
         g.fillRect(dx+36, dy-86, P, 16);
         g.fillRect(dx+52, dy-86, P, 14);
 
-        // Pencil
         pxRect(g, dx+100, dy-76, 40, 3, GB.BLACK);
-        pxRect(g, dx+100, dy-76, 6, 3, GB.DARK); // eraser end
-        pxRect(g, dx+138, dy-75, 4, P, GB.LIGHT); // tip
+        pxRect(g, dx+100, dy-76, 6, 3, GB.DARK);
+        pxRect(g, dx+138, dy-75, 4, P, GB.LIGHT);
 
-        // Apple on desk
         drawSprite(g, `
 ..0..
 .010.
@@ -737,339 +1014,118 @@ class LifeScene extends Phaser.Scene {
 01110
 .111.`, dx+150, dy-88, 2);
 
-        // Chair
-        pxRect(g, dx+50, dy-42, 70, 6, GB.DARK); // seat
+        pxRect(g, dx+50, dy-42, 70, 6, GB.DARK);
         pxRect(g, dx+50, dy-42, 70, P, GB.BLACK);
-        pxRect(g, dx+54, dy-36, 6, 36, GB.BLACK); // front legs
+        pxRect(g, dx+54, dy-36, 6, 36, GB.BLACK);
         pxRect(g, dx+110, dy-36, 6, 36, GB.BLACK);
-        // Chair back
         pxRect(g, dx+108, dy-90, 8, 54, GB.BLACK);
         pxRect(g, dx+96, dy-92, 24, 6, GB.DARK);
         pxRect(g, dx+96, dy-92, 24, P, GB.BLACK);
         pxRect(g, dx+96, dy-74, 24, 4, GB.DARK);
 
-        // ── Wall clock (larger) ──
         const clx = Math.floor(W*0.88), cly = H*0.10;
         pxRect(g, clx, cly, 48, 48, GB.DARK);
         pxBorder(g, clx, cly, 48, 48, GB.BLACK, 3);
         pxRect(g, clx+6, cly+6, 36, 36, GB.LIGHT);
         pxBorder(g, clx+6, cly+6, 36, 36, GB.BLACK, P);
-        // Hour markers
         g.fillStyle(GB.BLACK, 1);
         [[23,8],[36,12],[40,23],[36,34],[23,38],[10,34],[6,23],[10,12]].forEach(([mx,my])=>{
           g.fillRect(clx+mx, cly+my, 3, 3);
         });
-        // Hands
-        g.fillRect(clx+23, cly+10, P, 14); // minute
-        g.fillRect(clx+23, cly+23, 10, P); // hour
-        g.fillRect(clx+23, cly+23, 3, 3); // center
-        break;
-      }
-
-      case 'bedroom': {
-        // ── LARGE Bed ──
-        const bx = Math.floor(W*0.50), by = floorY;
-        const bedW = 240, bedH = 80;
-        // Bed frame
-        pxRect(g, bx, by-bedH, bedW, bedH, GB.DARK);
-        pxBorder(g, bx, by-bedH, bedW, bedH, GB.BLACK, 3);
-        // Mattress
-        pxRect(g, bx+6, by-bedH+6, bedW-12, bedH-12, GB.WHITE);
-        // Blanket
-        fillDither(g, bx+6, by-bedH+20, bedW-12, bedH-28, GB.LIGHT, GB.DARK, 'horiz');
-        pxRect(g, bx+6, by-bedH+20, bedW-12, 4, GB.DARK);
-        // Pillow
-        pxRect(g, bx+12, by-bedH+8, 60, 18, GB.WHITE);
-        pxBorder(g, bx+12, by-bedH+8, 60, 18, GB.LIGHT, P);
-        pxRect(g, bx+14, by-bedH+12, 4, 10, GB.LIGHT); // pillow crease
-        // Second pillow
-        pxRect(g, bx+78, by-bedH+10, 50, 16, GB.WHITE);
-        pxBorder(g, bx+78, by-bedH+10, 50, 16, GB.LIGHT, P);
-        // Headboard - tall, detailed
-        pxRect(g, bx-6, by-bedH-60, bedW+12, 64, GB.DARK);
-        pxBorder(g, bx-6, by-bedH-60, bedW+12, 64, GB.BLACK, 3);
-        // Headboard panels
-        pxBorder(g, bx+10, by-bedH-52, 60, 44, GB.BLACK, P);
-        pxBorder(g, bx+80, by-bedH-52, 80, 44, GB.BLACK, P);
-        pxBorder(g, bx+170, by-bedH-52, 60, 44, GB.BLACK, P);
-        // Headboard top detail
-        pxRect(g, bx-6, by-bedH-64, bedW+12, 6, GB.BLACK);
-        // Legs
-        pxRect(g, bx+4, by-6, 8, 6, GB.BLACK);
-        pxRect(g, bx+bedW-12, by-6, 8, 6, GB.BLACK);
-
-        // ── Large Poster ──
-        const px2 = Math.floor(W*0.16), py2 = H*0.11;
-        pxRect(g, px2-3, py2-3, 86, 110, GB.BLACK);
-        pxRect(g, px2, py2, 80, 104, GB.DARK);
-        // Poster art - skull/band
-        drawSprite(g, `
-....0000....
-...001100...
-..00100100..
-.0010000100.
-.0011001100.
-..00111100..
-...011110...
-..01111110..
-.0111111110.
-0111111111110
-.0110110110.
-..010.010..
-...01.10...`, px2+14, py2+8, 4);
-        // Band name
-        g.fillStyle(GB.LIGHT, 1);
-        g.fillRect(px2+10, py2+72, 60, 3);
-        g.fillRect(px2+18, py2+80, 44, 3);
-        g.fillRect(px2+14, py2+88, 52, 3);
-
-        // ── Desk with lamp ──
-        const dx = Math.floor(W*0.14), dy = floorY;
-        // Desk
-        pxRect(g, dx, dy-60, 110, 8, GB.DARK);
-        pxRect(g, dx, dy-60, 110, P, GB.BLACK);
-        pxRect(g, dx, dy-54, 110, P, GB.BLACK);
-        pxRect(g, dx+6, dy-52, 6, 52, GB.BLACK);
-        pxRect(g, dx+98, dy-52, 6, 52, GB.BLACK);
-        // Drawer
-        pxRect(g, dx+60, dy-52, 42, 26, GB.DARK);
-        pxBorder(g, dx+60, dy-52, 42, 26, GB.BLACK, P);
-        pxRect(g, dx+76, dy-42, 10, P, GB.LIGHT); // handle
-
-        // Lamp (taller)
-        pxRect(g, dx+20, dy-100, 30, 16, GB.BLACK); // shade
-        g.fillStyle(GB.DARK, 1);
-        g.fillRect(dx+22, dy-98, 26, 12); // shade inner
-        pxRect(g, dx+33, dy-84, 4, 22, GB.BLACK); // stem
-        pxRect(g, dx+26, dy-64, 18, 4, GB.BLACK); // base
-        // Glow
-        const gl = this.add.graphics();
-        fillDither(gl, dx+4, dy-108, 60, 50, GB.WHITE, GB.LIGHT, 'sparse');
-        gl.setAlpha(0.2);
-
-        // ── Shoes by bed ──
-        drawSprite(g, `
-.000..000.
-01110.1110
-01110.1110
-.000..000.`, bx+40, by-10, 2);
-        break;
-      }
-
-      case 'apartment': {
-        const nice = stats.money > 0.5;
-        // ── LARGE Couch ──
-        const sx = Math.floor(W*0.46), sy = floorY;
-        const couchW = 260, couchH = 110;
-        // Back
-        pxRect(g, sx, sy-couchH, couchW, 36, GB.DARK);
-        pxBorder(g, sx, sy-couchH, couchW, 36, GB.BLACK, 3);
-        // Seat
-        pxRect(g, sx+3, sy-couchH+36, couchW-6, 50, nice?GB.DARK:GB.BLACK);
-        if (nice) {
-          // Cushions
-          pxRect(g, sx+10, sy-couchH+40, 74, 40, GB.LIGHT);
-          pxBorder(g, sx+10, sy-couchH+40, 74, 40, GB.DARK, P);
-          pxRect(g, sx+90, sy-couchH+40, 74, 40, GB.LIGHT);
-          pxBorder(g, sx+90, sy-couchH+40, 74, 40, GB.DARK, P);
-          pxRect(g, sx+170, sy-couchH+40, 80, 40, GB.LIGHT);
-          pxBorder(g, sx+170, sy-couchH+40, 80, 40, GB.DARK, P);
-          // Cushion creases
-          g.fillStyle(GB.DARK, 1);
-          [sx+46, sx+126, sx+210].forEach(cx => {
-            g.fillRect(cx, sy-couchH+48, P, 24);
-          });
-        }
-        // Armrests
-        pxRect(g, sx-14, sy-couchH+10, 18, couchH-18, GB.BLACK);
-        pxRect(g, sx+couchW-4, sy-couchH+10, 18, couchH-18, GB.BLACK);
-        pxRect(g, sx-12, sy-couchH+12, 14, 10, GB.DARK);
-        pxRect(g, sx+couchW-2, sy-couchH+12, 14, 10, GB.DARK);
-        // Front panel
-        pxRect(g, sx+3, sy-24, couchW-6, 16, GB.BLACK);
-        // Legs
-        pxRect(g, sx+8, sy-8, 8, 8, GB.BLACK);
-        pxRect(g, sx+couchW-16, sy-8, 8, 8, GB.BLACK);
-
-        // ── Coffee table (larger) ──
-        const tx = Math.floor(W*0.26);
-        pxRect(g, tx, sy-42, 120, 8, GB.DARK);
-        pxRect(g, tx, sy-42, 120, P, GB.BLACK);
-        pxRect(g, tx, sy-36, 120, P, GB.BLACK);
-        pxRect(g, tx+8, sy-34, 6, 34, GB.BLACK);
-        pxRect(g, tx+106, sy-34, 6, 34, GB.BLACK);
-        // Shelf under
-        pxRect(g, tx+12, sy-18, 96, 4, GB.DARK);
-        // Mug (larger)
-        pxRect(g, tx+40, sy-60, 18, 18, GB.BLACK);
-        pxRect(g, tx+42, sy-58, 14, 14, GB.LIGHT);
-        pxRect(g, tx+58, sy-56, 6, 10, GB.BLACK); // handle
-        pxRect(g, tx+60, sy-54, 2, 6, GB.LIGHT);
-        // Steam
-        g.fillStyle(GB.DARK, 0.6);
-        g.fillRect(tx+46, sy-68, P, 6);
-        g.fillRect(tx+50, sy-72, P, 8);
-        g.fillRect(tx+54, sy-66, P, 4);
-        // Magazine
-        pxRect(g, tx+70, sy-52, 30, 8, GB.BLACK);
-        pxRect(g, tx+72, sy-50, 26, 4, GB.LIGHT);
-
-        // ── Wall art (larger) ──
-        const fx = Math.floor(W*0.56), fy = H*0.10;
-        pxRect(g, fx-4, fy-4, 94, 68, GB.BLACK);
-        pxRect(g, fx, fy, 86, 60, GB.LIGHT);
-        // Landscape painting
-        pxRect(g, fx+4, fy+34, 78, 22, GB.DARK);
-        // Mountains
-        g.fillStyle(GB.BLACK, 1);
-        for (let i = 0; i < 40; i++) {
-          const mh = Math.sin(i*0.15)*18 + Math.sin(i*0.3)*8;
-          g.fillRect(fx+4+i*2, fy+34-Math.max(0,mh), 2, Math.max(0,mh));
-        }
-        // Sun in painting
-        pxRect(g, fx+62, fy+8, 12, 12, GB.WHITE);
-
-        if (nice) {
-          // ── Floor lamp ──
-          const lx = Math.floor(W*0.84);
-          pxRect(g, lx+2, sy-180, P, 130, GB.BLACK); // pole
-          // Shade
-          pxRect(g, lx-12, sy-186, 30, 20, GB.DARK);
-          pxBorder(g, lx-12, sy-186, 30, 20, GB.BLACK, P);
-          pxRect(g, lx-10, sy-184, 26, 16, GB.LIGHT);
-          // Base
-          pxRect(g, lx-10, sy-50, 24, 6, GB.BLACK);
-          pxRect(g, lx-6, sy-44, 16, 44, GB.BLACK);
-          // Glow
-          const lg = this.add.graphics();
-          fillDither(lg, lx-20, sy-186, 46, 50, GB.WHITE, GB.LIGHT, 'sparse');
-          lg.setAlpha(0.15);
-        }
-
-        // ── Rug ──
-        fillDither(g, Math.floor(W*0.24), floorY+6, 240, 36, GB.DARK, GB.LIGHT, 'horiz');
-        pxBorder(g, Math.floor(W*0.24), floorY+6, 240, 36, GB.BLACK, P);
-        break;
-      }
-
-      case 'office': {
-        // ── LARGE Desk ──
-        const dx = Math.floor(W*0.36), dy = floorY;
-        const deskW = 280, deskH = 12;
-        pxRect(g, dx, dy-76, deskW, deskH, GB.DARK);
-        pxRect(g, dx, dy-76, deskW, P, GB.BLACK);
-        pxRect(g, dx, dy-66, deskW, P, GB.BLACK);
-        // Desk legs
-        pxRect(g, dx+8, dy-64, 8, 64, GB.BLACK);
-        pxRect(g, dx+deskW-16, dy-64, 8, 64, GB.BLACK);
-        // Drawer unit
-        pxRect(g, dx+deskW-90, dy-64, 80, 50, GB.DARK);
-        pxBorder(g, dx+deskW-90, dy-64, 80, 50, GB.BLACK, P);
-        // Individual drawers
-        pxBorder(g, dx+deskW-86, dy-60, 72, 14, GB.BLACK, P);
-        pxBorder(g, dx+deskW-86, dy-44, 72, 14, GB.BLACK, P);
-        pxRect(g, dx+deskW-56, dy-54, 16, P, GB.LIGHT); // handle
-        pxRect(g, dx+deskW-56, dy-38, 16, P, GB.LIGHT); // handle
-        // Cross brace
-        pxRect(g, dx+16, dy-24, deskW-112, P, GB.BLACK);
-
-        // ── Monitor (large) ──
-        const mx = dx + 60;
-        pxRect(g, mx, dy-152, 120, 76, GB.BLACK);
-        pxBorder(g, mx, dy-152, 120, 76, GB.BLACK, 4);
-        pxRect(g, mx+6, dy-148, 108, 64, GB.LIGHT);
-        // Screen content - code
-        g.fillStyle(GB.DARK, 1);
-        const lines = [40,60,30,50,70,20,55,35,45,65];
-        lines.forEach((lw,i) => {
-          g.fillRect(mx+12, dy-142+i*6, lw, P);
-        });
-        // Blinking cursor
-        pxRect(g, mx+12+lines[lines.length-1]+4, dy-142+(lines.length-1)*6, 4, 4, GB.BLACK);
-        // Monitor stand
-        pxRect(g, mx+44, dy-76, 32, 10, GB.BLACK);
-        pxRect(g, mx+36, dy-68, 48, 4, GB.DARK);
-        pxRect(g, mx+36, dy-68, 48, P, GB.BLACK);
-
-        // ── Keyboard ──
-        pxRect(g, mx-10, dy-84, 80, 10, GB.BLACK);
-        pxRect(g, mx-8, dy-82, 76, 6, GB.DARK);
-        // Key rows
-        g.fillStyle(GB.LIGHT, 1);
-        for (let row = 0; row < 2; row++) {
-          for (let k = 0; k < 12; k++) {
-            g.fillRect(mx-6+k*6, dy-80+row*3, 4, P);
-          }
-        }
-
-        // ── Mouse ──
-        pxRect(g, mx+78, dy-82, 12, 8, GB.BLACK);
-        pxRect(g, mx+80, dy-80, 8, 4, GB.DARK);
-
-        // ── Office chair (large, detailed) ──
-        const chx = dx + 100;
-        // Seat
-        pxRect(g, chx, dy-50, 80, 10, GB.DARK);
-        pxBorder(g, chx, dy-50, 80, 10, GB.BLACK, P);
-        // Back
-        pxRect(g, chx+60, dy-110, 16, 64, GB.BLACK);
-        pxRect(g, chx+56, dy-114, 24, 8, GB.DARK);
-        pxBorder(g, chx+56, dy-114, 24, 8, GB.BLACK, P);
-        pxRect(g, chx+56, dy-82, 24, 6, GB.DARK);
-        // Center pole
-        pxRect(g, chx+36, dy-40, 6, 28, GB.BLACK);
-        // Wheels
-        pxRect(g, chx+22, dy-12, 34, 6, GB.BLACK);
-        pxRect(g, chx+20, dy-6, 8, 6, GB.BLACK);
-        pxRect(g, chx+50, dy-6, 8, 6, GB.BLACK);
-
-        // ── Filing cabinet (large) ──
-        const fc = Math.floor(W*0.82);
-        pxRect(g, fc, dy-160, 70, 160, GB.DARK);
-        pxBorder(g, fc, dy-160, 70, 160, GB.BLACK, 3);
-        // 3 drawers
-        for (let d = 0; d < 3; d++) {
-          const ddy = dy-156+d*50;
-          pxBorder(g, fc+8, ddy, 54, 42, GB.BLACK, P);
-          pxRect(g, fc+28, ddy+18, 14, 3, GB.LIGHT); // handle
-        }
-        // Label slots
-        g.fillStyle(GB.LIGHT, 1);
-        for (let d = 0; d < 3; d++) {
-          g.fillRect(fc+30, dy-156+d*50+6, 10, 8);
-        }
-
-        // ── Wall clock ──
-        const clx = Math.floor(W*0.18), cly = H*0.12;
-        pxRect(g, clx, cly, 48, 48, GB.DARK);
-        pxBorder(g, clx, cly, 48, 48, GB.BLACK, 3);
-        pxRect(g, clx+6, cly+6, 36, 36, GB.LIGHT);
-        pxBorder(g, clx+6, cly+6, 36, 36, GB.BLACK, P);
-        g.fillStyle(GB.BLACK, 1);
         g.fillRect(clx+23, cly+10, P, 14);
         g.fillRect(clx+23, cly+23, 10, P);
         g.fillRect(clx+23, cly+23, 3, 3);
         break;
       }
 
+      case 'apartment': {
+        const nice = stats.money > 0.5;
+        const sx = Math.floor(W*0.46), sy = floorY;
+        const couchW = 260, couchH = 110;
+        pxRect(g, sx, sy-couchH, couchW, 36, GB.DARK);
+        pxBorder(g, sx, sy-couchH, couchW, 36, GB.BLACK, 3);
+        pxRect(g, sx+3, sy-couchH+36, couchW-6, 50, nice?GB.DARK:GB.BLACK);
+        if (nice) {
+          pxRect(g, sx+10, sy-couchH+40, 74, 40, GB.LIGHT);
+          pxBorder(g, sx+10, sy-couchH+40, 74, 40, GB.DARK, P);
+          pxRect(g, sx+90, sy-couchH+40, 74, 40, GB.LIGHT);
+          pxBorder(g, sx+90, sy-couchH+40, 74, 40, GB.DARK, P);
+          pxRect(g, sx+170, sy-couchH+40, 80, 40, GB.LIGHT);
+          pxBorder(g, sx+170, sy-couchH+40, 80, 40, GB.DARK, P);
+          g.fillStyle(GB.DARK, 1);
+          [sx+46, sx+126, sx+210].forEach(cx => {
+            g.fillRect(cx, sy-couchH+48, P, 24);
+          });
+        }
+        pxRect(g, sx-14, sy-couchH+10, 18, couchH-18, GB.BLACK);
+        pxRect(g, sx+couchW-4, sy-couchH+10, 18, couchH-18, GB.BLACK);
+        pxRect(g, sx-12, sy-couchH+12, 14, 10, GB.DARK);
+        pxRect(g, sx+couchW-2, sy-couchH+12, 14, 10, GB.DARK);
+        pxRect(g, sx+3, sy-24, couchW-6, 16, GB.BLACK);
+        pxRect(g, sx+8, sy-8, 8, 8, GB.BLACK);
+        pxRect(g, sx+couchW-16, sy-8, 8, 8, GB.BLACK);
+
+        const tx = Math.floor(W*0.26);
+        pxRect(g, tx, sy-42, 120, 8, GB.DARK);
+        pxRect(g, tx, sy-42, 120, P, GB.BLACK);
+        pxRect(g, tx, sy-36, 120, P, GB.BLACK);
+        pxRect(g, tx+8, sy-34, 6, 34, GB.BLACK);
+        pxRect(g, tx+106, sy-34, 6, 34, GB.BLACK);
+        pxRect(g, tx+12, sy-18, 96, 4, GB.DARK);
+        pxRect(g, tx+40, sy-60, 18, 18, GB.BLACK);
+        pxRect(g, tx+42, sy-58, 14, 14, GB.LIGHT);
+        pxRect(g, tx+58, sy-56, 6, 10, GB.BLACK);
+        pxRect(g, tx+60, sy-54, 2, 6, GB.LIGHT);
+        g.fillStyle(GB.DARK, 0.6);
+        g.fillRect(tx+46, sy-68, P, 6);
+        g.fillRect(tx+50, sy-72, P, 8);
+        g.fillRect(tx+54, sy-66, P, 4);
+        pxRect(g, tx+70, sy-52, 30, 8, GB.BLACK);
+        pxRect(g, tx+72, sy-50, 26, 4, GB.LIGHT);
+
+        const fx = Math.floor(W*0.56), fy = H*0.10;
+        pxRect(g, fx-4, fy-4, 94, 68, GB.BLACK);
+        pxRect(g, fx, fy, 86, 60, GB.LIGHT);
+        pxRect(g, fx+4, fy+34, 78, 22, GB.DARK);
+        g.fillStyle(GB.BLACK, 1);
+        for (let i = 0; i < 40; i++) {
+          const mh = Math.sin(i*0.15)*18 + Math.sin(i*0.3)*8;
+          g.fillRect(fx+4+i*2, fy+34-Math.max(0,mh), 2, Math.max(0,mh));
+        }
+        pxRect(g, fx+62, fy+8, 12, 12, GB.WHITE);
+
+        if (nice) {
+          const lx = Math.floor(W*0.84);
+          pxRect(g, lx+2, sy-180, P, 130, GB.BLACK);
+          pxRect(g, lx-12, sy-186, 30, 20, GB.DARK);
+          pxBorder(g, lx-12, sy-186, 30, 20, GB.BLACK, P);
+          pxRect(g, lx-10, sy-184, 26, 16, GB.LIGHT);
+          pxRect(g, lx-10, sy-50, 24, 6, GB.BLACK);
+          pxRect(g, lx-6, sy-44, 16, 44, GB.BLACK);
+          const lg = this.add.graphics();
+          fillDither(lg, lx-20, sy-186, 46, 50, GB.WHITE, GB.LIGHT, 'sparse');
+          lg.setAlpha(0.15);
+        }
+
+        fillDither(g, Math.floor(W*0.24), floorY+6, 240, 36, GB.DARK, GB.LIGHT, 'horiz');
+        pxBorder(g, Math.floor(W*0.24), floorY+6, 240, 36, GB.BLACK, P);
+        break;
+      }
+
       case 'home': {
         const nice = stats.money > 0.5;
-        // ── LARGE Sofa ──
         const sx = Math.floor(W*0.42), sy = floorY;
         const sofaW = 280, sofaH = 120;
-        // Back
         pxRect(g, sx, sy-sofaH, sofaW, 40, GB.DARK);
         pxBorder(g, sx, sy-sofaH, sofaW, 40, GB.BLACK, 3);
-        // Seat area
         pxRect(g, sx+3, sy-sofaH+40, sofaW-6, 54, GB.DARK);
-        // Cushions
         pxRect(g, sx+10, sy-sofaH+44, 82, 44, GB.LIGHT);
         pxBorder(g, sx+10, sy-sofaH+44, 82, 44, GB.DARK, P);
         pxRect(g, sx+98, sy-sofaH+44, 82, 44, GB.LIGHT);
         pxBorder(g, sx+98, sy-sofaH+44, 82, 44, GB.DARK, P);
         pxRect(g, sx+186, sy-sofaH+44, 82, 44, GB.LIGHT);
         pxBorder(g, sx+186, sy-sofaH+44, 82, 44, GB.DARK, P);
-        // Throw pillows
+        
         drawSprite(g, `
 .0000.
 011110
@@ -1082,61 +1138,50 @@ class LifeScene extends Phaser.Scene {
 100001
 100001
 .1111.`, sx+sofaW-60, sy-sofaH+20, 3);
-        // Armrests
+        
         pxRect(g, sx-16, sy-sofaH+14, 20, sofaH-22, GB.BLACK);
         pxRect(g, sx+sofaW-4, sy-sofaH+14, 20, sofaH-22, GB.BLACK);
         pxRect(g, sx-14, sy-sofaH+16, 16, 14, GB.DARK);
         pxRect(g, sx+sofaW-2, sy-sofaH+16, 16, 14, GB.DARK);
-        // Front
         pxRect(g, sx+3, sy-26, sofaW-6, 18, GB.BLACK);
-        // Legs
         pxRect(g, sx+10, sy-8, 10, 8, GB.BLACK);
         pxRect(g, sx+sofaW-20, sy-8, 10, 8, GB.BLACK);
 
-        // ── Coffee table ──
         const tx = Math.floor(W*0.26);
         pxRect(g, tx, sy-44, 120, 8, GB.DARK);
         pxRect(g, tx, sy-44, 120, P, GB.BLACK);
         pxRect(g, tx, sy-38, 120, P, GB.BLACK);
         pxRect(g, tx+8, sy-36, 6, 36, GB.BLACK);
         pxRect(g, tx+106, sy-36, 6, 36, GB.BLACK);
-        // Books on table
         pxRect(g, tx+20, sy-58, 36, 14, GB.BLACK);
         pxRect(g, tx+22, sy-56, 10, 10, GB.DARK);
         pxRect(g, tx+34, sy-58, 10, 12, GB.LIGHT);
         pxRect(g, tx+46, sy-54, 8, 8, GB.DARK);
-        // Remote
         pxRect(g, tx+70, sy-52, 20, 8, GB.BLACK);
         pxRect(g, tx+72, sy-50, 4, P, GB.LIGHT);
         pxRect(g, tx+78, sy-50, 4, P, GB.LIGHT);
 
-        // ── LARGE Bookshelf ──
         const bkx = Math.floor(W*0.80), bky = H*0.08;
         const bkW = 90, bkH = floorY - bky;
         pxRect(g, bkx, bky, bkW, bkH, GB.DARK);
         pxBorder(g, bkx, bky, bkW, bkH, GB.BLACK, 3);
-        // 5 shelves with books
         for (let s = 0; s < 5; s++) {
           const shY = bky + 8 + s * Math.floor((bkH-16)/5);
           pxRect(g, bkx+3, shY, bkW-6, 4, GB.BLACK);
-          // Books - varied sizes
           for (let b = 0; b < 6; b++) {
             const bw = 6 + (b%3)*3;
             const bh = 20 + (b*7)%16;
             const bc = b%3===0?GB.BLACK:b%3===1?GB.DARK:GB.LIGHT;
             pxRect(g, bkx+6+b*13, shY-bh, bw, bh, bc);
-            // Spine detail
             g.fillStyle(bc===GB.BLACK?GB.DARK:GB.BLACK, 1);
             g.fillRect(bkx+7+b*13, shY-bh+2, P, bh-4);
           }
         }
 
         if (nice) {
-          // ── Family photo (larger) ──
           const fpx = Math.floor(W*0.20), fpy = H*0.12;
           pxRect(g, fpx-4, fpy-4, 80, 64, GB.BLACK);
           pxRect(g, fpx, fpy, 72, 56, GB.LIGHT);
-          // Family portrait
           drawSprite(g, `
 ..00.....00..
 ..01.....01..
@@ -1154,10 +1199,8 @@ class LifeScene extends Phaser.Scene {
 .....000.....`, fpx+16, fpy+6, 3);
         }
 
-        // ── Rug ──
         fillDither(g, Math.floor(W*0.24), floorY+6, 260, 38, GB.DARK, GB.LIGHT, 'horiz');
         pxBorder(g, Math.floor(W*0.24), floorY+6, 260, 38, GB.BLACK, P);
-        // Rug pattern
         g.fillStyle(GB.BLACK, 1);
         g.fillRect(Math.floor(W*0.24)+8, floorY+14, 244, P);
         g.fillRect(Math.floor(W*0.24)+8, floorY+36, 244, P);
@@ -1165,84 +1208,64 @@ class LifeScene extends Phaser.Scene {
       }
 
       case 'hospital': {
-        // ── LARGE Hospital bed ──
         const bx = Math.floor(W*0.24), by = floorY;
         const bedW = 300, bedH = 80;
-        // Frame
         pxRect(g, bx, by-bedH, bedW, bedH, GB.DARK);
         pxBorder(g, bx, by-bedH, bedW, bedH, GB.BLACK, 3);
-        // Mattress
         pxRect(g, bx+8, by-bedH+8, bedW-16, bedH-14, GB.WHITE);
-        // Blanket
         fillDither(g, bx+60, by-bedH+14, bedW-76, bedH-26, GB.LIGHT, GB.DARK, 'horiz');
         pxRect(g, bx+60, by-bedH+14, bedW-76, 4, GB.DARK);
-        // Pillow
         pxRect(g, bx+14, by-bedH+10, 54, 22, GB.WHITE);
         pxBorder(g, bx+14, by-bedH+10, 54, 22, GB.LIGHT, P);
-        // Headboard
         pxRect(g, bx-8, by-bedH-50, 14, bedH+50, GB.BLACK);
         pxRect(g, bx-8, by-bedH-50, 80, 8, GB.DARK);
         pxBorder(g, bx-8, by-bedH-50, 80, 8, GB.BLACK, P);
-        // Side rails
         pxRect(g, bx+4, by-bedH-30, P, 30, GB.BLACK);
         pxRect(g, bx+10, by-bedH-30, P, 30, GB.BLACK);
         pxRect(g, bx+4, by-bedH-32, 8, 4, GB.DARK);
-        // Wheels
         const wheels = [bx+8, bx+bedW-16];
         wheels.forEach(wx => {
           pxRect(g, wx, by-4, 12, 4, GB.BLACK);
-          // Wheel detail
           pxRect(g, wx+2, by, 8, 4, GB.DARK);
         });
 
-        // ── IV Stand (tall, detailed) ──
         const ix = Math.floor(W*0.72);
         pxRect(g, ix+3, by-240, 4, 240, GB.BLACK);
-        // Crossbar top
         pxRect(g, ix-12, by-242, 30, 4, GB.BLACK);
         pxRect(g, ix-12, by-242, 4, 8, GB.BLACK);
         pxRect(g, ix+14, by-242, 4, 8, GB.BLACK);
-        // IV Bag
         pxRect(g, ix-6, by-234, 16, 30, GB.DARK);
         pxBorder(g, ix-6, by-234, 16, 30, GB.BLACK, P);
         pxRect(g, ix-4, by-232, 12, 26, GB.LIGHT);
-        // Drip line
         g.fillStyle(GB.BLACK, 1);
         g.fillRect(ix+2, by-204, P, 100);
-        // Drip chamber
         pxRect(g, ix-1, by-206, 6, 12, GB.BLACK);
         pxRect(g, ix, by-204, 4, 8, GB.LIGHT);
-        // Base (tripod)
         pxRect(g, ix-14, by-10, 32, 4, GB.BLACK);
         pxRect(g, ix-18, by-6, 6, 6, GB.BLACK);
         pxRect(g, ix+16, by-6, 6, 6, GB.BLACK);
         pxRect(g, ix+1, by-6, 6, 6, GB.BLACK);
 
-        // ── Heart monitor (large, detailed) ──
         const hmx = Math.floor(W*0.80), hmy = by-180;
         pxRect(g, hmx, hmy, 100, 72, GB.BLACK);
         pxBorder(g, hmx, hmy, 100, 72, GB.BLACK, 4);
         pxRect(g, hmx+6, hmy+6, 88, 44, GB.DARK);
-        // EKG waveform
         const ekg = [0,0,0,0,0,-2,-4,-8,14,-6,0,0,0,0,0,0,-2,-4,-8,14,-6,0,0,0,0,0,0,0,0,-2,-4,10,-4,0,0,0,0,0,0,0];
         g.fillStyle(GB.LIGHT, 1);
         for (let i = 0; i < ekg.length-1; i++) {
           const y1 = hmy+28+ekg[i], y2 = hmy+28+ekg[i+1];
           g.fillRect(hmx+8+i*2, Math.min(y1,y2), P, Math.abs(y2-y1)+P);
         }
-        // Readings
         g.fillStyle(GB.LIGHT, 1);
         g.fillRect(hmx+10, hmy+54, 24, 3);
         g.fillRect(hmx+40, hmy+54, 16, 3);
         g.fillRect(hmx+62, hmy+54, 30, 3);
         g.fillRect(hmx+10, hmy+62, 18, 3);
-        // Monitor stand
         pxRect(g, hmx-4, hmy+72, 108, 6, GB.DARK);
         pxRect(g, hmx-4, hmy+72, 108, P, GB.BLACK);
         pxRect(g, hmx+6, hmy+78, 6, by-hmy-78, GB.BLACK);
         pxRect(g, hmx+88, hmy+78, 6, by-hmy-78, GB.BLACK);
 
-        // ── Clipboard at foot ──
         pxRect(g, bx+bedW-8, by-100, 20, 32, GB.DARK);
         pxBorder(g, bx+bedW-8, by-100, 20, 32, GB.BLACK, P);
         pxRect(g, bx+bedW-4, by-96, 12, 24, GB.LIGHT);
@@ -1250,197 +1273,51 @@ class LifeScene extends Phaser.Scene {
         g.fillRect(bx+bedW, by-92, 6, P);
         g.fillRect(bx+bedW, by-86, 6, P);
         g.fillRect(bx+bedW, by-80, 4, P);
-        // Clip at top
         pxRect(g, bx+bedW-4, by-102, 12, 6, GB.BLACK);
         break;
       }
     }
   }
 
-  // ══════════════════════════════════════
-  // Character sprites — LARGE, detailed
-  // ══════════════════════════════════════
-  drawChar(age, stats, x, floorY) {
-    const gfx = this.add.graphics();
-    let map, scale;
-
-    if (age <= 3) {
-      // Baby - round, chubby proportions
-      scale = 4;
-      map = `
-.....0000.....
-....000000....
-...00000000...
-..0003003000..
-..0003003000..
-..0000000000..
-..0000110000..
-...00000000...
-....000000....
-.....0000.....
-....111111....
-...11111111...
-...11111111...
-...11111111...
-....11..11....
-....00..00....`;
-    } else if (age <= 8) {
-      // Child - slightly taller, big head
-      scale = 4;
-      map = `
-....11111.....
-...1111111....
-..111111111...
-..111111111...
-..110030031...
-..111000011...
-..111011011...
-...11111111...
-....111111....
-.....0000.....
-....111111....
-...11111111...
-..1111111111..
-..1111111111..
-...11....11...
-...11....11...
-...11....11...
-...00....00...`;
-    } else if (age <= 14) {
-      // Teen - taller, thinner
-      scale = 4;
-      map = `
-....1111......
-...111111.....
-..11111111....
-..11111111....
-..11003003....
-..11100001....
-..11100101....
-...11111111...
-....111111....
-.....1111.....
-.....0000.....
-....111111....
-...11111111...
-..1111111111..
-..1111111111..
-..1111111111..
-...111..111...
-...111..111...
-...111..111...
-...111..111...
-...000..000...`;
-    } else if (age <= 55) {
-      // Adult - broad shoulders, full body
-      scale = 5;
-      map = `
-...11111...
-..1111111..
-.111111111.
-.110030031.
-.111000011.
-.111001011.
-..1111111..
-...11111...
-...00000...
-..1111111..
-.111111111.
-1111111111.
-1111111111.
-.111111111.
-..11...11..
-..11...11..
-..11...11..
-..00...00..`;
-    } else {
-      // Elderly - slightly hunched, lighter tones
-      scale = 5;
-      map = `
-...22222...
-..2222222..
-.222222222.
-.220030032.
-.222000022.
-.222001022.
-..2222222..
-...22222...
-...00000...
-..2222222..
-.222222222.
-2222222222.
-2222222222.
-.222222222.
-..22...22..
-..22...22..
-..22...22..
-..00...00..`;
-    }
-
-    const rows = map.trim().split('\n');
-    const sprH = rows.length * scale;
-    const sprW = rows[0].length * scale;
-    const ox = x - sprW/2;
-    const oy = floorY - sprH;
-
-    drawSprite(gfx, map, ox, oy, scale);
-
-    // Shadow (larger)
-    const sh = this.add.graphics();
-    fillDither(sh, ox-4, floorY+2, sprW+8, 10, GB.DARK, GB.LIGHT, 'check');
-    sh.setAlpha(0.3);
-
-    // Idle bob
-    this.tweens.add({
-      targets: gfx, y: -3,
-      duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
-    });
-  }
-
-  // ── Particles ──
-  spawnParticles(type, stats, W, H, floorY) {
-    if (type === 'death') return;
-    // Dust motes
-    for (let i = 0; i < 5; i++) {
-      const p = this.add.graphics();
-      p.fillStyle(GB.DARK, Phaser.Math.FloatBetween(0.15, 0.35));
-      p.fillRect(0, 0, 3, 3);
-      p.x = Phaser.Math.Between(0, W);
-      p.y = Phaser.Math.Between(floorY*0.3, floorY*0.8);
-      this.particles.push({ gfx:p, vx:Phaser.Math.FloatBetween(-0.12,0.12), vy:Phaser.Math.FloatBetween(0.04,0.12), maxY:floorY-10, wrap:false });
-    }
-    if (stats.stress > 0.7) {
-      for (let i = 0; i < 12; i++) {
-        const r = this.add.graphics();
-        r.fillStyle(GB.DARK, 0.5);
-        r.fillRect(0, 0, P, 6);
-        r.x = Phaser.Math.Between(0, W);
-        r.y = Phaser.Math.Between(-20, H);
-        this.particles.push({ gfx:r, vx:-0.4, vy:3.5, maxY:H+10, wrap:true });
-      }
-    }
-  }
-
-  tickParticles() {
+  // This method is called every frame
+  tickAnimations() {
     const W = this.cameras.main.width;
-    for (const p of this.particles) {
-      p.gfx.x += p.vx; p.gfx.y += p.vy;
-      if (p.gfx.y > p.maxY) { p.gfx.y = -10; if (p.wrap) p.gfx.x = Phaser.Math.Between(0, W); }
-      if (p.gfx.x < -10) p.gfx.x = W+10;
-      if (p.gfx.x > W+10) p.gfx.x = -10;
+    const H = this.cameras.main.height;
+    
+    for (const obj of this.animatedObjects) {
+      if (obj.type === 'dust' || obj.type === 'ash') {
+        obj.gfx.x += obj.vx;
+        obj.gfx.y += obj.vy;
+        if (obj.vr) obj.gfx.rotation += obj.vr;
+        
+        if (obj.gfx.y > obj.maxY) {
+          obj.gfx.y = -10;
+          if (!obj.wrap) obj.gfx.x = Phaser.Math.Between(0, W);
+        }
+        if (obj.gfx.x < -10) obj.gfx.x = W+10;
+        if (obj.gfx.x > W+10) obj.gfx.x = -10;
+      } else if (obj.type === 'rain') {
+        obj.gfx.x += obj.vx;
+        obj.gfx.y += obj.vy;
+        
+        if (obj.gfx.y > obj.maxY) {
+          obj.gfx.y = -10;
+          obj.gfx.x = Phaser.Math.Between(0, W);
+        }
+      }
     }
   }
 }
 
 // ═══════════════════════════════════════════════
-// Game State + API
+// Game State + API (same as original)
 // ═══════════════════════════════════════════════
 
 // ── GB Sound Engine (Web Audio API chiptune) ──
 const SFX = (() => {
   let ctx = null;
   let muted = false;
-  const vol = 0.15; // master volume (gentle)
+  const vol = 0.15;
 
   function ensure() {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1481,27 +1358,13 @@ const SFX = (() => {
   return {
     get muted() { return muted; },
     toggle() { muted = !muted; return muted; },
-
-    // UI click — short square blip (Game Boy menu select)
-    click() {
-      if (muted) return;
-      osc('square', 880, 0, 0.06, vol*0.6);
-    },
-
-    // Choice confirm — two ascending square notes
+    click() { if (muted) return; osc('square', 880, 0, 0.06, vol*0.6); },
     confirm() {
       if (muted) return;
       osc('square', 523, 0, 0.08, vol*0.7);
       osc('square', 784, 0.08, 0.12, vol*0.7);
     },
-
-    // Typewriter tick — tiny high click (very quiet, rapid)
-    tick() {
-      if (muted) return;
-      osc('square', 1200, 0, 0.015, vol*0.15);
-    },
-
-    // Transition whoosh — descending sweep + noise
+    tick() { if (muted) return; osc('square', 1200, 0, 0.015, vol*0.15); },
     transition() {
       if (muted) return;
       osc('square', 440, 0, 0.12, vol*0.5);
@@ -1509,68 +1372,51 @@ const SFX = (() => {
       osc('square', 220, 0.12, 0.15, vol*0.3);
       noise(0, 0.25, vol*0.15);
     },
-
-    // New turn arrival — bright ascending arpeggio (Pokémon encounter feel)
     newTurn() {
       if (muted) return;
-      osc('square', 392, 0, 0.09, vol*0.5);     // G4
-      osc('square', 494, 0.08, 0.09, vol*0.5);   // B4
-      osc('square', 587, 0.16, 0.09, vol*0.5);   // D5
-      osc('square', 784, 0.24, 0.14, vol*0.6);   // G5
+      osc('square', 392, 0, 0.09, vol*0.5);
+      osc('square', 494, 0.08, 0.09, vol*0.5);
+      osc('square', 587, 0.16, 0.09, vol*0.5);
+      osc('square', 784, 0.24, 0.14, vol*0.6);
     },
-
-    // Game start — triumphant little fanfare
     start() {
       if (muted) return;
-      osc('square', 523, 0, 0.1, vol*0.6);       // C5
-      osc('square', 659, 0.1, 0.1, vol*0.6);     // E5
-      osc('square', 784, 0.2, 0.1, vol*0.6);     // G5
-      osc('square', 1047, 0.3, 0.2, vol*0.7);    // C6
-      // harmony
-      osc('square', 392, 0.3, 0.2, vol*0.3);     // G4
+      osc('square', 523, 0, 0.1, vol*0.6);
+      osc('square', 659, 0.1, 0.1, vol*0.6);
+      osc('square', 784, 0.2, 0.1, vol*0.6);
+      osc('square', 1047, 0.3, 0.2, vol*0.7);
+      osc('square', 392, 0.3, 0.2, vol*0.3);
     },
-
-    // Death — somber descending tone + low rumble
     death() {
       if (muted) return;
-      osc('triangle', 392, 0, 0.3, vol*0.6);     // G4
-      osc('triangle', 330, 0.25, 0.3, vol*0.5);   // E4
-      osc('triangle', 262, 0.5, 0.3, vol*0.5);    // C4
-      osc('triangle', 196, 0.75, 0.6, vol*0.5);   // G3
-      // low rumble
+      osc('triangle', 392, 0, 0.3, vol*0.6);
+      osc('triangle', 330, 0.25, 0.3, vol*0.5);
+      osc('triangle', 262, 0.5, 0.3, vol*0.5);
+      osc('triangle', 196, 0.75, 0.6, vol*0.5);
       osc('sawtooth', 65, 0.7, 0.8, vol*0.15);
       noise(0.8, 0.5, vol*0.08);
     },
-
-    // Stat up — quick happy chirp
     statUp() {
       if (muted) return;
       osc('square', 660, 0, 0.06, vol*0.4);
       osc('square', 880, 0.06, 0.1, vol*0.5);
     },
-
-    // Error — buzzy low tone
     error() {
       if (muted) return;
       osc('square', 150, 0, 0.12, vol*0.5);
       osc('square', 120, 0.1, 0.15, vol*0.4);
     },
-
-    // Play again — hopeful restart jingle
     playAgain() {
       if (muted) return;
-      osc('square', 262, 0, 0.1, vol*0.5);       // C4
-      osc('square', 330, 0.12, 0.1, vol*0.5);     // E4
-      osc('square', 392, 0.24, 0.1, vol*0.5);     // G4
-      osc('square', 523, 0.36, 0.18, vol*0.6);    // C5
-      osc('square', 659, 0.5, 0.25, vol*0.5);     // E5
+      osc('square', 262, 0, 0.1, vol*0.5);
+      osc('square', 330, 0.12, 0.1, vol*0.5);
+      osc('square', 392, 0.24, 0.1, vol*0.5);
+      osc('square', 523, 0.36, 0.18, vol*0.6);
+      osc('square', 659, 0.5, 0.25, vol*0.5);
     },
-
-    // ── Title screen BGM — dreamy Game Boy loop ──
     _bgmTimer: null,
     _bgmPlaying: false,
     _bgmGain: null,
-
     bgmStart() {
       if (this._bgmPlaying) return;
       this._bgmPlaying = true;
@@ -1578,59 +1424,27 @@ const SFX = (() => {
         if (!this._bgmPlaying) return;
         if (muted) { this._bgmTimer = setTimeout(playLoop, 8400); return; }
         const c = ensure();
-        // Master gain for BGM so we can fade it
         const master = c.createGain();
         master.gain.value = vol * 0.35;
         master.connect(c.destination);
         this._bgmGain = master;
 
-        // Dreamy melody — pentatonic, wistful (Game Boy Pokémon title vibe)
-        // 8-bar phrase, ~8.4 seconds at tempo
         const bpm = 95;
         const beat = 60 / bpm;
         const melody = [
-          // [note_freq, start_beat, duration_beats]
-          // Bar 1-2: opening motif
-          [330, 0, 1.5],      // E4
-          [392, 1.5, 1],      // G4
-          [440, 2.5, 1.5],    // A4
-          [392, 4, 2],        // G4
-          [330, 6, 1],        // E4
-          [294, 7, 1],        // D4
-          // Bar 3-4: response phrase
-          [262, 8, 1.5],      // C4
-          [294, 9.5, 1],      // D4
-          [330, 10.5, 2],     // E4
-          [294, 12.5, 1.5],   // D4
-          [262, 14, 2],       // C4
-          // Bar 5-6: climb
-          [330, 16, 1],       // E4
-          [392, 17, 1],       // G4
-          [440, 18, 1.5],     // A4
-          [523, 19.5, 2],     // C5
-          [440, 21.5, 1],     // A4
-          [392, 22.5, 1.5],   // G4
-          // Bar 7-8: resolve down
-          [330, 24, 1.5],     // E4
-          [294, 25.5, 1.5],   // D4
-          [262, 27, 2],       // C4
-          [220, 29, 1.5],     // A3
-          [262, 30.5, 2.5],   // C4 (held, resolve)
+          [330, 0, 1.5], [392, 1.5, 1], [440, 2.5, 1.5], [392, 4, 2],
+          [330, 6, 1], [294, 7, 1], [262, 8, 1.5], [294, 9.5, 1],
+          [330, 10.5, 2], [294, 12.5, 1.5], [262, 14, 2], [330, 16, 1],
+          [392, 17, 1], [440, 18, 1.5], [523, 19.5, 2], [440, 21.5, 1],
+          [392, 22.5, 1.5], [330, 24, 1.5], [294, 25.5, 1.5], [262, 27, 2],
+          [220, 29, 1.5], [262, 30.5, 2.5],
         ];
 
-        // Bass line — simple root notes, triangle wave
         const bass = [
-          [131, 0, 3.5],     // C3
-          [147, 4, 3.5],     // D3
-          [131, 8, 3.5],     // C3
-          [110, 12, 3.5],    // A2
-          [131, 16, 3.5],    // C3
-          [165, 20, 3.5],    // E3
-          [131, 24, 3.5],    // C3
-          [110, 28, 4.5],    // A2 (held)
+          [131, 0, 3.5], [147, 4, 3.5], [131, 8, 3.5], [110, 12, 3.5],
+          [131, 16, 3.5], [165, 20, 3.5], [131, 24, 3.5], [110, 28, 4.5],
         ];
 
-        // Arpeggio layer — quiet pulsing (square, very low vol)
         const arp = [
           [523, 0], [659, 0.5], [784, 1], [659, 1.5],
           [523, 2], [659, 2.5], [784, 3], [659, 3.5],
@@ -1651,7 +1465,6 @@ const SFX = (() => {
         ];
 
         const t = c.currentTime + 0.05;
-        // Melody — pulse/square
         for (const [freq, startB, durB] of melody) {
           const o = c.createOscillator(); const g = c.createGain();
           o.type = 'square'; o.frequency.value = freq;
@@ -1663,7 +1476,6 @@ const SFX = (() => {
           o.connect(g); g.connect(master);
           o.start(s); o.stop(s + d + 0.05);
         }
-        // Bass — triangle
         for (const [freq, startB, durB] of bass) {
           const o = c.createOscillator(); const g = c.createGain();
           o.type = 'triangle'; o.frequency.value = freq;
@@ -1674,7 +1486,6 @@ const SFX = (() => {
           o.connect(g); g.connect(master);
           o.start(s); o.stop(s + d + 0.05);
         }
-        // Arpeggio — quiet square pulse
         for (const [freq, startB] of arp) {
           const o = c.createOscillator(); const g = c.createGain();
           o.type = 'square'; o.frequency.value = freq;
@@ -1690,11 +1501,9 @@ const SFX = (() => {
       };
       playLoop();
     },
-
     bgmStop() {
       this._bgmPlaying = false;
       if (this._bgmTimer) { clearTimeout(this._bgmTimer); this._bgmTimer = null; }
-      // Fade out current BGM
       if (this._bgmGain) {
         try {
           const c = this._bgmGain.context;
@@ -1778,10 +1587,7 @@ function renderRelations(rels) {
   el.hudRelations.innerHTML='';
   if(!rels?.length)return;
 
-  // --- GB portrait sprite maps (14x14 grid, each char = shade) ---
-  // 0=BLACK(#0f380f) 1=DARK(#306230) 2=LIGHT(#8bac0f) 3=WHITE(#9bbc0f) .=transparent
   const PORTRAITS = {
-    // Mother / female caretaker — soft face, long hair
     mother: [
       '..011111110..',
       '.0111111111..',
@@ -1798,7 +1604,6 @@ function renderRelations(rels) {
       '.0111111111..',
       '.01111.1111..',
     ],
-    // Father / male caretaker — square jaw, short hair
     father: [
       '..01111110...',
       '.0011111100..',
@@ -1815,7 +1620,6 @@ function renderRelations(rels) {
       '..11111111...',
       '..1111.1111..',
     ],
-    // Friend / peer — round face, messy hair
     friend: [
       '...101010....',
       '..01111110...',
@@ -1832,7 +1636,6 @@ function renderRelations(rels) {
       '..11111111...',
       '..111..111...',
     ],
-    // Partner / lover — gentle features, styled hair
     partner: [
       '.011111110...',
       '01111111110..',
@@ -1849,7 +1652,6 @@ function renderRelations(rels) {
       '.0111111111..',
       '.0111..1111..',
     ],
-    // Child / offspring — small round face, big eyes
     child: [
       '..0111110....',
       '.011111110...',
@@ -1866,7 +1668,6 @@ function renderRelations(rels) {
       '..0111110....',
       '..011.011....',
     ],
-    // Boss / mentor — stern, glasses, broad
     mentor: [
       '..0111110....',
       '.011111110...',
@@ -1883,7 +1684,6 @@ function renderRelations(rels) {
       '.01111111....',
       '.0111.0111...',
     ],
-    // Sibling — similar to friend but with a distinctive tuft
     sibling: [
       '....010......',
       '..01111110...',
@@ -1900,7 +1700,6 @@ function renderRelations(rels) {
       '..11111111...',
       '..111..111...',
     ],
-    // Generic / fallback — neutral face
     generic: [
       '..0111110....',
       '.011111110...',
@@ -1937,10 +1736,8 @@ function renderRelations(rels) {
     const rows = map;
     const cols = rows[0].length;
     const px = size / Math.max(rows.length, cols);
-    // Background
     ctx.fillStyle = GB[3];
     ctx.fillRect(0, 0, size, size);
-    // Offset to center
     const ox = Math.floor((size - cols * px) / 2);
     const oy = Math.floor((size - rows.length * px) / 2);
     for (let r = 0; r < rows.length; r++) {
@@ -1998,9 +1795,9 @@ function updateScene(isDeath=false){
 }
 
 async function apiTurn(){const r=await fetch(API_BASE+'/api/turn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state})});const j=await r.json().catch(()=>null);if(!r.ok)throw new Error(j?.message||'turn_failed');return j;}
-async function apiApply(effects){const r=await fetch(API_BASE+'/api/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({age:state.age,stats:state.stats,effects,death_cause_hint:currentScenario?.death_cause_hint||''})});const j=await r.json().catch(()=>null);if(!r.ok)throw new Error(j?.error||'apply_failed');return j;}
+async function apiApply(effects){const r=await fetch(API_BASE+'/api/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({age:state.age,stats:state.stats,effects,session_id:state.session_id,run_id:state.run_id,death_cause_hint:currentScenario?.death_cause_hint||''})});const j=await r.json().catch(()=>null);if(!r.ok)throw new Error(j?.error||'apply_failed');return j;}
 async function apiEpilogue(cause){const r=await fetch(API_BASE+'/api/epilogue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({age:state.age,gender:state.gender,city:state.city,desire:state.desire,relationships:state.relationships||[],history:state.history.slice(-30),cause})});const j=await r.json().catch(()=>null);if(!r.ok)throw new Error(j?.error||'epilogue_failed');return j;}
-function logEvent(event,data={}){fetch(API_BASE+'/api/analytics',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,session_id:state.session_id,run_id:state.run_id,...data})}).catch(()=>{});}
+function logEvent(type,data={}){fetch(API_BASE+'/api/analytics',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,session_id:state.session_id,run_id:state.run_id,data})}).catch(()=>{});}
 function saveSession(){try{sessionStorage.setItem('dreamlandState',JSON.stringify({state:{...state},scenario:currentScenario,ts:Date.now()}));}catch{}}
 function clearSave(){try{sessionStorage.removeItem('dreamlandState');}catch{}}
 function restoreSession(){try{const raw=sessionStorage.getItem('dreamlandState');if(!raw)return false;const saved=JSON.parse(raw);if(Date.now()-saved.ts>2*60*60*1000){clearSave();return false;}Object.assign(state,saved.state);currentScenario=saved.scenario;return true;}catch{return false;}}
@@ -2104,7 +1901,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   el.playAgain.querySelector('button').addEventListener('click',()=>{SFX.click();SFX.bgmStart();resetGame();});
   el.statToggle.addEventListener('click',()=>{SFX.click();renderStatBars();el.statOverlay.style.display='flex';});
   el.statClose.addEventListener('click',()=>{SFX.click();el.statOverlay.style.display='none';});
-  // Start BGM on first user interaction with onboarding screen
+  
   const bgmKick = () => { SFX.bgmStart(); document.removeEventListener('click', bgmKick); document.removeEventListener('keydown', bgmKick); };
   document.addEventListener('click', bgmKick, { once: false });
   document.addEventListener('keydown', bgmKick, { once: false });
@@ -2132,5 +1929,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
 });
 </script>
+
 </body>
 </html>
