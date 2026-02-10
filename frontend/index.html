@@ -350,7 +350,7 @@ const SCENE_MAP = {
 // GAME STATE
 // ═══════════════════════════════════════════════
 const API_BASE = window.location.hostname === 'localhost'
-  ? 'http://localhost:3001'
+  ? 'http://localhost:8787'
   : 'https://life-sim-chi.vercel.app';
 
 let phaserGame = null;
@@ -796,12 +796,8 @@ async function choose(idx) {
 
   const opt = currentScenario.options[idx];
 
-  // Record history
-  state.history.push({
-    age: state.age,
-    scenario: currentScenario.text || '',
-    choice: opt.label,
-  });
+  // Record history (push label string to match server format)
+  state.history.push(opt.label);
 
   logAnalytics('choice', { age: state.age, choice: opt.label });
 
@@ -811,8 +807,8 @@ async function choose(idx) {
     const applyData = await apiApply(opt.effects || {});
 
     // Update stats from apply response
-    if (applyData.stats) {
-      Object.assign(state.stats, applyData.stats);
+    if (applyData.next_stats) {
+      Object.assign(state.stats, applyData.next_stats);
     }
     renderStatBars();
     updateScene();
@@ -872,8 +868,8 @@ async function handleDeath(cause) {
   // Try to get an epitaph
   try {
     const epilogueData = await apiEpilogue(cause);
-    if (epilogueData.epitaph) {
-      setTimeout(() => showText(epilogueData.epitaph), 1500);
+    if (epilogueData.text) {
+      setTimeout(() => showText(epilogueData.text), 1500);
     }
   } catch (e) {
     console.error('Epilogue failed:', e);
