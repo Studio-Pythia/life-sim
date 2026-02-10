@@ -291,7 +291,7 @@
 
   <div id="loading-overlay">
     <div class="loader"></div>
-    <div id="loading-text">LOADING...</div>
+    <div id="loading-text">Generating life moment…</div>
   </div>
 
   <div id="transition-overlay">
@@ -549,8 +549,31 @@ function setButtonsDisabled(d) {
   el.btnB.disabled = d;
 }
 
+// ── Loading with cycling text ──
+const loadLines = [
+  'Generating life moment\u2026',
+  'Calculating consequences\u2026',
+  'Locking the timeline\u2026',
+  'Spooling the next decade\u2026',
+  'Loading the moment\u2026',
+];
+let loadTimer = null;
+
 function setLoading(show) {
-  el.loadingOverlay.style.display = show ? 'flex' : 'none';
+  if (show) {
+    el.loadingOverlay.style.display = 'flex';
+    let i = 0;
+    const txt = el.loadingOverlay.querySelector('#loading-text');
+    if (txt) txt.textContent = loadLines[i];
+    if (loadTimer) clearInterval(loadTimer);
+    loadTimer = setInterval(() => {
+      i = (i + 1) % loadLines.length;
+      if (txt) txt.textContent = loadLines[i];
+    }, 1800);
+  } else {
+    el.loadingOverlay.style.display = 'none';
+    if (loadTimer) { clearInterval(loadTimer); loadTimer = null; }
+  }
 }
 
 function setError(msg) {
