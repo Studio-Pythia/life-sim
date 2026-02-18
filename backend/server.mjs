@@ -1,10 +1,8 @@
-// server.mjs — Phase 2: MUSEUM QUALITY
+// server.mjs — Phase 3: CLOSE CALLS
 // Life Sim Backend (Express + OpenAI Structured Outputs)
 //
 // Phase 1 upgrades:
 // ✅ Dramatically more volatile lives — bigger stat swings, wilder stories
-// ✅ Death from natural causes is RARE — only guaranteed by age 111
-// ✅ Death from risky behavior scales hard — max exposure + low health = real danger
 // ✅ Parent deaths modeled: linear increasing probability between player age 4–40
 // ✅ Stats deeply connected to narrative — AI references stat levels in prose
 // ✅ Effect ranges widened: -0.40 to +0.40 for bold choices
@@ -14,6 +12,16 @@
 // ✅ Enhanced epilogue: structured output with achievements, stat arc, verdict
 // ✅ Accepts stat_history for richer retrospective analysis
 // ✅ Desire callback in epilogue — the gap between wanting and getting
+//
+// Phase 3 upgrades:
+// ✅ CLOSE CALL SYSTEM — near-death experiences replace instant death
+// ✅ No death before age 17 (hard floor)
+// ✅ Close calls accumulate: 0=immune, 1=25% lethal, 2=60%, 3+=90%
+// ✅ Each close call hits stats hard (health -0.20, stress +0.25)
+// ✅ AI writes close call aftermath into the next turn's narrative
+// ✅ Natural death (90+) bypasses close call shield progressively
+// ✅ Age 111: guaranteed death (hard cap)
+// ✅ Frontend receives close_call + close_call_count for UI feedback
 
 import "dotenv/config";
 import express from "express";
@@ -163,6 +171,43 @@ function buildStatContext(stats) {
 }
 
 /**
+ * Build narrative context about close calls for the AI
+ */
+function buildCloseCallContext(closeCallCount, justHadCloseCall) {
+  if (closeCallCount === 0 && !justHadCloseCall) return "";
+
+  const lines = [];
+  lines.push("═══════════════════════════════════════════════════");
+  lines.push("CLOSE CALLS — NEAR-DEATH EXPERIENCES");
+  lines.push("═══════════════════════════════════════════════════");
+
+  if (justHadCloseCall) {
+    lines.push("");
+    lines.push("⚠️  THE PLAYER JUST HAD A CLOSE CALL — A NEAR-DEATH EXPERIENCE.");
+    lines.push("This MUST be the opening of the scenario. They almost died. Describe the aftermath:");
+    lines.push("- What happened? A car swerving, a knife missing by inches, a collapsed lung, an overdose they barely survived, a fall they somehow walked away from.");
+    lines.push("- How did they survive? Someone found them, they woke up in a hospital, they crawled out, dumb luck.");
+    lines.push("- What does it FEEL like? The terror, the numbness, the strange euphoria of still being alive.");
+    lines.push("- Reference the physical toll: scars, shaking hands, a limp, nightmares, a new prescription.");
+    lines.push("- This is a PIVOTAL MOMENT. The choices should reflect the fork: do they change, or do they keep going?");
+  }
+
+  if (closeCallCount >= 1) {
+    lines.push("");
+    lines.push(`CLOSE CALL COUNT: ${closeCallCount}`);
+    if (closeCallCount === 1) {
+      lines.push("They've brushed with death once. There's a scar — physical or psychological. They know they're not invincible anymore. The world feels slightly more fragile. Reference this awareness in the prose.");
+    } else if (closeCallCount === 2) {
+      lines.push("They've cheated death TWICE. People around them are worried — or have given up worrying. There's a recklessness OR a paranoia that comes with surviving what should have killed you. They carry it in their body. Friends have started using past tense about them. Reference this weight.");
+    } else {
+      lines.push(`They've had ${closeCallCount} close calls. They are LIVING ON BORROWED TIME and everyone knows it. They're either fearless or falling apart. Their body is a map of near-misses. People either marvel at them or can't stand to watch anymore. This should permeate everything.`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+/**
  * Parent death check — should a parent die this turn?
  * Linear probability increase from age 4 to age 40.
  * At age 4: ~3% chance per turn. At age 40: ~60% chance per turn.
@@ -191,63 +236,119 @@ function findLivingParentIndex(relationships) {
 }
 
 /**
- * Mortality: DRAMATICALLY reduced for natural causes.
- * Death is almost impossible from aging alone until very old.
- * But risky behavior (high exposure + low health + high stress) can kill at any age.
- * Hard cap: guaranteed death at age 111.
+ * ══════════════════════════════════════════════════════════
+ * MORTALITY SYSTEM — "CLOSE CALLS"
+ * ══════════════════════════════════════════════════════════
+ *
+ * Philosophy: Players should feel FREE to take risks. Death
+ * shouldn't be a random gotcha — it should be EARNED through
+ * sustained reckless living. The system works like arcade lives:
+ *
+ * 1. UNDER 17: Totally immune. Kids don't die in this game.
+ *
+ * 2. 17+: When a "death check" triggers, instead of dying,
+ *    you get a CLOSE CALL — a near-death experience. You survive
+ *    but take harsh penalties (health tanks, stress spikes).
+ *
+ * 3. CLOSE CALLS STACK — each one makes the next more dangerous:
+ *    - 0 close calls: always survives (100% shield)
+ *    - 1 close call:  75% shield, 25% real death
+ *    - 2 close calls: 40% shield, 60% real death
+ *    - 3+ close calls: 10% shield, 90% real death
+ *
+ * 4. AGE 90+: Natural death bypasses close call shield entirely.
+ *    Old age can kill you regardless of close call count.
+ *
+ * 5. AGE 111: Guaranteed death. Hard cap.
+ *
+ * This means a young player with 0 close calls can max out
+ * exposure, tank health, live on the edge — and they'll get
+ * dramatic close calls but WON'T die. The tension builds as
+ * close calls accumulate. By the 3rd close call, every risky
+ * move could be their last.
  */
-function computeMortalityChance(age, stats) {
+
+// How likely is a "death event" to trigger? (not actual death — just the check)
+function computeDeathCheckChance(age, stats) {
   const a = Math.max(0, Math.min(111, Number(age) || 0));
   const s = normalizeStats(stats);
 
-  // Hard cap — you WILL die at 111
+  // Hard cap
   if (a >= 111) return 1.0;
 
-  // ---- RISK-BASED DEATH (can happen at any age if you live dangerously) ----
-  // This is the "you played with fire" component
-  const exposureDanger = Math.pow(s.exposure, 2.5) * 0.15;       // exposure 1.0 → 0.35
-  const healthCrisis = Math.pow(1 - s.health, 3) * 0.10;         // health 0.0 → 0.30
-  const stressCrack = Math.pow(s.stress, 3) * 0.05;              // stress 1.0 → 0.15
-  const riskDeath = exposureDanger + healthCrisis + stressCrack;  // max theoretical ~0.80
+  // Under 17: no death checks at all
+  if (a < 17) return 0;
 
-  // ---- AGE-BASED NATURAL DEATH (very gentle curve, only real threat past 85+) ----
-  let naturalDeath = 0;
-  if (a < 5) {
-    // Infant/toddler — essentially zero
-    naturalDeath = 0.0001;
-  } else if (a < 30) {
-    // Young — almost zero from natural causes
-    naturalDeath = 0.0003;
-  } else if (a < 50) {
-    // Prime — still extremely low
-    naturalDeath = 0.001;
-  } else if (a < 65) {
-    // Middle age — barely noticeable
-    naturalDeath = 0.005 + ((a - 50) / 15) * 0.015; // 0.005..0.020
-  } else if (a < 80) {
-    // Senior — starting to creep up
-    naturalDeath = 0.02 + ((a - 65) / 15) * 0.08; // 0.02..0.10
+  // ---- RISK-BASED TRIGGER ----
+  // High exposure + low health + high stress = danger
+  const exposureDanger = Math.pow(s.exposure, 2) * 0.30;
+  const healthCrisis = Math.pow(1 - s.health, 2.5) * 0.25;
+  const stressCrack = Math.pow(s.stress, 2.5) * 0.12;
+  const riskTrigger = exposureDanger + healthCrisis + stressCrack;
+
+  // ---- AGE-BASED NATURAL TRIGGER (gentle, only bites past 80+) ----
+  let naturalTrigger = 0;
+  if (a < 50) {
+    naturalTrigger = 0.001;
+  } else if (a < 70) {
+    naturalTrigger = 0.005 + ((a - 50) / 20) * 0.02;
+  } else if (a < 85) {
+    naturalTrigger = 0.025 + ((a - 70) / 15) * 0.075;
   } else if (a < 95) {
-    // Elderly — moderate
-    naturalDeath = 0.10 + ((a - 80) / 15) * 0.25; // 0.10..0.35
+    naturalTrigger = 0.10 + ((a - 85) / 10) * 0.25;
   } else if (a < 105) {
-    // Very old — significant
-    naturalDeath = 0.35 + ((a - 95) / 10) * 0.30; // 0.35..0.65
+    naturalTrigger = 0.35 + ((a - 95) / 10) * 0.35;
   } else {
-    // 105-110 — high but not guaranteed
-    naturalDeath = 0.65 + ((a - 105) / 6) * 0.30; // 0.65..0.95
+    naturalTrigger = 0.70 + ((a - 105) / 6) * 0.25;
   }
 
-  // Stability and freedom provide small buffers against risk death only
-  const stabilityBuffer = Math.max(0, (s.stability - 0.5) * 0.06);
-  const freedomBuffer = Math.max(0, (s.freedom - 0.4) * 0.04);
+  // Buffers from stability/freedom
+  const stabilityBuffer = Math.max(0, (s.stability - 0.5) * 0.05);
+  const combined = Math.max(naturalTrigger, riskTrigger) + Math.min(naturalTrigger, riskTrigger) * 0.2;
+  return Math.max(0, Math.min(0.95, combined - stabilityBuffer));
+}
 
-  // Combine: natural death OR risk death (whichever is more relevant)
-  // They don't simply add — use a "worst of" approach with some blending
-  const combined = Math.max(naturalDeath, riskDeath) + Math.min(naturalDeath, riskDeath) * 0.3;
-  const final = combined - stabilityBuffer - freedomBuffer;
+// Given a death check triggered, does the close call shield save you?
+function resolveDeathCheck(age, closeCallCount, isNaturalAge) {
+  // Age 111+: guaranteed death
+  if (age >= 111) return { died: true, closeCall: false };
 
-  return Math.max(0.0001, Math.min(0.98, final));
+  // Natural death (age 90+) bypasses close call shield
+  // The older you are, the less the shield helps
+  if (isNaturalAge && age >= 90) {
+    // At 90 the shield still partially works; by 105 it's basically gone
+    const ageBypass = Math.min(1.0, (age - 90) / 20); // 0 at 90, 1.0 at 110
+    if (Math.random() < ageBypass) {
+      return { died: true, closeCall: false };
+    }
+  }
+
+  // Close call shield based on count
+  const shieldChance = [
+    1.00,  // 0 close calls — always survives
+    0.75,  // 1 close call  — 75% chance of another close call
+    0.40,  // 2 close calls — 40% chance
+    0.10,  // 3+ close calls — 10% chance (basically dead)
+  ];
+  const shield = shieldChance[Math.min(closeCallCount, 3)];
+
+  if (Math.random() < shield) {
+    // Survived — this becomes a close call
+    return { died: false, closeCall: true };
+  } else {
+    // Shield failed — actual death
+    return { died: true, closeCall: false };
+  }
+}
+
+// Close call stat penalties — surviving has a cost
+function closeCallPenalties() {
+  return {
+    health: -0.20,    // body takes a hit
+    stress: +0.25,    // traumatic
+    exposure: -0.10,  // you pull back from danger (briefly)
+    stability: -0.10, // life shaken
+  };
 }
 
 // ----------------------
@@ -499,7 +600,7 @@ const EpilogueJSONSchema = {
 // ----------------------
 // Prompts — PHASE 1: VOLATILE LIVES
 // ----------------------
-function systemPrompt(statContext) {
+function systemPrompt(statContext, closeCallContext) {
   return `
 You generate raw, unpredictable life moments for a binary-choice simulator. Every life should feel singular — strange, beautiful, ugly, surprising. You are writing a life, not a career plan.
 
@@ -509,6 +610,7 @@ TONE:
 - Not every moment is dramatic — sometimes the most important scenes are quiet (a conversation at 3am, a letter never sent, the smell of a kitchen).
 - But also: do NOT be boring. These lives should make players lean forward.
 
+${closeCallContext || ""}
 ═══════════════════════════════════════════════════
 STATS ARE THE SPINE OF THE STORY — THIS IS CRITICAL
 ═══════════════════════════════════════════════════
@@ -611,6 +713,10 @@ Remember: any person mentioned must be "Name (role)".
 async function generateTurn({ isBirth, payload }) {
   const schema = isBirth ? BirthJSONSchema : TurnJSONSchema;
   const statContext = isBirth ? "Birth turn — stats not yet established." : buildStatContext(payload.stats);
+  const closeCallContext = isBirth ? "" : buildCloseCallContext(
+    payload.close_calls || 0,
+    payload.just_had_close_call || false
+  );
 
   // Build the parent death directive if applicable
   let parentDeathDirective = "";
@@ -626,7 +732,7 @@ MANDATORY PARENT DEATH: ${parent.name} (${parent.role}) MUST die in this turn's 
     const response = await client.responses.create({
       model: "gpt-4.1",
       input: [
-        { role: "system", content: systemPrompt(statContext) + parentDeathDirective },
+        { role: "system", content: systemPrompt(statContext, closeCallContext) + parentDeathDirective },
         ...(isBirth ? [{ role: "user", content: birthInstruction() }] : []),
         { role: "user", content: JSON.stringify(payload) },
       ],
@@ -673,6 +779,7 @@ app.get("/api/session/:sessionId/:runId", (req, res) => {
     history: session.history,
     currentScenario: session.currentScenario,
     died: session.died || false,
+    close_calls: session.close_calls || 0,
   });
 });
 
@@ -818,6 +925,10 @@ app.post("/api/turn", async (req, res) => {
         const k = prefetchKey(session_id, run_id, age_from, letter);
         const cached = getPrefetch(k);
         if (cached?.scenario) {
+          // Preserve close_calls from existing session
+          const prevSession = getSession(session_id, run_id);
+          const prevCloseCalls = prevSession?.close_calls || 0;
+
           // Save to session store
           setSession(session_id, run_id, {
             age: cached.age_to,
@@ -828,6 +939,7 @@ app.post("/api/turn", async (req, res) => {
             relationships: cached.relationships || [],
             history: Array.isArray(state.history) ? state.history.slice(-18) : [],
             currentScenario: cached.scenario,
+            close_calls: prevCloseCalls,
           });
 
           return res.json({
@@ -843,6 +955,22 @@ app.post("/api/turn", async (req, res) => {
     }
 
     const age_to = isBirth ? 0 : Math.min(111, age_from + jumpYears(age_from));
+
+    // Get close call state from session
+    let closeCallCount = 0;
+    let justHadCloseCall = false;
+    if (!isBirth && session_id && run_id) {
+      const existingSession = getSession(session_id, run_id);
+      if (existingSession) {
+        closeCallCount = existingSession.close_calls || 0;
+        justHadCloseCall = existingSession.just_had_close_call || false;
+        // Clear the "just had" flag after reading it
+        if (justHadCloseCall) {
+          existingSession.just_had_close_call = false;
+          setSession(session_id, run_id, existingSession);
+        }
+      }
+    }
 
     // Check if a parent should die this turn
     let parentDeathIndex = -1;
@@ -863,6 +991,8 @@ app.post("/api/turn", async (req, res) => {
       stats: normalizeStats(state.stats),
       relationships: currentRelationships,
       history: Array.isArray(state.history) ? state.history.slice(-18) : [],
+      close_calls: closeCallCount,
+      just_had_close_call: justHadCloseCall,
     };
 
     // Add parent death directive to payload if applicable
@@ -931,6 +1061,7 @@ app.post("/api/turn", async (req, res) => {
       relationships,
       history: payload.history,
       currentScenario: scenario,
+      close_calls: closeCallCount,
     };
 
     if (isBirth) {
@@ -1101,6 +1232,7 @@ app.post("/api/turn", async (req, res) => {
       age_to,
       scenario,
       relationships,
+      close_calls: closeCallCount,
       elapsed_ms: Date.now() - t0,
       used_prefetch: false,
     });
@@ -1132,30 +1264,65 @@ app.post("/api/apply", (req, res) => {
       return res.status(400).json({ error: "bad_request", message: "Missing effects" });
     }
 
-    const next_stats = applyEffects(stats, effects);
-    const pDeath = computeMortalityChance(age, next_stats);
-    const died = Math.random() < pDeath;
+    let next_stats = applyEffects(stats, effects);
 
-    // Update session with new stats
+    // Get close call count from session
+    let closeCallCount = 0;
+    let session = null;
     if (session_id && run_id) {
-      const session = getSession(session_id, run_id);
+      session = getSession(session_id, run_id);
       if (session) {
-        session.stats = next_stats;
-        if (died) session.died = true;
-        setSession(session_id, run_id, session);
+        closeCallCount = session.close_calls || 0;
       }
     }
 
-    // Log death
+    // Run the death check
+    const pDeathCheck = computeDeathCheckChance(age, next_stats);
+    const deathCheckTriggered = Math.random() < pDeathCheck;
+
+    let died = false;
+    let closeCall = false;
+
+    if (deathCheckTriggered) {
+      // Is this primarily age-based? (affects whether shield applies)
+      const isNaturalAge = age >= 90;
+      const result = resolveDeathCheck(age, closeCallCount, isNaturalAge);
+      died = result.died;
+      closeCall = result.closeCall;
+
+      if (closeCall) {
+        // Apply close call penalties on top of the choice effects
+        const penalties = closeCallPenalties();
+        for (const k of STAT_KEYS) {
+          if (penalties[k]) {
+            next_stats[k] = clamp01(next_stats[k] + penalties[k]);
+          }
+        }
+        closeCallCount++;
+      }
+    }
+
+    // Age 111 hard cap
+    if (age >= 111) died = true;
+
+    // Update session
+    if (session) {
+      session.stats = next_stats;
+      session.close_calls = closeCallCount;
+      if (closeCall) session.just_had_close_call = true;
+      if (died) session.died = true;
+      setSession(session_id, run_id, session);
+    }
+
+    // Log events
     if (died) {
       logEvent({
         type: "death",
         session_id,
         run_id,
-        data: { age, probability: pDeath },
+        data: { age, close_calls: closeCallCount, death_check_chance: pDeathCheck },
       });
 
-      // Persistent: mark the run as ended
       analytics.logDeath({
         run_id,
         age,
@@ -1164,7 +1331,22 @@ app.post("/api/apply", (req, res) => {
       });
     }
 
-    return res.json({ next_stats, died, death_probability: pDeath });
+    if (closeCall) {
+      logEvent({
+        type: "close_call",
+        session_id,
+        run_id,
+        data: { age, close_call_number: closeCallCount, death_check_chance: pDeathCheck },
+      });
+    }
+
+    return res.json({
+      next_stats,
+      died,
+      close_call: closeCall,
+      close_call_count: closeCallCount,
+      death_check_chance: pDeathCheck,
+    });
   } catch (err) {
     return res.status(500).json({
       error: "apply_failed",

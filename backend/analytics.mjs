@@ -426,12 +426,12 @@ export async function getLeaderboard() {
       FROM runs WHERE death_age IS NOT NULL
       ORDER BY ended_at DESC NULLS LAST LIMIT 20
     `),
-    // Most dangerous cities (min 2 runs)
+    // Most dangerous cities (show all with completed runs)
     pool.query(`
       SELECT city, COUNT(*) AS lives, ROUND(AVG(death_age)) AS avg_age,
         MIN(death_age) AS youngest, MAX(death_age) AS oldest
       FROM runs WHERE death_age IS NOT NULL AND city IS NOT NULL AND city != ''
-      GROUP BY city HAVING COUNT(*) >= 2
+      GROUP BY city
       ORDER BY AVG(death_age) ASC LIMIT 15
     `),
     // Most popular desires
@@ -444,12 +444,12 @@ export async function getLeaderboard() {
       GROUP BY LOWER(TRIM(desire))
       ORDER BY times DESC LIMIT 15
     `),
-    // Most common causes of death
+    // Epitaphs — the final verdicts (most recent, player-facing text)
     pool.query(`
-      SELECT death_cause, COUNT(*) AS count, ROUND(AVG(death_age)) AS avg_age
-      FROM runs WHERE death_cause IS NOT NULL AND death_cause != '' AND death_cause != 'unknown'
-      GROUP BY death_cause
-      ORDER BY count DESC LIMIT 10
+      SELECT city, desire, death_age, verdict
+      FROM runs
+      WHERE verdict IS NOT NULL AND verdict != '' AND death_age IS NOT NULL
+      ORDER BY ended_at DESC NULLS LAST LIMIT 20
     `),
   ]);
 
