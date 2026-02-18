@@ -38,8 +38,10 @@
     #game-wrapper::after {
       content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 100;
       background: repeating-linear-gradient(
-        0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
+        0deg, transparent, transparent 1px, rgba(0,0,0,0.12) 1px, rgba(0,0,0,0.12) 2px
       );
+      mix-blend-mode: multiply;
+      will-change: transform;
     }
 
     #phaser-canvas { width: 100%; height: 100%; display: block; }
@@ -60,18 +62,37 @@
     #hud-age { font-size: 12px; color: var(--gb3); text-shadow: 1px 1px 0 var(--gb0); }
     #hud-meta { font-size: 7px; color: var(--gb2); max-width: 50%; text-align: right; }
 
-    #stat-toggle {
+    #go-back-btn {
       position: absolute; top: 32px; right: 10px;
       font-family: inherit; font-size: 10px; padding: 8px 18px;
       background: var(--gb0); color: var(--gb3); border: 2px solid var(--gb2);
       cursor: pointer; pointer-events: auto; z-index: 20;
       letter-spacing: 2px;
-      animation: statPulse 2s ease-in-out infinite;
+      animation: goBackPulse 3s ease-in-out infinite;
     }
-    @keyframes statPulse {
+    @keyframes goBackPulse {
       0%, 100% { background: var(--gb0); color: var(--gb3); border-color: var(--gb2); box-shadow: 0 0 4px rgba(139,172,15,0.2); }
       50% { background: var(--gb1); color: var(--gb3); border-color: var(--gb3); box-shadow: 0 0 12px rgba(155,188,15,0.5); }
     }
+
+    #go-back-confirm {
+      position: absolute; inset: 0; z-index: 180;
+      background: rgba(15,56,15,0.95); display: none;
+      align-items: center; justify-content: center;
+      pointer-events: auto;
+    }
+    #go-back-confirm-box {
+      text-align: center; width: 75%; max-width: 340px;
+    }
+    #go-back-confirm-box p {
+      font-size: 8px; color: var(--gb3); line-height: 2.2; margin-bottom: 16px;
+    }
+    #go-back-confirm-box button {
+      font-family: inherit; font-size: 8px; padding: 8px 20px;
+      background: var(--gb0); color: var(--gb3); border: 2px solid var(--gb2);
+      cursor: pointer; margin: 0 6px;
+    }
+    #go-back-confirm-box button:hover { background: var(--gb1); }
 
     #hud-relations {
       position: absolute; top: 50px; left: 10px; display: flex; gap: 6px;
@@ -186,27 +207,21 @@
 
     #start-btn:hover { background: var(--gb2); color: var(--gb0); }
 
-    /* Stat overlay */
-    #stat-overlay {
-      position: absolute; inset: 0; z-index: 180;
-      background: rgba(15,56,15,0.95); display: none;
-      align-items: center; justify-content: center;
-      pointer-events: auto;
+    /* Epilogue coda */
+    #epilogue-coda {
+      display: none; padding: 10px 14px; margin-top: 6px;
+      background: var(--gb0); border: 2px solid var(--gb1);
+      font-size: 7px; line-height: 2; color: var(--gb2);
+      max-height: 200px; overflow-y: auto;
     }
-
-    #stat-panel { width: 70%; max-width: 320px; }
-    #stat-panel h2 { font-size: 10px; margin-bottom: 12px; color: var(--gb3); text-align: center; }
-
-    .stat-row { display: flex; align-items: center; margin-bottom: 6px; }
-    .stat-label { font-size: 7px; width: 70px; color: var(--gb2); }
-    .stat-bar-bg { flex: 1; height: 8px; background: var(--gb0); border: 1px solid var(--gb1); }
-    .stat-bar-fill { height: 100%; transition: width 0.4s; }
-
-    #stat-close {
-      display: block; margin: 12px auto 0; font-family: inherit; font-size: 8px;
-      padding: 6px 16px; background: var(--gb1); color: var(--gb3);
-      border: 1px solid var(--gb2); cursor: pointer;
-    }
+    #epilogue-coda .coda-desire { color: var(--gb3); font-size: 8px; margin-bottom: 6px; }
+    #epilogue-coda .coda-verdict { color: var(--gb3); margin: 8px 0; font-size: 8px; }
+    #epilogue-coda .coda-stats { margin: 8px 0; }
+    #epilogue-coda .coda-stat-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+    #epilogue-coda .coda-stat-label { color: var(--gb1); }
+    #epilogue-coda .coda-stat-arc { color: var(--gb2); text-align: right; }
+    #epilogue-coda .coda-achievements { color: var(--gb2); margin-top: 8px; font-size: 7px; line-height: 2; }
+    #epilogue-coda .coda-lifespan { color: var(--gb3); margin-top: 8px; font-size: 9px; text-align: center; letter-spacing: 3px; }
 
     /* Loading */
     #loading-overlay {
@@ -233,7 +248,11 @@
       transition: opacity 0.4s ease;
     }
 
-    #transition-text { font-size: 14px; color: var(--gb3); letter-spacing: 3px; }
+    #transition-text {
+      font-size: 18px; color: var(--gb3); letter-spacing: 6px;
+      text-shadow: 0 0 20px rgba(155,188,15,0.3);
+      opacity: 0;
+    }
 
     /* Error */
     #error-bar {
@@ -255,7 +274,7 @@
       .rel-chip { font-size: 7px; }
       .rel-chip .rel-role { font-size: 5px; }
       #onboarding-box h1 { font-size: 16px; }
-      #stat-toggle { font-size: 8px; padding: 6px 14px; }
+      #go-back-btn { font-size: 8px; padding: 6px 14px; }
     }
 
     @media (max-height: 500px) {
@@ -273,7 +292,7 @@
       <div id="hud-age">AGE 0</div>
       <div id="hud-meta"></div>
     </div>
-    <button id="stat-toggle">STATS</button>
+    <button id="go-back-btn">GO BACK</button>
     <div id="hud-relations"></div>
 
     <div id="dialogue-area">
@@ -285,6 +304,7 @@
         <button class="choice-btn" id="btn-b" disabled>B</button>
       </div>
       <div id="play-again"><button>&#9654; PLAY AGAIN</button></div>
+      <div id="epilogue-coda"></div>
     </div>
   </div>
 
@@ -313,11 +333,11 @@
     </div>
   </div>
 
-  <div id="stat-overlay">
-    <div id="stat-panel">
-      <h2>LIFE STATS</h2>
-      <div id="stat-bars"></div>
-      <button id="stat-close">CLOSE</button>
+  <div id="go-back-confirm">
+    <div id="go-back-confirm-box">
+      <p>Are you sure? You can only do this once in life&hellip;</p>
+      <button id="go-back-yes">YES</button>
+      <button id="go-back-no">NEVER MIND</button>
     </div>
   </div>
 
@@ -394,9 +414,104 @@ const state = {
   run_id: '', session_id: '', age: 0, gender: '', city: '', desire: '',
   history: [], relationships: [],
   stats: { money: 0.5, stability: 0.5, status: 0.5, health: 0.5, stress: 0.5, freedom: 0.5, exposure: 0.5 },
+  // Phase 2
+  goBackUsed: false,
+  previousScenario: null,
+  previousChoiceIndex: null,
+  statHistory: [],
 };
 
 const el = {};
+
+// ═══════════════════════════════════════════════
+// AUDIO ENGINE (Web Audio API — tonal ambient)
+// ═══════════════════════════════════════════════
+let audioCtx = null;
+let audioUnlocked = false;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  initAudio();
+  const silent = audioCtx.createOscillator();
+  silent.connect(audioCtx.destination);
+  silent.start();
+  silent.stop(audioCtx.currentTime + 0.001);
+  audioUnlocked = true;
+}
+
+function playAgeTone(age) {
+  if (!audioCtx || !audioUnlocked) return;
+  const baseFreq = 220;
+  const semitones = Math.max(0, 24 - Math.floor(age / 4));
+  const freq = baseFreq * Math.pow(2, semitones / 12);
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  osc.detune.setValueAtTime(Math.random() * 6 - 3, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0, audioCtx.currentTime);
+  gain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.05);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.5);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 3);
+}
+
+function playTypeTick() {
+  if (!audioCtx || !audioUnlocked) return;
+  if (Math.random() > 0.6) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(800 + Math.random() * 400, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.008, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.02);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.03);
+}
+
+function playDeathTone() {
+  if (!audioCtx || !audioUnlocked) return;
+  const osc1 = audioCtx.createOscillator();
+  const osc2 = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(55, audioCtx.currentTime);
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(82.4, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 6);
+  osc1.connect(gain);
+  osc2.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc1.start();
+  osc2.start();
+  osc1.stop(audioCtx.currentTime + 7);
+  osc2.stop(audioCtx.currentTime + 7);
+}
+
+function playChoiceTone() {
+  if (!audioCtx || !audioUnlocked) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(330, audioCtx.currentTime + 0.15);
+  gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.4);
+}
 
 function newRunId() {
   return 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -683,6 +798,68 @@ class LifeScene extends Phaser.Scene {
     const spriteY = floorY - spriteH + 8;
     drawSprite(this.gfx, spriteMap, spriteX, spriteY, spriteScale);
 
+    // ── Phase 2: Stat-driven visual augmentations ──
+
+    // MONEY HIGH (≥ 0.75): pile of coins near sprite
+    if (stats.money >= 0.75) {
+      const coinX = spriteX + 60;
+      const coinY = floorY - 10;
+      this.gfx.fillStyle(GB.WHITE, 1);
+      this.gfx.fillRect(coinX, coinY, 12, 4);
+      this.gfx.fillRect(coinX + 2, coinY - 4, 10, 4);
+      this.gfx.fillRect(coinX + 4, coinY - 8, 8, 4);
+      this.gfx.fillStyle(GB.DARK, 1);
+      this.gfx.fillRect(coinX + 6, coinY - 12, 2, 16);
+    }
+
+    // HEALTH LOW (≤ 0.30): damage marks + periodic flicker
+    if (stats.health <= 0.30 && stats.health > 0) {
+      const dmgY = spriteY + Math.floor(spriteH * 0.4);
+      this.gfx.fillStyle(GB.BLACK, 0.6);
+      this.gfx.fillRect(spriteX + 4, dmgY, 3, 2);
+      this.gfx.fillRect(spriteX + 12, dmgY + 6, 4, 2);
+      if (Math.floor(Date.now() / 500) % 3 === 0) {
+        this.gfx.fillStyle(GB.BLACK, 0.3);
+        this.gfx.fillRect(spriteX, spriteY, spriteLines[0].length * spriteScale, spriteH);
+      }
+    }
+
+    // STATUS HIGH (≥ 0.80): glow around sprite
+    if (stats.status >= 0.80) {
+      this.gfx.fillStyle(GB.WHITE, 0.15);
+      for (let r = 40; r > 0; r -= 4) {
+        this.gfx.fillCircle(spriteX + 20, spriteY + spriteH / 2, r);
+      }
+    }
+
+    // STRESS HIGH (≥ 0.75): screen edge vignette
+    if (stats.stress >= 0.75) {
+      const intensity = (stats.stress - 0.75) * 4;
+      this.gfx.fillStyle(0x000000, 0.15 + intensity * 0.25);
+      this.gfx.fillRect(0, 0, 30, H);
+      this.gfx.fillRect(W - 30, 0, 30, H);
+      this.gfx.fillRect(0, 0, W, 20);
+      this.gfx.fillRect(0, H - 20, W, 20);
+    }
+
+    // EXPOSURE HIGH (≥ 0.70): watching eye in corner
+    if (stats.exposure >= 0.70) {
+      const eyeX = W - 50;
+      const eyeY = 20;
+      this.gfx.fillStyle(GB.DARK, 0.5 + Math.sin(Date.now() / 800) * 0.3);
+      this.gfx.fillCircle(eyeX, eyeY, 6);
+      this.gfx.fillStyle(GB.BLACK, 0.7);
+      this.gfx.fillCircle(eyeX, eyeY, 3);
+    }
+
+    // FREEDOM LOW (≤ 0.25): cage bars over scene
+    if (stats.freedom <= 0.25) {
+      this.gfx.fillStyle(GB.BLACK, 0.3);
+      for (let bx = 30; bx < W; bx += 60) {
+        this.gfx.fillRect(bx, 0, 3, H);
+      }
+    }
+
     // Death overlay — graveyard scene with coffin
     if (stats.health <= 0) {
       // Darken the background
@@ -763,6 +940,13 @@ class LifeScene extends Phaser.Scene {
       }
     }
   }
+
+  // Phase 2: animated re-render for flicker/eye effects
+  update() {
+    if (state.stats.health <= 0.30 || state.stats.exposure >= 0.70) {
+      this.renderScene(getSceneType(state.age, state.stats), state.stats, state.age);
+    }
+  }
 }
 
 function updateScene() {
@@ -778,22 +962,51 @@ function updateScene() {
 let typewriterTimer = null;
 
 function showText(text, cb) {
-  clearInterval(typewriterTimer);
+  clearTimeout(typewriterTimer);
   el.dialogueText.textContent = '';
   let i = 0;
-  typewriterTimer = setInterval(() => {
-    if (i < text.length) {
-      el.dialogueText.textContent += text[i++];
-      el.dialogueBox.scrollTop = el.dialogueBox.scrollHeight;
-    } else {
-      clearInterval(typewriterTimer);
+
+  function typeNext() {
+    if (i >= text.length) {
       if (cb) cb();
+      return;
     }
-  }, 18);
+
+    el.dialogueText.textContent += text[i];
+    el.dialogueBox.scrollTop = el.dialogueBox.scrollHeight;
+    playTypeTick();
+
+    const char = text[i];
+    const next = text[i + 1];
+    i++;
+
+    let delay = 32;
+
+    // Punctuation pauses
+    if (char === '.' && next === ' ') delay = 220;
+    else if (char === '.' && next === '"') delay = 200;
+    else if (char === '!' || char === '?') delay = 200;
+    else if (char === ',') delay = 90;
+    else if (char === ';' || char === ':') delay = 110;
+    else if (char === '\u2014' || char === '\u2013') delay = 160;
+    else if (char === '"' && i > 1) delay = 70;
+
+    // Micro-stutter on first char of new sentence
+    if (i >= 2 && text[i - 2] === ' ' && /[.!?]/.test(text[i - 3])) {
+      delay += 60;
+    }
+
+    // Slight randomness
+    delay += (Math.random() - 0.5) * 16;
+
+    typewriterTimer = setTimeout(typeNext, delay);
+  }
+
+  typewriterTimer = setTimeout(typeNext, 100);
 }
 
 function showTextInstant(text) {
-  clearInterval(typewriterTimer);
+  clearTimeout(typewriterTimer);
   el.dialogueText.textContent = text;
   el.dialogueBox.scrollTop = el.dialogueBox.scrollHeight;
 }
@@ -836,27 +1049,6 @@ function setError(msg) {
   el.errorBar.style.display = 'block';
 }
 
-const STAT_COLORS = {
-  money: '#9bbc0f', stability: '#8bac0f', status: '#306230',
-  health: '#9bbc0f', stress: '#8bac0f', freedom: '#306230', exposure: '#9bbc0f'
-};
-
-function renderStatBars() {
-  const container = el.statBars;
-  container.innerHTML = '';
-  for (const [key, val] of Object.entries(state.stats)) {
-    const pct = Math.max(0, Math.min(100, Math.round(val * 100)));
-    const row = document.createElement('div');
-    row.className = 'stat-row';
-    row.innerHTML = `
-      <span class="stat-label">${key.toUpperCase()}</span>
-      <div class="stat-bar-bg">
-        <div class="stat-bar-fill" style="width:${pct}%;background:${STAT_COLORS[key]||'var(--gb2)'}"></div>
-      </div>`;
-    container.appendChild(row);
-  }
-}
-
 const REL_ICONS = {
   parent: '\u{1F468}', sibling: '\u{1F46C}', friend: '\u{1F91D}',
   partner: '\u2764\uFE0F', rival: '\u26A1', mentor: '\u{1F393}',
@@ -877,21 +1069,43 @@ function renderRelations(rels) {
 }
 
 // ═══════════════════════════════════════════════
-// TRANSITION EFFECT
+// TRANSITION EFFECT (Phase 2: 2.5s hold)
 // ═══════════════════════════════════════════════
-function playTransition(text) {
-  return new Promise(resolve => {
-    el.transitionOverlay.style.display = 'flex';
-    el.transitionText.textContent = text || '...';
-    el.transitionOverlay.style.opacity = '1';
-    setTimeout(() => {
-      el.transitionOverlay.style.opacity = '0';
-      setTimeout(() => {
-        el.transitionOverlay.style.display = 'none';
-        resolve();
-      }, 400);
-    }, 800);
-  });
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function playTransition(label) {
+  const overlay = el.transitionOverlay;
+  const text = el.transitionText;
+
+  overlay.style.display = 'flex';
+  overlay.style.pointerEvents = 'auto';
+  text.textContent = '';
+  text.style.opacity = '0';
+
+  // Fade to black
+  overlay.style.transition = 'opacity 0.4s ease';
+  overlay.style.opacity = '1';
+  await sleep(500);
+
+  // Age number fades in
+  text.textContent = label;
+  text.style.transition = 'opacity 0.3s ease';
+  text.style.opacity = '1';
+  playAgeTone(state.age);
+  await sleep(2500);
+
+  // Age number fades out
+  text.style.transition = 'opacity 0.3s ease';
+  text.style.opacity = '0';
+  await sleep(400);
+
+  // Scene fades back in
+  overlay.style.transition = 'opacity 0.5s ease';
+  overlay.style.opacity = '0';
+  await sleep(600);
+
+  overlay.style.display = 'none';
+  overlay.style.pointerEvents = 'none';
 }
 
 // ═══════════════════════════════════════════════
@@ -967,6 +1181,7 @@ async function apiEpilogue(cause) {
       relationships: state.relationships || [],
       history: state.history.slice(-30),
       cause,
+      stat_history: state.statHistory.slice(-30),
     }),
   });
   const j = await r.json().catch(() => null);
@@ -983,6 +1198,8 @@ function logAnalytics(eventType, data = {}) {
 }
 
 async function startGame() {
+  unlockAudio();
+
   state.gender = document.getElementById('gender').value;
   state.city = document.getElementById('city').value || 'New York';
   state.desire = document.getElementById('desire').value || 'a happy life';
@@ -992,13 +1209,20 @@ async function startGame() {
   state.history = [];
   state.relationships = [];
   state.stats = { money: 0.5, stability: 0.5, status: 0.5, health: 0.5, stress: 0.5, freedom: 0.5, exposure: 0.5 };
+  // Phase 2 state
+  state.goBackUsed = false;
+  state.previousScenario = null;
+  state.previousChoiceIndex = null;
+  state.statHistory = [];
 
   el.onboarding.style.display = 'none';
   el.hudAge.textContent = 'AGE 0';
-  el.hudMeta.textContent = `${state.city.toUpperCase()} \u00B7 ${state.desire.toUpperCase()}`;
+  el.hudMeta.textContent = state.city.toUpperCase();
   el.playAgain.style.display = 'none';
+  el.epilogueCoda.style.display = 'none';
   el.btnA.style.display = '';
   el.btnB.style.display = '';
+  el.goBackBtn.style.display = '';
   setButtonsDisabled(true);
   setError('');
   updateScene();
@@ -1027,13 +1251,20 @@ async function doTurn() {
       state.relationships = turnData.relationships;
     }
 
+    // Phase 2: record stat snapshot
+    state.statHistory.push({ age: state.age, stats: { ...state.stats } });
+
+    // Phase 2: store previous scenario before overwriting
+    if (currentScenario) {
+      state.previousScenario = { ...currentScenario };
+    }
+
     // Store the scenario
     currentScenario = turnData.scenario || turnData;
     const scenarioText = currentScenario.text || currentScenario.scenario || 'Something happened...';
 
     el.hudAge.textContent = `AGE ${state.age}`;
     renderRelations(state.relationships);
-    renderStatBars();
     updateScene();
 
     // Transition effect
@@ -1072,6 +1303,10 @@ async function choose(idx) {
   locked = true;
   setButtonsDisabled(true);
   setError('');
+  playChoiceTone();
+
+  // Phase 2: track which choice was made (for GO BACK)
+  state.previousChoiceIndex = idx;
 
   const opt = currentScenario.options[idx];
 
@@ -1089,7 +1324,10 @@ async function choose(idx) {
     if (applyData.next_stats) {
       Object.assign(state.stats, applyData.next_stats);
     }
-    renderStatBars();
+
+    // Phase 2: record stat snapshot after choice
+    state.statHistory.push({ age: state.age, stats: { ...state.stats } });
+
     updateScene();
 
     // Check for death
@@ -1139,10 +1377,12 @@ async function handleDeath(cause) {
   setButtonsDisabled(true);
   el.btnA.style.display = 'none';
   el.btnB.style.display = 'none';
+  el.goBackBtn.style.display = 'none';
   el.playAgain.style.display = 'block';
   state.stats.health = 0;
   updateScene();
   clearSave();
+  playDeathTone();
 
   // Show RIP overlay
   el.ripOverlay.style.display = 'block';
@@ -1152,12 +1392,72 @@ async function handleDeath(cause) {
   try {
     const epilogueData = await apiEpilogue(cause);
     if (epilogueData.text) {
-      setTimeout(() => showText(epilogueData.text), 1500);
+      setTimeout(() => {
+        showText(epilogueData.text, () => {
+          // Phase 2: show structured epilogue coda after prose finishes
+          renderEpilogueCoda(epilogueData);
+        });
+      }, 1500);
     }
   } catch (e) {
     console.error('Epilogue failed:', e);
     setTimeout(() => showText(`You lived to age ${state.age}. Rest in peace.`), 1500);
   }
+}
+
+// Phase 2: render the structured epilogue coda
+function renderEpilogueCoda(data) {
+  const coda = el.epilogueCoda;
+  if (!coda) return;
+
+  const birthStats = state.statHistory.length > 0 ? state.statHistory[0].stats : null;
+
+  let html = '';
+
+  // City + gender
+  html += `<div style="color:var(--gb1);font-size:7px;">${state.city.toUpperCase()} \u00B7 ${state.gender.toUpperCase()}</div>`;
+
+  // Desire callback
+  html += `<div class="coda-desire">"I wanted to become ${state.desire}"</div>`;
+
+  // Verdict (typed with delay)
+  if (data.verdict) {
+    html += `<div class="coda-verdict">${data.verdict}</div>`;
+  }
+
+  // Stat arcs
+  if (data.stat_arc && birthStats) {
+    html += '<div class="coda-stats">';
+    const STAT_KEYS = ['money','stability','status','health','stress','freedom','exposure'];
+    for (const k of STAT_KEYS) {
+      const birth = birthStats[k] !== undefined ? birthStats[k].toFixed(2) : '?';
+      const death = state.stats[k] !== undefined ? state.stats[k].toFixed(2) : '?';
+      const arc = data.stat_arc[k] || 'unknown';
+      html += `<div class="coda-stat-row">
+        <span class="coda-stat-label">${k.toUpperCase()}: ${birth} \u2192 ${death}</span>
+        <span class="coda-stat-arc">${arc}</span>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  // Achievements
+  if (data.achievements) {
+    html += `<div class="coda-achievements">${data.achievements}</div>`;
+  }
+
+  // Lifespan
+  html += `<div class="coda-lifespan">LIVED ${state.age} YEARS</div>`;
+
+  coda.innerHTML = html;
+
+  // Fade in after a pause
+  setTimeout(() => {
+    coda.style.display = 'block';
+    coda.style.opacity = '0';
+    coda.style.transition = 'opacity 1.5s ease';
+    requestAnimationFrame(() => { coda.style.opacity = '1'; });
+  }, 2000);
 }
 
 function resetGame() {
@@ -1170,6 +1470,12 @@ function resetGame() {
   state.history = [];
   state.relationships = [];
   state.stats = { money: 0.5, stability: 0.5, status: 0.5, health: 0.5, stress: 0.5, freedom: 0.5, exposure: 0.5 };
+  // Phase 2 reset
+  state.goBackUsed = false;
+  state.previousScenario = null;
+  state.previousChoiceIndex = null;
+  state.statHistory = [];
+
   el.hudAge.textContent = 'AGE 0';
   el.hudMeta.textContent = '';
   el.hudRelations.innerHTML = '';
@@ -1178,8 +1484,11 @@ function resetGame() {
   el.btnB.textContent = 'B';
   el.btnA.style.display = '';
   el.btnB.style.display = '';
+  el.goBackBtn.style.display = '';
   setButtonsDisabled(true);
   el.playAgain.style.display = 'none';
+  el.epilogueCoda.style.display = 'none';
+  el.epilogueCoda.innerHTML = '';
   el.ripOverlay.style.display = 'none';
   el.onboarding.style.display = 'flex';
   setError('');
@@ -1205,10 +1514,11 @@ window.addEventListener('DOMContentLoaded', () => {
   el.playAgain = document.getElementById('play-again');
   el.ripOverlay = document.getElementById('rip-overlay');
   el.ripAgeText = document.getElementById('rip-age-text');
-  el.statToggle = document.getElementById('stat-toggle');
-  el.statOverlay = document.getElementById('stat-overlay');
-  el.statBars = document.getElementById('stat-bars');
-  el.statClose = document.getElementById('stat-close');
+  el.goBackBtn = document.getElementById('go-back-btn');
+  el.goBackConfirm = document.getElementById('go-back-confirm');
+  el.goBackYes = document.getElementById('go-back-yes');
+  el.goBackNo = document.getElementById('go-back-no');
+  el.epilogueCoda = document.getElementById('epilogue-coda');
   el.loadingOverlay = document.getElementById('loading-overlay');
   el.transitionOverlay = document.getElementById('transition-overlay');
   el.transitionText = document.getElementById('transition-text');
@@ -1233,24 +1543,109 @@ window.addEventListener('DOMContentLoaded', () => {
   el.btnA.addEventListener('click', () => choose(0));
   el.btnB.addEventListener('click', () => choose(1));
   el.playAgain.querySelector('button').addEventListener('click', resetGame);
-  el.statToggle.addEventListener('click', () => { renderStatBars(); el.statOverlay.style.display = 'flex'; });
-  el.statClose.addEventListener('click', () => { el.statOverlay.style.display = 'none'; });
+
+  // ── GO BACK button logic ──
+  el.goBackBtn.addEventListener('click', () => {
+    if (state.goBackUsed || !state.previousScenario) return;
+    el.goBackConfirm.style.display = 'flex';
+  });
+
+  el.goBackNo.addEventListener('click', () => {
+    el.goBackConfirm.style.display = 'none';
+  });
+
+  el.goBackYes.addEventListener('click', () => {
+    el.goBackConfirm.style.display = 'none';
+    state.goBackUsed = true;
+    el.goBackBtn.style.display = 'none';
+    saveSession();
+
+    const prev = state.previousScenario;
+    if (!prev || !prev.options || prev.options.length < 2) return;
+
+    const trueUndo = Math.random() < 0.10;
+    setButtonsDisabled(true);
+
+    // Re-render previous scenario
+    const prevText = prev.text || prev.scenario || 'A moment from the past...';
+    showText(prevText, () => {
+      if (trueUndo) {
+        // 10% case: true undo — can actually re-choose
+        el.btnA.textContent = prev.options[0].label || 'Option A';
+        el.btnB.textContent = prev.options[1].label || 'Option B';
+        el.btnA.style.opacity = '1';
+        el.btnB.style.opacity = '1';
+        el.btnA.style.borderColor = '';
+        el.btnB.style.borderColor = '';
+        el.btnA.style.pointerEvents = '';
+        el.btnB.style.pointerEvents = '';
+        setButtonsDisabled(false);
+
+        // Override choose temporarily to use the previous scenario's options
+        const origScenario = currentScenario;
+        currentScenario = prev;
+
+        // Apply stress/stability penalty for time manipulation
+        const penaltyEffects = { stress: 0.15, stability: -0.10 };
+        apiApply(penaltyEffects).then(applyData => {
+          if (applyData.next_stats) Object.assign(state.stats, applyData.next_stats);
+          state.statHistory.push({ age: state.age, stats: { ...state.stats } });
+          updateScene();
+        }).catch(() => {});
+
+      } else {
+        // 90% case: regret only — look but can't change
+        const chosenIdx = state.previousChoiceIndex ?? 0;
+        el.btnA.textContent = prev.options[0].label || 'Option A';
+        el.btnB.textContent = prev.options[1].label || 'Option B';
+
+        // Mark chosen option
+        const chosenBtn = chosenIdx === 0 ? el.btnA : el.btnB;
+        const otherBtn = chosenIdx === 0 ? el.btnB : el.btnA;
+        chosenBtn.style.opacity = '0.5';
+        chosenBtn.style.borderColor = '#8b0000';
+        chosenBtn.textContent += ' (chosen)';
+        otherBtn.style.opacity = '0.7';
+        el.btnA.style.pointerEvents = 'none';
+        el.btnB.style.pointerEvents = 'none';
+
+        // Auto-advance back after 4 seconds
+        setTimeout(() => {
+          el.btnA.style.opacity = '1';
+          el.btnB.style.opacity = '1';
+          el.btnA.style.borderColor = '';
+          el.btnB.style.borderColor = '';
+          el.btnA.style.pointerEvents = '';
+          el.btnB.style.pointerEvents = '';
+          // Restore current scenario
+          if (currentScenario) {
+            const curText = currentScenario.text || currentScenario.scenario || '';
+            showTextInstant(curText);
+            if (currentScenario.options && currentScenario.options.length >= 2) {
+              el.btnA.textContent = currentScenario.options[0].label;
+              el.btnB.textContent = currentScenario.options[1].label;
+              setButtonsDisabled(false);
+            }
+          }
+        }, 4000);
+      }
+    });
+  });
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') el.statOverlay.style.display = 'none';
+    if (e.key === 'Escape') el.goBackConfirm.style.display = 'none';
     if (el.onboarding.style.display !== 'none') return;
     if (e.key === '1' || e.key === 'a') el.btnA.click();
     if (e.key === '2' || e.key === 'b') el.btnB.click();
-    if (e.key === 's' || e.key === 'S') el.statToggle.click();
   });
 
   // Restore session
   if (restoreSession()) {
     el.onboarding.style.display = 'none';
     el.hudAge.textContent = `AGE ${state.age}`;
-    el.hudMeta.textContent = `${state.city.toUpperCase()} \u00B7 ${state.desire.toUpperCase()}`;
+    el.hudMeta.textContent = state.city.toUpperCase();
+    if (state.goBackUsed) el.goBackBtn.style.display = 'none';
     renderRelations(state.relationships);
-    renderStatBars();
     updateScene();
     if (currentScenario) {
       showTextInstant(currentScenario.text || currentScenario.scenario || '');
