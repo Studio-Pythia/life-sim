@@ -69,12 +69,12 @@ function randomInt(min, maxInclusive) {
 function jumpYears(currentAge) {
   // Tighter jumps everywhere = more turns = more drama
   if (currentAge < 1) return randomInt(3, 6);       // birth → early childhood
-  if (currentAge < 14) return randomInt(3, 6);       // childhood → teen
-  if (currentAge < 25) return randomInt(1, 4);       // teen/young adult — TIGHTEST, most drama
-  if (currentAge < 40) return randomInt(2, 5);       // prime years — still tight
-  if (currentAge < 60) return randomInt(3, 7);       // middle age
-  if (currentAge < 80) return randomInt(2, 6);       // senior years — tighter for late-life drama
-  return randomInt(2, 5);                             // elderly — each year counts
+  if (currentAge < 14) return randomInt(4, 8);       // childhood → teen
+  if (currentAge < 25) return randomInt(4, 9);       // teen/young adult — TIGHTEST, most drama
+  if (currentAge < 40) return randomInt(5, 12);       // prime years — still tight
+  if (currentAge < 60) return randomInt(6, 12);       // middle age
+  if (currentAge < 80) return randomInt(7, 12);       // senior years — tighter for late-life drama
+  return randomInt(8, 12);                             // elderly — each year counts
 }
 
 function runNonce() {
