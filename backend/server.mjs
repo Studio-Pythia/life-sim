@@ -1,14 +1,14 @@
-// server.mjs — Phase 0
+// server.mjs — Phase 1: VOLATILE LIVES
 // Life Sim Backend (Express + OpenAI Structured Outputs)
 //
-// Phase 0 upgrades:
-// ✅ Server-side session store (in-memory Map) — client no longer owns full state
-// ✅ GET /api/session/:id — recover game state on page refresh
-// ✅ Retry logic with exponential backoff on OpenAI calls (3 attempts)
-// ✅ POST /api/analytics — lightweight event logging
-// ✅ Prefetch cache with TTL + auto-cleanup
-// ✅ History trimmed to 18 entries max
-// ✅ All existing features preserved (birth, turn, apply, epilogue)
+// Phase 1 upgrades:
+// ✅ Dramatically more volatile lives — bigger stat swings, wilder stories
+// ✅ Death from natural causes is RARE — only guaranteed by age 111
+// ✅ Death from risky behavior scales hard — max exposure + low health = real danger
+// ✅ Parent deaths modeled: linear increasing probability between player age 4–40
+// ✅ Stats deeply connected to narrative — AI references stat levels in prose
+// ✅ Effect ranges widened: -0.40 to +0.40 for bold choices
+// ✅ All Phase 0 features preserved (sessions, retry, analytics, prefetch)
 
 import "dotenv/config";
 import express from "express";
@@ -55,13 +55,14 @@ function randomInt(min, maxInclusive) {
 }
 
 function jumpYears(currentAge) {
-  // More granular in the dramatic years, wider jumps in childhood and old age
-  if (currentAge < 1) return randomInt(4, 8);       // birth → childhood
-  if (currentAge < 14) return randomInt(4, 8);       // childhood → teen
-  if (currentAge < 25) return randomInt(2, 5);       // teen/young adult — most drama, tight turns
-  if (currentAge < 40) return randomInt(3, 7);       // prime years — still eventful
-  if (currentAge < 60) return randomInt(4, 10);      // middle age — wider swings
-  return randomInt(3, 8);                             // elderly — tighter again as mortality rises
+  // Tighter jumps everywhere = more turns = more drama
+  if (currentAge < 1) return randomInt(3, 6);       // birth → early childhood
+  if (currentAge < 14) return randomInt(3, 6);       // childhood → teen
+  if (currentAge < 25) return randomInt(1, 4);       // teen/young adult — TIGHTEST, most drama
+  if (currentAge < 40) return randomInt(2, 5);       // prime years — still tight
+  if (currentAge < 60) return randomInt(3, 7);       // middle age
+  if (currentAge < 80) return randomInt(2, 6);       // senior years — tighter for late-life drama
+  return randomInt(2, 5);                             // elderly — each year counts
 }
 
 function runNonce() {
@@ -102,36 +103,138 @@ function withDisplayRelationships(rels) {
   });
 }
 
+// ----------------------
+// Stat summary for AI context
+// ----------------------
+function describeStatLevel(value) {
+  if (value <= 0.10) return "critically low";
+  if (value <= 0.25) return "very low";
+  if (value <= 0.40) return "low";
+  if (value <= 0.60) return "moderate";
+  if (value <= 0.75) return "high";
+  if (value <= 0.90) return "very high";
+  return "extreme";
+}
+
+function buildStatContext(stats) {
+  const s = normalizeStats(stats);
+  const lines = [];
+
+  // Only call out stats that are notably high or low — the AI should weave these in
+  if (s.money <= 0.20) lines.push(`MONEY is ${describeStatLevel(s.money)} (${s.money.toFixed(2)}) — they are broke, scraping by, desperate for cash`);
+  else if (s.money >= 0.80) lines.push(`MONEY is ${describeStatLevel(s.money)} (${s.money.toFixed(2)}) — they are wealthy, doors open, temptation everywhere`);
+
+  if (s.stability <= 0.20) lines.push(`STABILITY is ${describeStatLevel(s.stability)} (${s.stability.toFixed(2)}) — life is chaotic, nothing is anchored, they could lose everything`);
+  else if (s.stability >= 0.80) lines.push(`STABILITY is ${describeStatLevel(s.stability)} (${s.stability.toFixed(2)}) — life is locked in, routine, maybe suffocating`);
+
+  if (s.status <= 0.20) lines.push(`STATUS is ${describeStatLevel(s.status)} (${s.status.toFixed(2)}) — they are invisible, overlooked, nobody`);
+  else if (s.status >= 0.80) lines.push(`STATUS is ${describeStatLevel(s.status)} (${s.status.toFixed(2)}) — they are known, watched, scrutinized`);
+
+  if (s.health <= 0.20) lines.push(`HEALTH is ${describeStatLevel(s.health)} (${s.health.toFixed(2)}) — they are falling apart physically, every risk could be fatal`);
+  else if (s.health >= 0.80) lines.push(`HEALTH is ${describeStatLevel(s.health)} (${s.health.toFixed(2)}) — they are strong, vital, physically invincible-feeling`);
+
+  if (s.stress >= 0.75) lines.push(`STRESS is ${describeStatLevel(s.stress)} (${s.stress.toFixed(2)}) — they are cracking, making bad decisions, near breaking point`);
+  else if (s.stress <= 0.15) lines.push(`STRESS is ${describeStatLevel(s.stress)} (${s.stress.toFixed(2)}) — eerily calm, maybe detached, maybe at peace`);
+
+  if (s.freedom <= 0.20) lines.push(`FREEDOM is ${describeStatLevel(s.freedom)} (${s.freedom.toFixed(2)}) — they are trapped, controlled, desperate to escape`);
+  else if (s.freedom >= 0.80) lines.push(`FREEDOM is ${describeStatLevel(s.freedom)} (${s.freedom.toFixed(2)}) — they answer to nobody, unmoored, dangerously free`);
+
+  if (s.exposure >= 0.75) lines.push(`EXPOSURE is ${describeStatLevel(s.exposure)} (${s.exposure.toFixed(2)}) — they are living dangerously, one wrong move from catastrophe`);
+  else if (s.exposure <= 0.15) lines.push(`EXPOSURE is ${describeStatLevel(s.exposure)} (${s.exposure.toFixed(2)}) — they are hidden, safe, unknown`);
+
+  if (lines.length === 0) {
+    return "All stats are in the moderate range — life is stable but something needs to shake it up. CREATE CONFLICT.";
+  }
+
+  return "CURRENT STAT CONTEXT (weave these into the narrative — the story MUST reflect these realities):\n" + lines.join("\n");
+}
+
 /**
- * Mortality: VERY low early, increases later + low health + high stress + exposure
+ * Parent death check — should a parent die this turn?
+ * Linear probability increase from age 4 to age 40.
+ * At age 4: ~3% chance per turn. At age 40: ~60% chance per turn.
+ * Random and organic — sometimes early, sometimes late.
+ */
+function shouldParentDie(playerAge) {
+  if (playerAge < 4 || playerAge > 40) return false;
+  // Linear ramp: 0.03 at age 4, up to 0.60 at age 40
+  const t = (playerAge - 4) / (40 - 4); // 0..1
+  const probability = 0.03 + t * 0.57;   // 0.03..0.60
+  return Math.random() < probability;
+}
+
+/**
+ * Find a living parent in the relationship slots.
+ * Returns the index, or -1 if no living parent found.
+ */
+function findLivingParentIndex(relationships) {
+  const parentRoles = ["mother", "father", "mom", "dad", "parent", "guardian", "grandmother", "grandfather", "grandma", "grandpa"];
+  for (let i = 0; i < relationships.length; i++) {
+    const role = (relationships[i]?.role || "").toLowerCase();
+    if (role.includes("deceased") || role.includes("dead") || role.includes("late ")) continue;
+    if (parentRoles.some(pr => role.includes(pr))) return i;
+  }
+  return -1;
+}
+
+/**
+ * Mortality: DRAMATICALLY reduced for natural causes.
+ * Death is almost impossible from aging alone until very old.
+ * But risky behavior (high exposure + low health + high stress) can kill at any age.
+ * Hard cap: guaranteed death at age 111.
  */
 function computeMortalityChance(age, stats) {
-  const a = Math.max(0, Math.min(112, Number(age) || 0));
+  const a = Math.max(0, Math.min(111, Number(age) || 0));
   const s = normalizeStats(stats);
 
-  if (a < 2) {
-    const base = 0.00012;
-    const exposure = s.exposure * 0.0005;
-    const health = (1 - s.health) * 0.0008;
-    return Math.min(0.01, base + exposure + health);
+  // Hard cap — you WILL die at 111
+  if (a >= 111) return 1.0;
+
+  // ---- RISK-BASED DEATH (can happen at any age if you live dangerously) ----
+  // This is the "you played with fire" component
+  const exposureDanger = Math.pow(s.exposure, 2.5) * 0.35;       // exposure 1.0 → 0.35
+  const healthCrisis = Math.pow(1 - s.health, 3) * 0.30;         // health 0.0 → 0.30
+  const stressCrack = Math.pow(s.stress, 3) * 0.15;              // stress 1.0 → 0.15
+  const riskDeath = exposureDanger + healthCrisis + stressCrack;  // max theoretical ~0.80
+
+  // ---- AGE-BASED NATURAL DEATH (very gentle curve, only real threat past 85+) ----
+  let naturalDeath = 0;
+  if (a < 5) {
+    // Infant/toddler — essentially zero
+    naturalDeath = 0.0001;
+  } else if (a < 30) {
+    // Young — almost zero from natural causes
+    naturalDeath = 0.0003;
+  } else if (a < 50) {
+    // Prime — still extremely low
+    naturalDeath = 0.001;
+  } else if (a < 65) {
+    // Middle age — barely noticeable
+    naturalDeath = 0.005 + ((a - 50) / 15) * 0.015; // 0.005..0.020
+  } else if (a < 80) {
+    // Senior — starting to creep up
+    naturalDeath = 0.02 + ((a - 65) / 15) * 0.08; // 0.02..0.10
+  } else if (a < 95) {
+    // Elderly — moderate
+    naturalDeath = 0.10 + ((a - 80) / 15) * 0.25; // 0.10..0.35
+  } else if (a < 105) {
+    // Very old — significant
+    naturalDeath = 0.35 + ((a - 95) / 10) * 0.30; // 0.35..0.65
+  } else {
+    // 105-110 — high but not guaranteed
+    naturalDeath = 0.65 + ((a - 105) / 6) * 0.30; // 0.65..0.95
   }
 
-  if (a < 12) {
-    const base = 0.00030;
-    const exposure = s.exposure * 0.0010;
-    const health = (1 - s.health) * 0.0014;
-    return Math.min(0.02, base + exposure + health);
-  }
+  // Stability and freedom provide small buffers against risk death only
+  const stabilityBuffer = Math.max(0, (s.stability - 0.5) * 0.06);
+  const freedomBuffer = Math.max(0, (s.freedom - 0.4) * 0.04);
 
-  const base = Math.min(0.65, Math.pow(a / 112, 3) * 0.55);
-  const healthPenalty = (1 - s.health) * 0.12;
-  const stressPenalty = s.stress * 0.08;
-  const exposurePenalty = s.exposure * 0.06;
-  const stabilityBuffer = (s.stability - 0.5) * 0.04;
-  const freedomBuffer = (s.freedom - 0.5) * 0.03;
+  // Combine: natural death OR risk death (whichever is more relevant)
+  // They don't simply add — use a "worst of" approach with some blending
+  const combined = Math.max(naturalDeath, riskDeath) + Math.min(naturalDeath, riskDeath) * 0.3;
+  const final = combined - stabilityBuffer - freedomBuffer;
 
-  const p = base + healthPenalty + stressPenalty + exposurePenalty - stabilityBuffer - freedomBuffer;
-  return Math.max(0.002, Math.min(0.92, p));
+  return Math.max(0.0001, Math.min(0.98, final));
 }
 
 // ----------------------
@@ -344,9 +447,9 @@ const BirthJSONSchema = {
 };
 
 // ----------------------
-// Prompts
+// Prompts — PHASE 1: VOLATILE LIVES
 // ----------------------
-function systemPrompt() {
+function systemPrompt(statContext) {
   return `
 You generate raw, unpredictable life moments for a binary-choice simulator. Every life should feel singular — strange, beautiful, ugly, surprising. You are writing a life, not a career plan.
 
@@ -356,44 +459,75 @@ TONE:
 - Not every moment is dramatic — sometimes the most important scenes are quiet (a conversation at 3am, a letter never sent, the smell of a kitchen).
 - But also: do NOT be boring. These lives should make players lean forward.
 
-VOLATILITY RULES — follow these closely:
-- ~25% of turns should involve something DRASTICALLY unexpected: sudden wealth, devastating loss, a crime, a betrayal, an accident, falling in love with the wrong person, a secret revealed, getting fired, a pregnancy, an arrest, a windfall, an addiction spiral, fleeing a country, a viral moment, a natural disaster, a diagnosis.
-- ~25% should be slow-burn turning points: a relationship quietly souring, realizing you hate your career, noticing your parent is getting old, an opportunity that requires sacrifice.
-- ~25% should involve genuine moral dilemmas with no clean answer.
-- ~25% should be character-driven: someone in your life does something that forces you to react.
-- NEVER generate a "your career is going well, do you want to push harder or relax?" turn. That is boring. Find the conflict.
-- Choices should NEVER both be "sensible." At least one choice should be reckless, emotional, or morally grey.
+═══════════════════════════════════════════════════
+STATS ARE THE SPINE OF THE STORY — THIS IS CRITICAL
+═══════════════════════════════════════════════════
+
+The player's stats are not just numbers — they ARE the story. Every scenario MUST reflect the player's current stat reality:
+
+${statContext}
+
+STAT-STORY INTEGRATION RULES:
+- If money is critically low, the character is VISIBLY desperate — skipping meals, borrowing from dangerous people, sleeping in cars, selling possessions. The scenario MUST show this.
+- If health is very low, the character is PHYSICALLY falling apart — can't climb stairs, coughing blood, trembling hands, hospital visits. Reference the body.
+- If stress is extreme, the character is MENTALLY cracking — paranoia, insomnia, lashing out at loved ones, substance use to cope, bad snap decisions.
+- If exposure is high, the scenario should involve DANGEROUS situations — you're known to the wrong people, you're in over your head, someone's watching you.
+- If freedom is low, the character is TRAPPED — controlled by a partner, institution, debt, obligation, addiction, or contract. They can't just leave.
+- If stability is low, everything is PRECARIOUS — the apartment is temporary, the job could end tomorrow, one bad day ruins everything.
+- If status is high, people RECOGNIZE them — fame, notoriety, reputation. This creates problems AND opportunities.
+- If multiple stats are extreme, COMBINE them. Broke + high stress + low health = someone spiraling. Rich + high exposure + low stability = empire about to crumble.
+- MODERATE stats are BORING. When all stats are moderate, your job is to CREATE the event that pushes something to an extreme. Moderate lives need disruption.
+
+VOLATILITY RULES — EVERYTHING TURNED UP:
+- ~30% of turns should involve something DRASTICALLY unexpected: sudden wealth, devastating loss, a crime, a betrayal, an accident, falling in love with the wrong person, a secret revealed, getting fired, a pregnancy, an arrest, a windfall, an addiction spiral, fleeing a country, a viral moment, a natural disaster, a diagnosis, a robbery, a fire, witnessing something you can't forget.
+- ~25% should be slow-burn turning points with TEETH: not "your relationship is getting complicated" but "you find the messages on their phone and your hands are shaking."
+- ~25% should involve genuine moral dilemmas where BOTH options cost something real.
+- ~20% should be character-driven eruptions: someone in your life does something unforgivable, or unbearably kind.
+- NEVER generate a "your career is going well, do you want to push harder or relax?" turn. That is BANNED. Find the conflict, the betrayal, the secret, the disaster, the opportunity that could destroy everything.
+- The COMFORTABLE MIDDLE is the enemy. If life is going well, BREAK something. If life is terrible, offer a terrible temptation.
+
+EFFECT MAGNITUDE RULES — GO BIG:
+- Effects range from -0.40 to +0.40. USE THE FULL RANGE.
+- Safe, boring choices should still move stats by ±0.05 to ±0.15. Nothing is free.
+- Bold choices MUST have bold effects. Minimum ±0.15, ideally ±0.20 to ±0.35.
+- RECKLESS choices (rob someone, start an affair, take the drug deal, bet everything) should have EXTREME effects: ±0.25 to ±0.40 on multiple stats.
+- Every choice should move at least 3 stats meaningfully (±0.08+).
+- If a choice involves physical danger, exposure MUST increase significantly (+0.15 to +0.35).
+- If a choice involves financial risk, money should swing hard.
+- Stress should move on almost every choice. Life is stressful.
+- ASYMMETRIC effects are great: a choice that gives +0.30 money but +0.25 exposure and -0.20 stability is a real dilemma.
+- Choices should NEVER both be "sensible." At least one should be reckless, emotional, impulsive, or morally grey.
 
 RELATIONSHIP RULES — CRITICAL:
 - You have 3 relationship slots. These are the most important people in the player's life RIGHT NOW.
 - People MUST change over time. A 40-year-old should NOT still have "mother" and "father" as 2 of their 3 slots unless those relationships are actively central to the drama.
 - USE relationship_changes to rotate characters in and out:
-  • Parents should die (realistically by age 50-70 for the player, sometimes earlier). When a parent dies, set replace_index to their slot and new_person to null. Then in a LATER turn, fill that slot with someone new (a partner, a child, a colleague, an enemy).
   • Friendships end. Partners leave. Children grow distant. Mentors disappear.
   • New people arrive: lovers, rivals, cellmates, business partners, neighbors who change your life, a child you didn't expect.
   • When setting new_person to null, the death/departure MUST be referenced in the prose text.
   • Aim to rotate at least 1 relationship every 2-3 turns after age 20.
-- Relationship roles should be specific and evocative: not just "friend" but "childhood friend," "cellmate," "business rival," "estranged sister," "AA sponsor," "affair."
+- Relationship roles should be specific and evocative: not just "friend" but "childhood friend," "cellmate," "business rival," "estranged sister," "AA sponsor," "affair," "parole officer," "the one who got away."
 
 PROSE RULES:
 - Always address the player as "you."
 - First names only. Every person mentioned: Name (role). Role AFTER name.
 - One paragraph, max ~900 characters. No headings, no lists, no tables.
 - Include sensory details: a sound, a smell, a texture, a weather detail, a specific object.
-- The prose should make the player FEEL something — dread, hope, guilt, nostalgia, excitement, shame.
+- The prose MUST reflect the stat context above. If they're broke, show it. If they're sick, show it. If they're stressed, show it in their behavior.
+- The prose should make the player FEEL something — dread, hope, guilt, nostalgia, excitement, shame, rage.
 - Include the player's living situation, how they survive financially, and what's happening RIGHT NOW.
 - Never use the word "pivot."
 
 CHOICE RULES:
 - Exactly 2 choices. Keep labels SHORT (under 65 chars). Start with a verb.
-- Choices should be genuinely different paths, not "good option vs slightly different good option."
-- At least one choice should have real consequences — moral, financial, relational, physical.
-- Effects: all 7 keys required (money, stability, status, health, stress, freedom, exposure). Values between -0.25 and +0.25, realistic.
-- Bold choices should have bold effects. A choice to "rob the warehouse" should not have +0.02 money.
+- Choices should be genuinely different paths with genuinely different consequences.
+- At least one choice should carry REAL risk — moral, financial, relational, physical, legal.
+- The "safe" choice should still cost something. Safety has a price.
 
 DEATH_CAUSE_HINT:
-- Always provide a plausible cause of death relevant to the current scenario.
-- Make it specific: not "health complications" but "liver failure," "car accident on the coast road," "overdose in a motel bathroom," "heart attack while arguing."
+- Always provide a plausible cause of death relevant to the current scenario AND stat levels.
+- If health is low, reference the body failing. If exposure is high, reference the danger catching up.
+- Make it specific: not "health complications" but "liver failure," "car accident on the coast road," "overdose in a motel bathroom," "heart attack while arguing," "stabbed outside the bar," "fell from the scaffolding."
 
 Output must be valid JSON matching the schema exactly.
 `.trim();
@@ -411,8 +545,10 @@ You must:
   Give them PERSONALITY through the prose — one sentence about each that hints at who they are.
 - Compute birth_stats (0..1) for all 7 stats. These should reflect the starting circumstances:
   A birth into poverty in a war zone ≠ a birth into stability in suburban Connecticut.
+  Be BOLD with birth stats — don't default to 0.5. A rough start should have 0.15 money, 0.20 stability. A privileged start should have 0.85 money.
 - Write prose describing the birth context. Make it atmospheric — the room, the sounds, who's there, what the city smells like.
 - The first choice should be meaningful and hint at the life to come. Not trivial.
+- Effects on the first choice should already be SIGNIFICANT (±0.10 to ±0.25). The first choice matters.
 
 Remember: any person mentioned must be "Name (role)".
 `.trim();
@@ -424,12 +560,23 @@ Remember: any person mentioned must be "Name (role)".
 // ----------------------
 async function generateTurn({ isBirth, payload }) {
   const schema = isBirth ? BirthJSONSchema : TurnJSONSchema;
+  const statContext = isBirth ? "Birth turn — stats not yet established." : buildStatContext(payload.stats);
+
+  // Build the parent death directive if applicable
+  let parentDeathDirective = "";
+  if (!isBirth && payload.parent_death_index !== undefined && payload.parent_death_index >= 0) {
+    const parent = payload.relationships?.[payload.parent_death_index];
+    if (parent?.name && parent?.role) {
+      parentDeathDirective = `
+MANDATORY PARENT DEATH: ${parent.name} (${parent.role}) MUST die in this turn's prose. Work their death into the scenario naturally — it can be the central event or happen alongside other events. Set relationship_changes to: replace_index=${payload.parent_death_index}, new_person=null. Reference how their death affects the player emotionally. This is not optional.`;
+    }
+  }
 
   return withRetry(async () => {
     const response = await client.responses.create({
       model: "gpt-4.1",
       input: [
-        { role: "system", content: systemPrompt() },
+        { role: "system", content: systemPrompt(statContext) + parentDeathDirective },
         ...(isBirth ? [{ role: "user", content: birthInstruction() }] : []),
         { role: "user", content: JSON.stringify(payload) },
       ],
@@ -584,7 +731,14 @@ app.post("/api/turn", async (req, res) => {
       }
     }
 
-    const age_to = isBirth ? 0 : Math.min(112, age_from + jumpYears(age_from));
+    const age_to = isBirth ? 0 : Math.min(111, age_from + jumpYears(age_from));
+
+    // Check if a parent should die this turn
+    let parentDeathIndex = -1;
+    const currentRelationships = withDisplayRelationships(state.relationships);
+    if (!isBirth && shouldParentDie(age_to)) {
+      parentDeathIndex = findLivingParentIndex(currentRelationships);
+    }
 
     const payload = {
       nonce: runNonce(),
@@ -596,9 +750,14 @@ app.post("/api/turn", async (req, res) => {
       city: String(state.city || ""),
       desire: String(state.desire || ""),
       stats: normalizeStats(state.stats),
-      relationships: withDisplayRelationships(state.relationships),
+      relationships: currentRelationships,
       history: Array.isArray(state.history) ? state.history.slice(-18) : [],
     };
+
+    // Add parent death directive to payload if applicable
+    if (parentDeathIndex >= 0) {
+      payload.parent_death_index = parentDeathIndex;
+    }
 
     const out = await generateTurn({ isBirth, payload });
 
@@ -691,6 +850,19 @@ app.post("/api/turn", async (req, res) => {
         const yearsA = jumpYears(age_to);
         const yearsB = jumpYears(age_to);
 
+        // Check parent death for prefetched turns too
+        const nextAgeA = Math.min(111, age_to + yearsA);
+        const nextAgeB = Math.min(111, age_to + yearsB);
+
+        let parentDeathA = -1;
+        let parentDeathB = -1;
+        if (shouldParentDie(nextAgeA)) {
+          parentDeathA = findLivingParentIndex(relationships);
+        }
+        if (shouldParentDie(nextAgeB)) {
+          parentDeathB = findLivingParentIndex(relationships);
+        }
+
         const payloadA = {
           ...payload,
           nonce: runNonce(),
@@ -698,8 +870,9 @@ app.post("/api/turn", async (req, res) => {
           relationships,
           history: [...payload.history, scenario.options[0].label].slice(-18),
           age_from: age_to,
-          age_to: Math.min(112, age_to + yearsA),
+          age_to: nextAgeA,
         };
+        if (parentDeathA >= 0) payloadA.parent_death_index = parentDeathA;
 
         const payloadB = {
           ...payload,
@@ -708,8 +881,9 @@ app.post("/api/turn", async (req, res) => {
           relationships,
           history: [...payload.history, scenario.options[1].label].slice(-18),
           age_from: age_to,
-          age_to: Math.min(112, age_to + yearsB),
+          age_to: nextAgeB,
         };
+        if (parentDeathB >= 0) payloadB.parent_death_index = parentDeathB;
 
         const outA = await generateTurn({ isBirth: false, payload: payloadA });
         const outB = await generateTurn({ isBirth: false, payload: payloadB });
@@ -734,16 +908,51 @@ app.post("/api/turn", async (req, res) => {
           death_cause_hint: String(outB.death_cause_hint || ""),
         };
 
+        // Apply relationship changes for prefetched turns
+        let relsA = [...relationships];
+        const rcA = scA.relationship_changes;
+        if (rcA && rcA.replace_index !== null) {
+          const idx = Number(rcA.replace_index);
+          if (idx >= 0 && idx <= 2 && relsA.length === 3) {
+            if (rcA.new_person === null) {
+              const old = relsA[idx];
+              if (old?.name && old?.role) {
+                relsA[idx] = { name: old.name, role: `${old.role}, deceased`, display: `${old.name} (${old.role}, deceased)` };
+              }
+            } else {
+              const np = { name: String(rcA.new_person?.name || ""), role: String(rcA.new_person?.role || "") };
+              relsA[idx] = { ...np, display: `${np.name} (${np.role})` };
+            }
+          }
+        }
+
+        let relsB = [...relationships];
+        const rcB = scB.relationship_changes;
+        if (rcB && rcB.replace_index !== null) {
+          const idx = Number(rcB.replace_index);
+          if (idx >= 0 && idx <= 2 && relsB.length === 3) {
+            if (rcB.new_person === null) {
+              const old = relsB[idx];
+              if (old?.name && old?.role) {
+                relsB[idx] = { name: old.name, role: `${old.role}, deceased`, display: `${old.name} (${old.role}, deceased)` };
+              }
+            } else {
+              const np = { name: String(rcB.new_person?.name || ""), role: String(rcB.new_person?.role || "") };
+              relsB[idx] = { ...np, display: `${np.name} (${np.role})` };
+            }
+          }
+        }
+
         setPrefetch(prefetchKey(session_id, run_id, age_to, "A"), {
           age_to: payloadA.age_to,
           scenario: scA,
-          relationships,
+          relationships: relsA,
         });
 
         setPrefetch(prefetchKey(session_id, run_id, age_to, "B"), {
           age_to: payloadB.age_to,
           scenario: scB,
-          relationships,
+          relationships: relsB,
         });
       } catch {
         // silently ignore prefetch failures
@@ -823,7 +1032,7 @@ app.post("/api/apply", (req, res) => {
       });
     }
 
-    return res.json({ next_stats, died });
+    return res.json({ next_stats, died, death_probability: pDeath });
   } catch (err) {
     return res.status(500).json({
       error: "apply_failed",
@@ -852,12 +1061,17 @@ app.post("/api/epilogue", async (req, res) => {
     const city = String(req.body?.city || "");
     const desire = String(req.body?.desire || "");
     const cause = String(req.body?.cause || "complications");
+    const stats = normalizeStats(req.body?.stats);
 
     const relationships = withDisplayRelationships(req.body?.relationships || []);
     const history = Array.isArray(req.body?.history) ? req.body.history.slice(-20) : [];
 
+    const statSummary = buildStatContext(stats);
+
     const sys = `
 Write a death epilogue for a life simulator. This is the final screen the player sees. Make it count.
+
+${statSummary}
 
 Rules:
 - Address the player as "you."
@@ -865,6 +1079,7 @@ Rules:
 - No headings, no lists, no moralising, no "lessons learned."
 - 500–900 characters.
 - Open with the immediate moment of death — where you are, what you see, who's there (or who isn't).
+- The death scene MUST reflect the final stats. If health was critically low, the body was already failing. If exposure was extreme, the danger finally caught up. If they were rich, describe the expensive room they die in. If they were broke, describe the bare walls.
 - Include 2–3 specific sensory details from the life: a recurring smell, a room you always returned to, a song, a piece of clothing, a food, a view from a window.
 - Reference at least one relationship — what they meant, what was left unsaid, or where they are now.
 - State the cause of death plainly in one sentence.
@@ -880,6 +1095,7 @@ Rules:
       city,
       desire,
       cause,
+      stats,
       relationships,
       history,
     });
@@ -907,5 +1123,5 @@ Rules:
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Phase 0 features: sessions, retry, analytics, prefetch`);
+  console.log(`Phase 1 features: volatile lives, rare natural death, parent mortality, stat-driven stories`);
 });
