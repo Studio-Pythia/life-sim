@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <title>Dreamland</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
   <style>
@@ -22,7 +22,7 @@
       color: var(--gb3);
       font-family: 'Press Start 2P', monospace;
       overflow: hidden;
-      width: 100vw; height: 100vh; height: 100dvh;
+      width: 100vw; height: 100vh;
       display: flex; align-items: center; justify-content: center;
       image-rendering: pixelated;
     }
@@ -116,29 +116,12 @@
       transition: all 0.1s;
     }
 
-    .choice-btn:not(:disabled) {
-      animation: choiceGlow 1.8s ease-in-out infinite;
-    }
-
     .choice-btn:hover:not(:disabled) {
       background: var(--gb1); color: var(--gb3);
-      box-shadow: 0 0 14px rgba(155,188,15,0.5);
-      animation: none;
+      box-shadow: 0 0 10px rgba(155,188,15,0.2);
     }
 
-    @keyframes choiceGlow {
-      0%, 100% { border-color: var(--gb1); box-shadow: 0 0 4px rgba(155,188,15,0.1); }
-      50% { border-color: var(--gb3); box-shadow: 0 0 16px rgba(155,188,15,0.45), inset 0 0 8px rgba(155,188,15,0.08); }
-    }
-
-    .choice-btn:disabled { opacity: 0.4; cursor: default; animation: none; }
-
-    .choice-btn:focus { outline: none; }
-    .choice-btn { -webkit-tap-highlight-color: transparent; }
-    @media (hover: none) {
-      .choice-btn:hover:not(:disabled) { background: var(--gb0); box-shadow: none; animation: choiceGlow 1.8s ease-in-out infinite; }
-      .choice-btn:active:not(:disabled) { background: var(--gb1); color: var(--gb3); box-shadow: 0 0 14px rgba(155,188,15,0.5); animation: none; }
-    }
+    .choice-btn:disabled { opacity: 0.4; cursor: default; }
 
     #play-again { display: none; text-align: center; margin-top: 10px; }
     #play-again button {
@@ -240,45 +223,6 @@
       background: var(--gb2); color: var(--gb0);
     }
 
-    /* Feedback form on death screen */
-    #death-feedback {
-      width: 100%; max-width: 580px;
-      margin-top: 10px; padding: 10px 14px;
-      background: var(--gb0); border: 2px solid var(--gb1);
-      text-align: center;
-      animation: ripFadeIn 4s ease-out forwards; opacity: 0;
-    }
-    .fb-title {
-      font-size: 8px; color: var(--gb2); letter-spacing: 2px; margin-bottom: 8px;
-    }
-    .fb-stars {
-      display: flex; justify-content: center; gap: 8px; margin-bottom: 8px;
-    }
-    .fb-star {
-      font-size: 20px; color: var(--gb1); cursor: pointer;
-      transition: color 0.1s, text-shadow 0.1s;
-    }
-    .fb-star:hover, .fb-star.active {
-      color: var(--gb3);
-      text-shadow: 0 0 10px rgba(155,188,15,0.5);
-    }
-    #fb-text {
-      width: 100%; font-family: inherit; font-size: 8px; padding: 8px;
-      background: var(--gb0); color: var(--gb3); border: 2px solid var(--gb1);
-      resize: none; line-height: 1.8;
-    }
-    #fb-text::placeholder { color: var(--gb1); }
-    #fb-submit {
-      font-family: inherit; font-size: 8px; padding: 8px 20px;
-      background: var(--gb1); color: var(--gb3); border: 2px solid var(--gb2);
-      cursor: pointer; margin-top: 8px; letter-spacing: 1px;
-    }
-    #fb-submit:hover { background: var(--gb2); color: var(--gb0); }
-    #fb-thanks {
-      font-size: 9px; color: var(--gb3); letter-spacing: 2px; margin-top: 6px;
-      display: none;
-    }
-
     #onboarding-overlay {
       position: absolute; inset: 0; z-index: 200;
       background: var(--gb0); display: flex; align-items: center;
@@ -372,7 +316,7 @@
 
     /* Responsive */
     @media (max-width: 640px) {
-      #game-wrapper { border-width: 2px; aspect-ratio: auto; height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+      #game-wrapper { border-width: 2px; aspect-ratio: auto; height: 100vh; max-height: 100vh; }
       #hud { padding: 6px 8px; }
       #hud-age { font-size: 11px; }
       #dialogue-box { font-size: 9px; min-height: 80px; max-height: 120px; padding: 10px 12px; }
@@ -436,20 +380,6 @@
     </div>
     <div id="death-epilogue"></div>
     <div id="death-play-again"><button>&#9654; PLAY AGAIN</button></div>
-    <div id="death-feedback">
-      <div class="fb-title">HELP US IMPROVE</div>
-      <div class="fb-stars">
-        <span class="fb-star" data-star="1">&#9733;</span>
-        <span class="fb-star" data-star="2">&#9733;</span>
-        <span class="fb-star" data-star="3">&#9733;</span>
-        <span class="fb-star" data-star="4">&#9733;</span>
-        <span class="fb-star" data-star="5">&#9733;</span>
-      </div>
-      <textarea id="fb-text" placeholder="Tell us what you think..." rows="2"></textarea>
-      <br>
-      <button id="fb-submit">SEND FEEDBACK</button>
-      <div id="fb-thanks">THANK YOU!</div>
-    </div>
   </div>
 
   <div id="onboarding-overlay">
@@ -551,6 +481,7 @@ let locked = false;
 
 const state = {
   run_id: '', session_id: '', age: 0, gender: '', city: '', desire: '', location: '',
+  dead: false,
   history: [], relationships: [], statHistory: [],
   stats: { money: 0.5, stability: 0.5, status: 0.5, health: 0.5, stress: 0.5, freedom: 0.5, exposure: 0.5 },
 };
@@ -842,8 +773,8 @@ class LifeScene extends Phaser.Scene {
     const spriteY = floorY - spriteH + 8;
     drawSprite(this.gfx, spriteMap, spriteX, spriteY, spriteScale);
 
-    // Death overlay — graveyard scene with coffin
-    if (stats.health <= 0) {
+    // Death overlay — graveyard scene with coffin (only when actually dead, not just low health)
+    if (state.dead) {
       // Darken the background
       this.gfx.fillStyle(0x0f380f, 0.85);
       this.gfx.fillRect(0, 0, W, H);
@@ -1029,23 +960,8 @@ function renderRelations(rels) {
   rels.slice(0, 5).forEach(r => {
     const chip = document.createElement('div');
     chip.className = 'rel-chip';
-
-    // Parse name: "Mamma (mother)" → displayName="Mamma", relType="mother"
-    const raw = r.name || r.display || 'Unknown';
-    const parenMatch = raw.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
-    let displayName = raw;
-    let relType = '';
-
-    if (parenMatch) {
-      displayName = parenMatch[1].trim();
-      relType = parenMatch[2].trim();
-    }
-
-    // r.role from API is attitude/disposition — show as tooltip only
-    const attitude = r.role || '';
-    if (attitude) chip.title = attitude;
-
-    chip.innerHTML = `<span class="rel-role">${relType || 'acquaintance'}</span>${displayName}`;
+    const role = r.role || 'acquaintance';
+    chip.innerHTML = `<span class="rel-role">${role}</span>${r.name || 'Unknown'}`;
     el.hudRelations.appendChild(chip);
   });
 }
@@ -1316,6 +1232,7 @@ async function startGame() {
   state.city = document.getElementById('city').value || 'New York';
   state.desire = document.getElementById('desire').value || 'a happy life';
   state.location = state.city;
+  state.dead = false;
   state.run_id = newRunId();
   state.session_id = newRunId();
   state.age = 0;
@@ -1488,6 +1405,7 @@ async function handleDeath(cause) {
   el.btnA.style.display = 'none';
   el.btnB.style.display = 'none';
   el.playAgain.style.display = 'none'; // hide old play-again
+  state.dead = true;
   state.stats.health = 0;
   updateScene();
   clearSave();
@@ -1539,6 +1457,7 @@ function resetGame() {
   state.statHistory = [];
   state.stats = { money: 0.5, stability: 0.5, status: 0.5, health: 0.5, stress: 0.5, freedom: 0.5, exposure: 0.5 };
   state.location = '';
+  state.dead = false;
   el.hudAge.textContent = 'AGE 0';
   el.hudMeta.textContent = '';
   el.hudRelations.innerHTML = '';
@@ -1550,85 +1469,11 @@ function resetGame() {
   setButtonsDisabled(true);
   el.playAgain.style.display = 'none';
   el.deathScreen.classList.remove('visible');
-  resetFeedbackForm();
   el.onboarding.style.display = 'flex';
   setError('');
   setLoading(false);
   clearSave();
   updateScene();
-}
-
-// ═══════════════════════════════════════════════
-// FEEDBACK FORM
-// ═══════════════════════════════════════════════
-let feedbackRating = 0;
-
-function initFeedbackForm() {
-  const stars = document.querySelectorAll('.fb-star');
-  const submitBtn = document.getElementById('fb-submit');
-  const thanks = document.getElementById('fb-thanks');
-  const textArea = document.getElementById('fb-text');
-
-  stars.forEach(star => {
-    star.addEventListener('click', () => {
-      feedbackRating = parseInt(star.dataset.star);
-      stars.forEach(s => {
-        s.classList.toggle('active', parseInt(s.dataset.star) <= feedbackRating);
-      });
-    });
-    star.addEventListener('mouseenter', () => {
-      const hv = parseInt(star.dataset.star);
-      stars.forEach(s => {
-        s.classList.toggle('active', parseInt(s.dataset.star) <= hv);
-      });
-    });
-    star.addEventListener('mouseleave', () => {
-      stars.forEach(s => {
-        s.classList.toggle('active', parseInt(s.dataset.star) <= feedbackRating);
-      });
-    });
-  });
-
-  submitBtn.addEventListener('click', () => {
-    const payload = {
-      session_id: state.session_id || '',
-      run_id: state.run_id,
-      rating: feedbackRating,
-      comment: textArea.value.trim(),
-      death_age: state.age,
-      city: state.city,
-      desire: state.desire,
-    };
-    // Send to dedicated feedback endpoint
-    fetch(API_BASE + '/api/feedback', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }).catch(() => {});
-    // Also log as event for redundancy
-    logAnalytics('feedback', { rating: feedbackRating, comment: textArea.value.trim() });
-
-    submitBtn.style.display = 'none';
-    textArea.style.display = 'none';
-    document.querySelector('.fb-stars').style.display = 'none';
-    document.querySelector('.fb-title').textContent = '';
-    thanks.style.display = 'block';
-  });
-}
-
-function resetFeedbackForm() {
-  feedbackRating = 0;
-  document.querySelectorAll('.fb-star').forEach(s => s.classList.remove('active'));
-  const ta = document.getElementById('fb-text');
-  if (ta) { ta.value = ''; ta.style.display = ''; }
-  const btn = document.getElementById('fb-submit');
-  if (btn) btn.style.display = '';
-  const sc = document.querySelector('.fb-stars');
-  if (sc) sc.style.display = '';
-  const title = document.querySelector('.fb-title');
-  if (title) title.textContent = 'HELP US IMPROVE';
-  const thx = document.getElementById('fb-thanks');
-  if (thx) thx.style.display = 'none';
 }
 
 // ═══════════════════════════════════════════════
@@ -1658,9 +1503,6 @@ window.addEventListener('DOMContentLoaded', () => {
   el.transitionText = document.getElementById('transition-text');
   el.errorBar = document.getElementById('error-bar');
 
-  // Init feedback form
-  initFeedbackForm();
-
   // Init Phaser
   phaserGame = new Phaser.Game({
     type: Phaser.AUTO,
@@ -1677,8 +1519,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Event listeners
   el.startBtn.addEventListener('click', e => { e.preventDefault(); startGame(); });
-  el.btnA.addEventListener('click', () => { el.btnA.blur(); choose(0); });
-  el.btnB.addEventListener('click', () => { el.btnB.blur(); choose(1); });
+  el.btnA.addEventListener('click', () => choose(0));
+  el.btnB.addEventListener('click', () => choose(1));
   el.playAgain.querySelector('button').addEventListener('click', resetGame);
   document.getElementById('death-play-again').querySelector('button').addEventListener('click', resetGame);
   el.statToggle.addEventListener('click', () => { renderStatBars(); el.statOverlay.style.display = 'flex'; });
