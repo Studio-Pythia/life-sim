@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Dreamland — The Dead</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+  :root {
+    --gb0: #0f380f;
+    --gb1: #306230;
+    --gb2: #8bac0f;
+    --gb3: #9bbc0f;
+    --dead: #5a7a0a;
+    --dim: #2a4a1a;
+    --bright: #c8e820;
+    --danger: #cc3030;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0a0a0a;
+    color: var(--gb3);
+    font-family: 'Press Start 2P', monospace;
+    image-rendering: pixelated;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px
+    );
+    mix-blend-mode: multiply;
+  }
+
+  .screen {
+    width: 100%;
+    max-width: 720px;
+    min-height: 100vh;
+    background: var(--gb0);
+    border-left: 4px solid var(--gb1);
+    border-right: 4px solid var(--gb1);
+    box-shadow: 0 0 80px rgba(155,188,15,0.06);
+    padding: 20px 16px;
+  }
+
+  .header {
+    text-align: center;
+    padding: 16px 0 20px;
+    border-bottom: 2px solid var(--gb1);
+    margin-bottom: 20px;
+  }
+
+  .header h1 { font-size: 14px; color: var(--gb3); letter-spacing: 2px; margin-bottom: 8px; }
+  .header .sub { font-size: 7px; color: var(--gb1); letter-spacing: 1px; }
+
+  .play-link {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 7px;
+    color: var(--gb2);
+    text-decoration: none;
+    border: 1px solid var(--gb1);
+    padding: 6px 12px;
+    transition: all 0.2s;
+  }
+
+  .play-link:hover { color: var(--bright); border-color: var(--gb2); background: rgba(139,172,15,0.08); }
+
+  .global-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--dim);
+    margin-bottom: 20px;
+  }
+
+  .g-stat { text-align: center; }
+  .g-stat .g-val { font-size: 16px; color: var(--bright); display: block; margin-bottom: 4px; }
+  .g-stat .g-label { font-size: 6px; color: var(--gb1); letter-spacing: 1px; }
+
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--gb1);
+  }
+
+  .tab {
+    padding: 8px 10px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px;
+    color: var(--dead);
+    background: none;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.15s;
+  }
+
+  .tab:hover { color: var(--gb2); }
+  .tab.active { color: var(--bright); border-bottom-color: var(--bright); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .board-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .board-header h2 { font-size: 9px; color: var(--gb2); }
+  .board-header .ico { font-size: 12px; }
+
+  .entry {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    gap: 8px;
+    align-items: start;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--dim);
+    transition: background 0.15s;
+  }
+
+  .entry:hover { background: rgba(139,172,15,0.04); }
+  .entry:nth-child(-n+3) .rank { color: var(--bright); }
+
+  .rank { font-size: 8px; color: var(--dead); text-align: center; padding-top: 2px; }
+
+  .entry-body { min-width: 0; }
+  .entry-top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin-bottom: 3px; }
+  .entry-city { font-size: 8px; color: var(--gb3); }
+  .entry-desire { font-size: 6px; color: var(--dead); font-style: italic; }
+  .entry-verdict { font-size: 7px; color: var(--gb3); line-height: 1.7; margin-top: 4px; }
+  .entry-age { font-size: 14px; color: var(--gb2); text-align: right; white-space: nowrap; padding-top: 2px; }
+  .entry-cause { font-size: 5px; color: var(--dead); margin-top: 5px; }
+  .entry-age.young { color: var(--danger); }
+  .entry-age.elder { color: var(--bright); }
+
+  .data-row {
+    display: grid;
+    gap: 4px;
+    padding: 8px;
+    border-bottom: 1px solid var(--dim);
+    font-size: 7px;
+    align-items: center;
+  }
+
+  .data-row.hdr { color: var(--dead); font-size: 6px; border-bottom: 1px solid var(--gb1); }
+  .g-city { grid-template-columns: 1fr 50px 50px 50px; }
+  .g-desire { grid-template-columns: 1fr 44px 50px; }
+  .g-cause { grid-template-columns: 1fr 44px 50px; }
+  .vc { text-align: center; color: var(--gb2); }
+  .vd { text-align: center; color: var(--danger); }
+  .vm { text-align: center; color: var(--dead); }
+  .vn { color: var(--gb3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vr { color: var(--danger); }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--dead); font-size: 7px; line-height: 2; }
+  .empty .big { font-size: 24px; display: block; margin-bottom: 12px; color: var(--gb1); }
+
+  .loading { text-align: center; padding: 40px; color: var(--dead); font-size: 7px; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .loading .dots { animation: blink 1s infinite; }
+
+  .footer { text-align: center; padding: 24px 0 12px; border-top: 1px solid var(--dim); margin-top: 24px; }
+  .footer a { font-size: 6px; color: var(--dead); text-decoration: none; letter-spacing: 1px; }
+  .footer a:hover { color: var(--gb2); }
+
+  @media (max-width: 480px) {
+    .screen { padding: 12px 8px; }
+    .header h1 { font-size: 11px; }
+    .g-stat .g-val { font-size: 13px; }
+    .entry { grid-template-columns: 22px 1fr auto; }
+    .entry-age { font-size: 12px; }
+    .tab { padding: 6px 6px; font-size: 5px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="screen">
+  <div class="header">
+    <h1>☠ THE DEAD ☠</h1>
+    <div class="sub">EVERY LIFE THAT PASSED THROUGH DREAMLAND</div>
+    <a href="/" class="play-link">► PLAY DREAMLAND</a>
+  </div>
+
+  <div class="global-bar">
+    <div class="g-stat"><span class="g-val" id="gLives">—</span><span class="g-label">LIVES LIVED</span></div>
+    <div class="g-stat"><span class="g-val" id="gDone">—</span><span class="g-label">COMPLETED</span></div>
+    <div class="g-stat"><span class="g-val" id="gAvg">—</span><span class="g-label">AVG AGE</span></div>
+    <div class="g-stat"><span class="g-val" id="gMax">—</span><span class="g-label">OLDEST</span></div>
+    <div class="g-stat"><span class="g-val" id="gMin">—</span><span class="g-label">YOUNGEST</span></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="elders">ELDERS</button>
+    <button class="tab" data-tab="fallen">FALLEN</button>
+    <button class="tab" data-tab="recent">RECENT</button>
+    <button class="tab" data-tab="cities">CITIES</button>
+    <button class="tab" data-tab="dreams">DREAMS</button>
+    <button class="tab" data-tab="causes">EPITAPHS</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-elders">
+    <div class="board-header"><span class="ico">👑</span><h2>HALL OF ELDERS</h2></div>
+    <div id="bElders"><p class="loading">LOADING<span class="dots">...</span></p></div>
+  </div>
+
+  <div class="tab-panel" id="panel-fallen">
+    <div class="board-header"><span class="ico">⚰</span><h2>GONE TOO SOON</h2></div>
+    <div id="bFallen"><p class="loading">LOADING<span class="dots">...</span></p></div>
+  </div>
+
+  <div class="tab-panel" id="panel-recent">
+    <div class="board-header"><span class="ico">🕯</span><h2>RECENTLY DEPARTED</h2></div>
+    <div id="bRecent"><p class="loading">LOADING<span class="dots">...</span></p></div>
+  </div>
+
+  <div class="tab-panel" id="panel-cities">
+    <div class="board-header"><span class="ico">🏙</span><h2>DEADLIEST CITIES</h2></div>
+    <div id="bCities"><p class="loading">LOADING<span class="dots">...</span></p></div>
+  </div>
+
+  <div class="tab-panel" id="panel-dreams">
+    <div class="board-header"><span class="ico">✦</span><h2>WHAT THEY WANTED</h2></div>
+    <div id="bDreams"><p class="loading">LOADING<span class="dots">...</span></p></div>
+  </div>
+
+  <div class="tab-panel" id="panel-causes">
+    <div class="board-header"><span class="ico">💀</span><h2>EPITAPHS</h2></div>
+    <div id="bCauses"><p class="loading">LOADING<span class="dots">...</span></p></div>
+  </div>
+
+  <div class="footer"><a href="/">DREAMLAND</a></div>
+</div>
+
+<script>
+const API = 'https://life-sim-production.up.railway.app';
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+function h(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function ac(age) { return age < 25 ? 'young' : age >= 75 ? 'elder' : ''; }
+
+function renderEntries(list, el) {
+  if (!list || !list.length) { el.innerHTML = '<div class="empty"><span class="big">∅</span>NO DEATHS YET</div>'; return; }
+  el.innerHTML = list.map((e, i) => `<div class="entry">
+    <div class="rank">${String(i+1).padStart(2,'0')}</div>
+    <div class="entry-body">
+      <div class="entry-top">
+        <span class="entry-city">${h(e.city||'???')}</span>
+        <span class="entry-desire">${e.desire?'"'+h(e.desire)+'"':''}</span>
+      </div>
+      ${e.verdict?'<div class="entry-verdict">'+h(e.verdict)+'</div>':''}
+      ${e.death_cause?'<div class="entry-cause">COD: '+h(e.death_cause)+'</div>':''}
+    </div>
+    <div>
+      <div class="entry-age ${ac(e.death_age)}">${e.death_age??'?'}</div>
+    </div>
+  </div>`).join('');
+}
+
+function renderCities(list, el) {
+  if (!list||!list.length) { el.innerHTML = '<div class="empty"><span class="big">∅</span>NOT ENOUGH DATA</div>'; return; }
+  el.innerHTML = '<div class="data-row hdr g-city"><div>CITY</div><div style="text-align:center">LIVES</div><div style="text-align:center">AVG</div><div style="text-align:center">MIN</div></div>'
+    + list.map(c => `<div class="data-row g-city"><div class="vn">${h(c.city)}</div><div class="vc">${c.lives}</div><div class="vc">${c.avg_age??'—'}</div><div class="vd">${c.youngest??'—'}</div></div>`).join('');
+}
+
+function renderDesires(list, el) {
+  if (!list||!list.length) { el.innerHTML = '<div class="empty"><span class="big">∅</span>NO DREAMS YET</div>'; return; }
+  el.innerHTML = '<div class="data-row hdr g-desire"><div>DESIRE</div><div style="text-align:center">#</div><div style="text-align:center">AVG AGE</div></div>'
+    + list.map(d => `<div class="data-row g-desire"><div class="vn" title="${h(d.desire)}">"${h(d.desire)}"</div><div class="vc">${d.times}</div><div class="vm">${d.avg_age??'—'}</div></div>`).join('');
+}
+
+function renderCauses(list, el) {
+  if (!list||!list.length) { el.innerHTML = '<div class="empty"><span class="big">∅</span>NO EPITAPHS YET</div>'; return; }
+  el.innerHTML = list.map(c => `<div style="padding:12px 8px;border-bottom:1px solid var(--dim);">
+    <div style="font-size:7px;color:var(--gb3);line-height:1.7;margin-bottom:6px;">${h(c.verdict)}</div>
+    <div style="font-size:5px;color:var(--dead);">${h(c.city||'???')} · "${h(c.desire||'?')}" · died at ${c.death_age??'?'}</div>
+  </div>`).join('');
+}
+
+async function load() {
+  try {
+    const res = await fetch(API + '/api/leaderboard');
+    const d = await res.json();
+    if (!d.db_connected) {
+      document.querySelectorAll('[id^=b]').forEach(b => { b.innerHTML = '<div class="empty"><span class="big">⚠</span>DATABASE NOT CONNECTED</div>'; });
+      return;
+    }
+    const g = d.global || {};
+    document.getElementById('gLives').textContent = g.total_lives ?? '0';
+    document.getElementById('gDone').textContent = g.completed ?? '0';
+    document.getElementById('gAvg').textContent = g.avg_age ?? '—';
+    document.getElementById('gMax').textContent = g.oldest ?? '—';
+    document.getElementById('gMin').textContent = g.youngest ?? '—';
+
+    renderEntries(d.oldest, document.getElementById('bElders'));
+    renderEntries(d.youngest, document.getElementById('bFallen'));
+    renderEntries(d.recent, document.getElementById('bRecent'));
+    renderCities(d.dangerous_cities, document.getElementById('bCities'));
+    renderDesires(d.popular_desires, document.getElementById('bDreams'));
+    renderCauses(d.common_causes, document.getElementById('bCauses'));
+  } catch (err) {
+    console.error('Load failed:', err);
+    document.querySelectorAll('[id^=b]').forEach(b => { b.innerHTML = '<div class="empty"><span class="big">⚠</span>FAILED TO LOAD</div>'; });
+  }
+}
+
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>
