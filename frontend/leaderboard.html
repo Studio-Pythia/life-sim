@@ -141,9 +141,9 @@
   .entry-top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin-bottom: 3px; }
   .entry-city { font-size: 8px; color: var(--gb3); }
   .entry-desire { font-size: 6px; color: var(--dead); font-style: italic; }
-  .entry-verdict { font-size: 6px; color: var(--gb1); line-height: 1.6; margin-top: 4px; }
+  .entry-verdict { font-size: 7px; color: var(--gb3); line-height: 1.7; margin-top: 4px; }
   .entry-age { font-size: 14px; color: var(--gb2); text-align: right; white-space: nowrap; padding-top: 2px; }
-  .entry-cause { font-size: 5px; color: var(--dim); text-align: right; margin-top: 3px; }
+  .entry-cause { font-size: 5px; color: var(--dead); margin-top: 5px; }
   .entry-age.young { color: var(--danger); }
   .entry-age.elder { color: var(--bright); }
 
@@ -210,7 +210,7 @@
     <button class="tab" data-tab="recent">RECENT</button>
     <button class="tab" data-tab="cities">CITIES</button>
     <button class="tab" data-tab="dreams">DREAMS</button>
-    <button class="tab" data-tab="causes">CAUSES</button>
+    <button class="tab" data-tab="causes">EPITAPHS</button>
   </div>
 
   <div class="tab-panel active" id="panel-elders">
@@ -239,7 +239,7 @@
   </div>
 
   <div class="tab-panel" id="panel-causes">
-    <div class="board-header"><span class="ico">💀</span><h2>HOW THEY DIED</h2></div>
+    <div class="board-header"><span class="ico">💀</span><h2>EPITAPHS</h2></div>
     <div id="bCauses"><p class="loading">LOADING<span class="dots">...</span></p></div>
   </div>
 
@@ -275,10 +275,10 @@ function renderEntries(list, el) {
         <span class="entry-desire">${e.desire?'"'+h(e.desire)+'"':''}</span>
       </div>
       ${e.verdict?'<div class="entry-verdict">'+h(e.verdict)+'</div>':''}
+      ${e.death_cause?'<div class="entry-cause">COD: '+h(e.death_cause)+'</div>':''}
     </div>
     <div>
       <div class="entry-age ${ac(e.death_age)}">${e.death_age??'?'}</div>
-      ${e.death_cause?'<div class="entry-cause">'+h(e.death_cause)+'</div>':''}
     </div>
   </div>`).join('');
 }
@@ -296,9 +296,11 @@ function renderDesires(list, el) {
 }
 
 function renderCauses(list, el) {
-  if (!list||!list.length) { el.innerHTML = '<div class="empty"><span class="big">∅</span>NO DATA YET</div>'; return; }
-  el.innerHTML = '<div class="data-row hdr g-cause"><div>CAUSE</div><div style="text-align:center">#</div><div style="text-align:center">AVG AGE</div></div>'
-    + list.map(c => `<div class="data-row g-cause"><div class="vr">${h(c.death_cause)}</div><div class="vc">${c.count}</div><div class="vm">${c.avg_age??'—'}</div></div>`).join('');
+  if (!list||!list.length) { el.innerHTML = '<div class="empty"><span class="big">∅</span>NO EPITAPHS YET</div>'; return; }
+  el.innerHTML = list.map(c => `<div style="padding:12px 8px;border-bottom:1px solid var(--dim);">
+    <div style="font-size:7px;color:var(--gb3);line-height:1.7;margin-bottom:6px;">${h(c.verdict)}</div>
+    <div style="font-size:5px;color:var(--dead);">${h(c.city||'???')} · "${h(c.desire||'?')}" · died at ${c.death_age??'?'}</div>
+  </div>`).join('');
 }
 
 async function load() {
