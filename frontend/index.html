@@ -38,10 +38,8 @@
     #game-wrapper::after {
       content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 100;
       background: repeating-linear-gradient(
-        0deg, transparent, transparent 1px, rgba(0,0,0,0.12) 1px, rgba(0,0,0,0.12) 2px
+        0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
       );
-      mix-blend-mode: multiply;
-      will-change: transform;
     }
 
     #phaser-canvas { width: 100%; height: 100%; display: block; }
@@ -62,37 +60,18 @@
     #hud-age { font-size: 12px; color: var(--gb3); text-shadow: 1px 1px 0 var(--gb0); }
     #hud-meta { font-size: 7px; color: var(--gb2); max-width: 50%; text-align: right; }
 
-    #go-back-btn {
+    #stat-toggle {
       position: absolute; top: 32px; right: 10px;
       font-family: inherit; font-size: 10px; padding: 8px 18px;
       background: var(--gb0); color: var(--gb3); border: 2px solid var(--gb2);
       cursor: pointer; pointer-events: auto; z-index: 20;
       letter-spacing: 2px;
-      animation: goBackPulse 3s ease-in-out infinite;
+      animation: statPulse 2s ease-in-out infinite;
     }
-    @keyframes goBackPulse {
+    @keyframes statPulse {
       0%, 100% { background: var(--gb0); color: var(--gb3); border-color: var(--gb2); box-shadow: 0 0 4px rgba(139,172,15,0.2); }
       50% { background: var(--gb1); color: var(--gb3); border-color: var(--gb3); box-shadow: 0 0 12px rgba(155,188,15,0.5); }
     }
-
-    #go-back-confirm {
-      position: absolute; inset: 0; z-index: 180;
-      background: rgba(15,56,15,0.95); display: none;
-      align-items: center; justify-content: center;
-      pointer-events: auto;
-    }
-    #go-back-confirm-box {
-      text-align: center; width: 75%; max-width: 340px;
-    }
-    #go-back-confirm-box p {
-      font-size: 8px; color: var(--gb3); line-height: 2.2; margin-bottom: 16px;
-    }
-    #go-back-confirm-box button {
-      font-family: inherit; font-size: 8px; padding: 8px 20px;
-      background: var(--gb0); color: var(--gb3); border: 2px solid var(--gb2);
-      cursor: pointer; margin: 0 6px;
-    }
-    #go-back-confirm-box button:hover { background: var(--gb1); }
 
     #hud-relations {
       position: absolute; top: 50px; left: 10px; display: flex; gap: 6px;
@@ -161,28 +140,136 @@
       cursor: pointer;
     }
 
-    #rip-overlay {
+    #death-screen {
       display: none;
-      position: absolute; left: 0; right: 0;
-      top: 20%; z-index: 50;
-      text-align: center; pointer-events: none;
+      position: absolute; inset: 0; z-index: 60;
+      background: rgba(15,56,15,0.97);
+      flex-direction: column; align-items: center;
+      justify-content: flex-start;
+      pointer-events: auto; overflow-y: auto;
+      padding: 12px 16px 16px;
     }
-    #rip-overlay .rip-text {
-      font-size: 28px; color: var(--gb3);
-      text-shadow: 3px 3px 0 var(--gb0), -1px -1px 0 var(--gb1), 0 0 20px rgba(155,188,15,0.4);
-      letter-spacing: 8px;
-      animation: ripFadeIn 2s ease-out forwards;
-      opacity: 0;
+    #death-screen.visible { display: flex; }
+
+    #death-screen .rip-text {
+      font-size: 24px; color: var(--gb3);
+      text-shadow: 2px 2px 0 var(--gb0), 0 0 16px rgba(155,188,15,0.3);
+      letter-spacing: 8px; margin-top: 6px;
+      animation: ripFadeIn 1.5s ease-out forwards; opacity: 0;
     }
-    #rip-overlay .rip-age {
-      font-size: 14px; color: var(--gb2);
-      margin-top: 8px; letter-spacing: 4px;
-      animation: ripFadeIn 2.5s ease-out forwards;
-      opacity: 0;
+    #death-screen .rip-age {
+      font-size: 11px; color: var(--gb2);
+      margin-top: 4px; letter-spacing: 4px;
+      animation: ripFadeIn 2s ease-out forwards; opacity: 0;
     }
     @keyframes ripFadeIn {
-      0% { opacity: 0; transform: translateY(-10px); }
+      0% { opacity: 0; transform: translateY(-8px); }
       100% { opacity: 1; transform: translateY(0); }
+    }
+
+    #close-call-flash {
+      display: none; position: absolute; inset: 0; z-index: 55;
+      background: rgba(200, 50, 50, 0.25);
+      align-items: center; justify-content: center; flex-direction: column;
+      pointer-events: none;
+    }
+    #close-call-flash.active { display: flex; animation: ccFlash 2s ease-out forwards; }
+    #close-call-flash .cc-text {
+      font-size: 14px; color: #EF5350; letter-spacing: 4px;
+      text-shadow: 0 0 12px rgba(239,83,80,0.6);
+    }
+    #close-call-flash .cc-count {
+      font-size: 8px; color: var(--gb2); margin-top: 6px; letter-spacing: 2px;
+    }
+    @keyframes ccFlash {
+      0% { opacity: 0; }
+      15% { opacity: 1; }
+      70% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    #stat-graph-container {
+      width: 100%; max-width: 580px;
+      margin: 10px auto 6px;
+      animation: ripFadeIn 2.5s ease-out forwards; opacity: 0;
+    }
+    #stat-graph-canvas {
+      width: 100%; height: auto;
+      image-rendering: auto;
+      border: 2px solid var(--gb1);
+      background: var(--gb0);
+    }
+    #stat-graph-legend {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 6px 12px; margin-top: 6px;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 6px; color: var(--gb2);
+    }
+    .legend-swatch {
+      width: 12px; height: 3px; display: inline-block;
+    }
+
+    #death-epilogue {
+      width: 100%; max-width: 580px;
+      margin-top: 8px; padding: 10px 12px;
+      background: var(--gb0); border: 2px solid var(--gb1);
+      font-size: 8px; line-height: 1.8; color: var(--gb3);
+      min-height: 50px; max-height: 100px; overflow-y: auto;
+      animation: ripFadeIn 3s ease-out forwards; opacity: 0;
+    }
+
+    #death-play-again {
+      margin-top: 10px;
+      animation: ripFadeIn 3.5s ease-out forwards; opacity: 0;
+    }
+    #death-play-again button {
+      font-family: inherit; font-size: 10px; padding: 10px 24px;
+      background: var(--gb1); color: var(--gb3); border: 2px solid var(--gb2);
+      cursor: pointer; letter-spacing: 2px;
+    }
+    #death-play-again button:hover {
+      background: var(--gb2); color: var(--gb0);
+    }
+
+    /* Feedback form on death screen */
+    #death-feedback {
+      width: 100%; max-width: 580px;
+      margin-top: 10px; padding: 10px 14px;
+      background: var(--gb0); border: 2px solid var(--gb1);
+      text-align: center;
+      animation: ripFadeIn 4s ease-out forwards; opacity: 0;
+    }
+    .fb-title {
+      font-size: 8px; color: var(--gb2); letter-spacing: 2px; margin-bottom: 8px;
+    }
+    .fb-stars {
+      display: flex; justify-content: center; gap: 8px; margin-bottom: 8px;
+    }
+    .fb-star {
+      font-size: 20px; color: var(--gb1); cursor: pointer;
+      transition: color 0.1s, text-shadow 0.1s;
+    }
+    .fb-star:hover, .fb-star.active {
+      color: var(--gb3);
+      text-shadow: 0 0 10px rgba(155,188,15,0.5);
+    }
+    #fb-text {
+      width: 100%; font-family: inherit; font-size: 8px; padding: 8px;
+      background: var(--gb0); color: var(--gb3); border: 2px solid var(--gb1);
+      resize: none; line-height: 1.8;
+    }
+    #fb-text::placeholder { color: var(--gb1); }
+    #fb-submit {
+      font-family: inherit; font-size: 8px; padding: 8px 20px;
+      background: var(--gb1); color: var(--gb3); border: 2px solid var(--gb2);
+      cursor: pointer; margin-top: 8px; letter-spacing: 1px;
+    }
+    #fb-submit:hover { background: var(--gb2); color: var(--gb0); }
+    #fb-thanks {
+      font-size: 9px; color: var(--gb3); letter-spacing: 2px; margin-top: 6px;
+      display: none;
     }
 
     #onboarding-overlay {
@@ -217,21 +304,27 @@
 
     #start-btn:hover { background: var(--gb2); color: var(--gb0); }
 
-    /* Epilogue coda */
-    #epilogue-coda {
-      display: none; padding: 10px 14px; margin-top: 6px;
-      background: var(--gb0); border: 2px solid var(--gb1);
-      font-size: 7px; line-height: 2; color: var(--gb2);
-      max-height: 200px; overflow-y: auto;
+    /* Stat overlay */
+    #stat-overlay {
+      position: absolute; inset: 0; z-index: 180;
+      background: rgba(15,56,15,0.95); display: none;
+      align-items: center; justify-content: center;
+      pointer-events: auto;
     }
-    #epilogue-coda .coda-desire { color: var(--gb3); font-size: 8px; margin-bottom: 6px; }
-    #epilogue-coda .coda-verdict { color: var(--gb3); margin: 8px 0; font-size: 8px; }
-    #epilogue-coda .coda-stats { margin: 8px 0; }
-    #epilogue-coda .coda-stat-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
-    #epilogue-coda .coda-stat-label { color: var(--gb1); }
-    #epilogue-coda .coda-stat-arc { color: var(--gb2); text-align: right; }
-    #epilogue-coda .coda-achievements { color: var(--gb2); margin-top: 8px; font-size: 7px; line-height: 2; }
-    #epilogue-coda .coda-lifespan { color: var(--gb3); margin-top: 8px; font-size: 9px; text-align: center; letter-spacing: 3px; }
+
+    #stat-panel { width: 70%; max-width: 320px; }
+    #stat-panel h2 { font-size: 10px; margin-bottom: 12px; color: var(--gb3); text-align: center; }
+
+    .stat-row { display: flex; align-items: center; margin-bottom: 6px; }
+    .stat-label { font-size: 7px; width: 70px; color: var(--gb2); }
+    .stat-bar-bg { flex: 1; height: 8px; background: var(--gb0); border: 1px solid var(--gb1); }
+    .stat-bar-fill { height: 100%; transition: width 0.4s; }
+
+    #stat-close {
+      display: block; margin: 12px auto 0; font-family: inherit; font-size: 8px;
+      padding: 6px 16px; background: var(--gb1); color: var(--gb3);
+      border: 1px solid var(--gb2); cursor: pointer;
+    }
 
     /* Loading */
     #loading-overlay {
@@ -258,11 +351,7 @@
       transition: opacity 0.4s ease;
     }
 
-    #transition-text {
-      font-size: 18px; color: var(--gb3); letter-spacing: 6px;
-      text-shadow: 0 0 20px rgba(155,188,15,0.3);
-      opacity: 0;
-    }
+    #transition-text { font-size: 14px; color: var(--gb3); letter-spacing: 3px; }
 
     /* Error */
     #error-bar {
@@ -284,11 +373,20 @@
       .rel-chip { font-size: 7px; }
       .rel-chip .rel-role { font-size: 5px; }
       #onboarding-box h1 { font-size: 16px; }
-      #go-back-btn { font-size: 8px; padding: 6px 14px; }
+      #stat-toggle { font-size: 8px; padding: 6px 14px; }
+      #death-screen { padding: 8px 10px 12px; }
+      #death-screen .rip-text { font-size: 18px; letter-spacing: 6px; }
+      #death-screen .rip-age { font-size: 9px; }
+      #death-epilogue { font-size: 7px; max-height: 80px; }
+      .legend-item { font-size: 5px; }
     }
 
     @media (max-height: 500px) {
       #dialogue-box { min-height: 60px; max-height: 90px; }
+      #death-screen { padding: 4px 8px 8px; }
+      #death-screen .rip-text { font-size: 16px; margin-top: 2px; }
+      #stat-graph-container { margin: 4px auto; }
+      #death-epilogue { max-height: 60px; min-height: 30px; }
     }
   </style>
 </head>
@@ -302,7 +400,7 @@
       <div id="hud-age">AGE 0</div>
       <div id="hud-meta"></div>
     </div>
-    <button id="go-back-btn">GO BACK</button>
+    <button id="stat-toggle">STATS</button>
     <div id="hud-relations"></div>
 
     <div id="dialogue-area">
@@ -314,13 +412,37 @@
         <button class="choice-btn" id="btn-b" disabled>B</button>
       </div>
       <div id="play-again"><button>&#9654; PLAY AGAIN</button></div>
-      <div id="epilogue-coda"></div>
     </div>
   </div>
 
-  <div id="rip-overlay">
+  <div id="close-call-flash">
+    <div class="cc-text">CLOSE CALL</div>
+    <div class="cc-count" id="cc-count-text"></div>
+  </div>
+
+  <div id="death-screen">
     <div class="rip-text">R.I.P.</div>
     <div class="rip-age" id="rip-age-text"></div>
+    <div id="stat-graph-container">
+      <canvas id="stat-graph-canvas" width="580" height="220"></canvas>
+      <div id="stat-graph-legend"></div>
+    </div>
+    <div id="death-epilogue"></div>
+    <div id="death-play-again"><button>&#9654; PLAY AGAIN</button></div>
+    <div id="death-feedback">
+      <div class="fb-title">HELP US IMPROVE</div>
+      <div class="fb-stars">
+        <span class="fb-star" data-star="1">&#9733;</span>
+        <span class="fb-star" data-star="2">&#9733;</span>
+        <span class="fb-star" data-star="3">&#9733;</span>
+        <span class="fb-star" data-star="4">&#9733;</span>
+        <span class="fb-star" data-star="5">&#9733;</span>
+      </div>
+      <textarea id="fb-text" placeholder="Tell us what you think..." rows="2"></textarea>
+      <br>
+      <button id="fb-submit">SEND FEEDBACK</button>
+      <div id="fb-thanks">THANK YOU!</div>
+    </div>
   </div>
 
   <div id="onboarding-overlay">
@@ -343,11 +465,11 @@
     </div>
   </div>
 
-  <div id="go-back-confirm">
-    <div id="go-back-confirm-box">
-      <p>Are you sure? You can only do this once in life&hellip;</p>
-      <button id="go-back-yes">YES</button>
-      <button id="go-back-no">NEVER MIND</button>
+  <div id="stat-overlay">
+    <div id="stat-panel">
+      <h2>LIFE STATS</h2>
+      <div id="stat-bars"></div>
+      <button id="stat-close">CLOSE</button>
     </div>
   </div>
 
@@ -421,107 +543,12 @@ let currentScenario = null;
 let locked = false;
 
 const state = {
-  run_id: '', session_id: '', age: 0, gender: '', city: '', desire: '',
-  history: [], relationships: [],
+  run_id: '', session_id: '', age: 0, gender: '', city: '', desire: '', location: '',
+  history: [], relationships: [], statHistory: [],
   stats: { money: 0.5, stability: 0.5, status: 0.5, health: 0.5, stress: 0.5, freedom: 0.5, exposure: 0.5 },
-  // Phase 2
-  goBackUsed: false,
-  previousScenario: null,
-  previousChoiceIndex: null,
-  statHistory: [],
 };
 
 const el = {};
-
-// ═══════════════════════════════════════════════
-// AUDIO ENGINE (Web Audio API — tonal ambient)
-// ═══════════════════════════════════════════════
-let audioCtx = null;
-let audioUnlocked = false;
-
-function initAudio() {
-  if (audioCtx) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-}
-
-function unlockAudio() {
-  if (audioUnlocked) return;
-  initAudio();
-  const silent = audioCtx.createOscillator();
-  silent.connect(audioCtx.destination);
-  silent.start();
-  silent.stop(audioCtx.currentTime + 0.001);
-  audioUnlocked = true;
-}
-
-function playAgeTone(age) {
-  if (!audioCtx || !audioUnlocked) return;
-  const baseFreq = 220;
-  const semitones = Math.max(0, 24 - Math.floor(age / 4));
-  const freq = baseFreq * Math.pow(2, semitones / 12);
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-  osc.detune.setValueAtTime(Math.random() * 6 - 3, audioCtx.currentTime);
-  gain.gain.setValueAtTime(0, audioCtx.currentTime);
-  gain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.05);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.5);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 3);
-}
-
-function playTypeTick() {
-  if (!audioCtx || !audioUnlocked) return;
-  if (Math.random() > 0.6) return;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = 'square';
-  osc.frequency.setValueAtTime(800 + Math.random() * 400, audioCtx.currentTime);
-  gain.gain.setValueAtTime(0.008, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.02);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.03);
-}
-
-function playDeathTone() {
-  if (!audioCtx || !audioUnlocked) return;
-  const osc1 = audioCtx.createOscillator();
-  const osc2 = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc1.type = 'sine';
-  osc1.frequency.setValueAtTime(55, audioCtx.currentTime);
-  osc2.type = 'sine';
-  osc2.frequency.setValueAtTime(82.4, audioCtx.currentTime);
-  gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 6);
-  osc1.connect(gain);
-  osc2.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc1.start();
-  osc2.start();
-  osc1.stop(audioCtx.currentTime + 7);
-  osc2.stop(audioCtx.currentTime + 7);
-}
-
-function playChoiceTone() {
-  if (!audioCtx || !audioUnlocked) return;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = 'triangle';
-  osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(330, audioCtx.currentTime + 0.15);
-  gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.4);
-}
 
 function newRunId() {
   return 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -808,68 +835,6 @@ class LifeScene extends Phaser.Scene {
     const spriteY = floorY - spriteH + 8;
     drawSprite(this.gfx, spriteMap, spriteX, spriteY, spriteScale);
 
-    // ── Phase 2: Stat-driven visual augmentations ──
-
-    // MONEY HIGH (≥ 0.75): pile of coins near sprite
-    if (stats.money >= 0.75) {
-      const coinX = spriteX + 60;
-      const coinY = floorY - 10;
-      this.gfx.fillStyle(GB.WHITE, 1);
-      this.gfx.fillRect(coinX, coinY, 12, 4);
-      this.gfx.fillRect(coinX + 2, coinY - 4, 10, 4);
-      this.gfx.fillRect(coinX + 4, coinY - 8, 8, 4);
-      this.gfx.fillStyle(GB.DARK, 1);
-      this.gfx.fillRect(coinX + 6, coinY - 12, 2, 16);
-    }
-
-    // HEALTH LOW (≤ 0.30): damage marks + periodic flicker
-    if (stats.health <= 0.30 && stats.health > 0) {
-      const dmgY = spriteY + Math.floor(spriteH * 0.4);
-      this.gfx.fillStyle(GB.BLACK, 0.6);
-      this.gfx.fillRect(spriteX + 4, dmgY, 3, 2);
-      this.gfx.fillRect(spriteX + 12, dmgY + 6, 4, 2);
-      if (Math.floor(Date.now() / 500) % 3 === 0) {
-        this.gfx.fillStyle(GB.BLACK, 0.3);
-        this.gfx.fillRect(spriteX, spriteY, spriteLines[0].length * spriteScale, spriteH);
-      }
-    }
-
-    // STATUS HIGH (≥ 0.80): glow around sprite
-    if (stats.status >= 0.80) {
-      this.gfx.fillStyle(GB.WHITE, 0.15);
-      for (let r = 40; r > 0; r -= 4) {
-        this.gfx.fillCircle(spriteX + 20, spriteY + spriteH / 2, r);
-      }
-    }
-
-    // STRESS HIGH (≥ 0.75): screen edge vignette
-    if (stats.stress >= 0.75) {
-      const intensity = (stats.stress - 0.75) * 4;
-      this.gfx.fillStyle(0x000000, 0.15 + intensity * 0.25);
-      this.gfx.fillRect(0, 0, 30, H);
-      this.gfx.fillRect(W - 30, 0, 30, H);
-      this.gfx.fillRect(0, 0, W, 20);
-      this.gfx.fillRect(0, H - 20, W, 20);
-    }
-
-    // EXPOSURE HIGH (≥ 0.70): watching eye in corner
-    if (stats.exposure >= 0.70) {
-      const eyeX = W - 50;
-      const eyeY = 20;
-      this.gfx.fillStyle(GB.DARK, 0.5 + Math.sin(Date.now() / 800) * 0.3);
-      this.gfx.fillCircle(eyeX, eyeY, 6);
-      this.gfx.fillStyle(GB.BLACK, 0.7);
-      this.gfx.fillCircle(eyeX, eyeY, 3);
-    }
-
-    // FREEDOM LOW (≤ 0.25): cage bars over scene
-    if (stats.freedom <= 0.25) {
-      this.gfx.fillStyle(GB.BLACK, 0.3);
-      for (let bx = 30; bx < W; bx += 60) {
-        this.gfx.fillRect(bx, 0, 3, H);
-      }
-    }
-
     // Death overlay — graveyard scene with coffin
     if (stats.health <= 0) {
       // Darken the background
@@ -950,13 +915,6 @@ class LifeScene extends Phaser.Scene {
       }
     }
   }
-
-  // Phase 2: animated re-render for flicker/eye effects
-  update() {
-    if (state.stats.health <= 0.30 || state.stats.exposure >= 0.70) {
-      this.renderScene(getSceneType(state.age, state.stats), state.stats, state.age);
-    }
-  }
 }
 
 function updateScene() {
@@ -972,51 +930,22 @@ function updateScene() {
 let typewriterTimer = null;
 
 function showText(text, cb) {
-  clearTimeout(typewriterTimer);
+  clearInterval(typewriterTimer);
   el.dialogueText.textContent = '';
   let i = 0;
-
-  function typeNext() {
-    if (i >= text.length) {
+  typewriterTimer = setInterval(() => {
+    if (i < text.length) {
+      el.dialogueText.textContent += text[i++];
+      el.dialogueBox.scrollTop = el.dialogueBox.scrollHeight;
+    } else {
+      clearInterval(typewriterTimer);
       if (cb) cb();
-      return;
     }
-
-    el.dialogueText.textContent += text[i];
-    el.dialogueBox.scrollTop = el.dialogueBox.scrollHeight;
-    playTypeTick();
-
-    const char = text[i];
-    const next = text[i + 1];
-    i++;
-
-    let delay = 32;
-
-    // Punctuation pauses
-    if (char === '.' && next === ' ') delay = 220;
-    else if (char === '.' && next === '"') delay = 200;
-    else if (char === '!' || char === '?') delay = 200;
-    else if (char === ',') delay = 90;
-    else if (char === ';' || char === ':') delay = 110;
-    else if (char === '\u2014' || char === '\u2013') delay = 160;
-    else if (char === '"' && i > 1) delay = 70;
-
-    // Micro-stutter on first char of new sentence
-    if (i >= 2 && text[i - 2] === ' ' && /[.!?]/.test(text[i - 3])) {
-      delay += 60;
-    }
-
-    // Slight randomness
-    delay += (Math.random() - 0.5) * 16;
-
-    typewriterTimer = setTimeout(typeNext, delay);
-  }
-
-  typewriterTimer = setTimeout(typeNext, 100);
+  }, 18);
 }
 
 function showTextInstant(text) {
-  clearTimeout(typewriterTimer);
+  clearInterval(typewriterTimer);
   el.dialogueText.textContent = text;
   el.dialogueBox.scrollTop = el.dialogueBox.scrollHeight;
 }
@@ -1059,6 +988,27 @@ function setError(msg) {
   el.errorBar.style.display = 'block';
 }
 
+const STAT_COLORS = {
+  money: '#9bbc0f', stability: '#8bac0f', status: '#306230',
+  health: '#9bbc0f', stress: '#8bac0f', freedom: '#306230', exposure: '#9bbc0f'
+};
+
+function renderStatBars() {
+  const container = el.statBars;
+  container.innerHTML = '';
+  for (const [key, val] of Object.entries(state.stats)) {
+    const pct = Math.max(0, Math.min(100, Math.round(val * 100)));
+    const row = document.createElement('div');
+    row.className = 'stat-row';
+    row.innerHTML = `
+      <span class="stat-label">${key.toUpperCase()}</span>
+      <div class="stat-bar-bg">
+        <div class="stat-bar-fill" style="width:${pct}%;background:${STAT_COLORS[key]||'var(--gb2)'}"></div>
+      </div>`;
+    container.appendChild(row);
+  }
+}
+
 const REL_ICONS = {
   parent: '\u{1F468}', sibling: '\u{1F46C}', friend: '\u{1F91D}',
   partner: '\u2764\uFE0F', rival: '\u26A1', mentor: '\u{1F393}',
@@ -1079,43 +1029,21 @@ function renderRelations(rels) {
 }
 
 // ═══════════════════════════════════════════════
-// TRANSITION EFFECT (Phase 2: 2.5s hold)
+// TRANSITION EFFECT
 // ═══════════════════════════════════════════════
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-async function playTransition(label) {
-  const overlay = el.transitionOverlay;
-  const text = el.transitionText;
-
-  overlay.style.display = 'flex';
-  overlay.style.pointerEvents = 'auto';
-  text.textContent = '';
-  text.style.opacity = '0';
-
-  // Fade to black
-  overlay.style.transition = 'opacity 0.4s ease';
-  overlay.style.opacity = '1';
-  await sleep(500);
-
-  // Age number fades in
-  text.textContent = label;
-  text.style.transition = 'opacity 0.3s ease';
-  text.style.opacity = '1';
-  playAgeTone(state.age);
-  await sleep(2500);
-
-  // Age number fades out
-  text.style.transition = 'opacity 0.3s ease';
-  text.style.opacity = '0';
-  await sleep(400);
-
-  // Scene fades back in
-  overlay.style.transition = 'opacity 0.5s ease';
-  overlay.style.opacity = '0';
-  await sleep(600);
-
-  overlay.style.display = 'none';
-  overlay.style.pointerEvents = 'none';
+function playTransition(text) {
+  return new Promise(resolve => {
+    el.transitionOverlay.style.display = 'flex';
+    el.transitionText.textContent = text || '...';
+    el.transitionOverlay.style.opacity = '1';
+    setTimeout(() => {
+      el.transitionOverlay.style.opacity = '0';
+      setTimeout(() => {
+        el.transitionOverlay.style.display = 'none';
+        resolve();
+      }, 400);
+    }, 800);
+  });
 }
 
 // ═══════════════════════════════════════════════
@@ -1191,8 +1119,6 @@ async function apiEpilogue(cause) {
       relationships: state.relationships || [],
       history: state.history.slice(-30),
       cause,
-      stat_history: state.statHistory.slice(-30),
-      run_id: state.run_id,
     }),
   });
   const j = await r.json().catch(() => null);
@@ -1208,32 +1134,181 @@ function logAnalytics(eventType, data = {}) {
   }).catch(() => {});
 }
 
-async function startGame() {
-  unlockAudio();
+// ═══════════════════════════════════════════════
+// STAT HISTORY TRACKING & GRAPH
+// ═══════════════════════════════════════════════
+function recordStatSnapshot() {
+  state.statHistory.push({
+    age: state.age,
+    money: state.stats.money,
+    stability: state.stats.stability,
+    status: state.stats.status,
+    health: state.stats.health,
+    stress: state.stats.stress,
+    freedom: state.stats.freedom,
+    exposure: state.stats.exposure,
+  });
+}
 
+const GRAPH_COLORS = {
+  money:     '#FFD700', // gold
+  stability: '#4FC3F7', // light blue
+  status:    '#E040FB', // purple
+  health:    '#66BB6A', // green
+  stress:    '#EF5350', // red
+  freedom:   '#FF9800', // orange
+  exposure:  '#BDBDBD', // grey
+};
+
+function drawStatGraph() {
+  const canvas = document.getElementById('stat-graph-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const data = state.statHistory;
+  if (!data.length) return;
+
+  // High-res canvas
+  const dpr = window.devicePixelRatio || 1;
+  const displayW = canvas.clientWidth || 580;
+  const displayH = Math.floor(displayW * 0.38);
+  canvas.width = displayW * dpr;
+  canvas.height = displayH * dpr;
+  canvas.style.height = displayH + 'px';
+  ctx.scale(dpr, dpr);
+
+  const W = displayW;
+  const H = displayH;
+  const pad = { top: 14, right: 12, bottom: 24, left: 36 };
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top - pad.bottom;
+
+  // Background
+  ctx.fillStyle = '#0f380f';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(48,98,48,0.6)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (plotH * i / 4);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(pad.left + plotW, y);
+    ctx.stroke();
+  }
+
+  // Y axis labels
+  ctx.fillStyle = '#8bac0f';
+  ctx.font = '9px "Press Start 2P", monospace';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 4; i++) {
+    const val = (1 - i / 4).toFixed(1);
+    const y = pad.top + (plotH * i / 4);
+    ctx.fillText(val === '0.0' ? '0' : val, pad.left - 4, y);
+  }
+
+  // X axis — age
+  const maxAge = Math.max(data[data.length - 1].age, 10);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const ageStep = maxAge <= 30 ? 5 : maxAge <= 60 ? 10 : 20;
+  for (let a = 0; a <= maxAge; a += ageStep) {
+    const x = pad.left + (a / maxAge) * plotW;
+    ctx.fillStyle = 'rgba(48,98,48,0.6)';
+    ctx.beginPath();
+    ctx.moveTo(x, pad.top);
+    ctx.lineTo(x, pad.top + plotH);
+    ctx.stroke();
+    ctx.fillStyle = '#8bac0f';
+    ctx.fillText(String(a), x, pad.top + plotH + 4);
+  }
+
+  // Age label
+  ctx.fillStyle = '#8bac0f';
+  ctx.font = '7px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('AGE', pad.left + plotW / 2, H - 2);
+
+  // Plot each stat line
+  const statKeys = ['money', 'stability', 'status', 'health', 'stress', 'freedom', 'exposure'];
+  for (const key of statKeys) {
+    ctx.strokeStyle = GRAPH_COLORS[key];
+    ctx.lineWidth = 1.8;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let i = 0; i < data.length; i++) {
+      const x = pad.left + (data[i].age / maxAge) * plotW;
+      const y = pad.top + plotH - (data[i][key] * plotH);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Draw dots at each data point
+    ctx.fillStyle = GRAPH_COLORS[key];
+    for (let i = 0; i < data.length; i++) {
+      const x = pad.left + (data[i].age / maxAge) * plotW;
+      const y = pad.top + plotH - (data[i][key] * plotH);
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Axes border
+  ctx.strokeStyle = '#8bac0f';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.left, pad.top);
+  ctx.lineTo(pad.left, pad.top + plotH);
+  ctx.lineTo(pad.left + plotW, pad.top + plotH);
+  ctx.stroke();
+
+  // Legend
+  const legendEl = document.getElementById('stat-graph-legend');
+  if (legendEl) {
+    legendEl.innerHTML = statKeys.map(k =>
+      `<span class="legend-item"><span class="legend-swatch" style="background:${GRAPH_COLORS[k]}"></span>${k.toUpperCase()}</span>`
+    ).join('');
+  }
+}
+
+async function showCloseCallFlash(count) {
+  const flashEl = document.getElementById('close-call-flash');
+  const countEl = document.getElementById('cc-count-text');
+  if (!flashEl) return;
+  countEl.textContent = count === 1 ? '1ST CLOSE CALL' : count === 2 ? '2ND CLOSE CALL' : `${count}TH CLOSE CALL`;
+  flashEl.classList.remove('active');
+  void flashEl.offsetWidth; // force reflow
+  flashEl.classList.add('active');
+  return new Promise(r => setTimeout(() => {
+    flashEl.classList.remove('active');
+    r();
+  }, 2200));
+}
+
+async function startGame() {
   state.gender = document.getElementById('gender').value;
   state.city = document.getElementById('city').value || 'New York';
   state.desire = document.getElementById('desire').value || 'a happy life';
+  state.location = state.city;
   state.run_id = newRunId();
   state.session_id = newRunId();
   state.age = 0;
   state.history = [];
   state.relationships = [];
-  state.stats = { money: 0.5, stability: 0.5, status: 0.5, health: 0.5, stress: 0.5, freedom: 0.5, exposure: 0.5 };
-  // Phase 2 state
-  state.goBackUsed = false;
-  state.previousScenario = null;
-  state.previousChoiceIndex = null;
   state.statHistory = [];
+  state.stats = { money: 0.5, stability: 0.5, status: 0.5, health: 0.5, stress: 0.5, freedom: 0.5, exposure: 0.5 };
 
   el.onboarding.style.display = 'none';
   el.hudAge.textContent = 'AGE 0';
-  el.hudMeta.textContent = state.city.toUpperCase();
+  el.hudMeta.textContent = `${state.city.toUpperCase()} \u00B7 ${state.desire.toUpperCase()}`;
   el.playAgain.style.display = 'none';
-  el.epilogueCoda.style.display = 'none';
+  el.deathScreen.classList.remove('visible');
   el.btnA.style.display = '';
   el.btnB.style.display = '';
-  el.goBackBtn.style.display = '';
   setButtonsDisabled(true);
   setError('');
   updateScene();
@@ -1262,20 +1337,22 @@ async function doTurn() {
       state.relationships = turnData.relationships;
     }
 
-    // Phase 2: record stat snapshot
-    state.statHistory.push({ age: state.age, stats: { ...state.stats } });
-
-    // Phase 2: store previous scenario before overwriting
-    if (currentScenario) {
-      state.previousScenario = { ...currentScenario };
-    }
+    // Record stat snapshot for graph
+    recordStatSnapshot();
 
     // Store the scenario
     currentScenario = turnData.scenario || turnData;
     const scenarioText = currentScenario.text || currentScenario.scenario || 'Something happened...';
 
+    // Track location
+    if (currentScenario.location) {
+      state.location = currentScenario.location;
+    }
+
     el.hudAge.textContent = `AGE ${state.age}`;
+    el.hudMeta.textContent = `${(state.location || state.city).toUpperCase()} \u00B7 ${state.desire.toUpperCase()}`;
     renderRelations(state.relationships);
+    renderStatBars();
     updateScene();
 
     // Transition effect
@@ -1314,10 +1391,6 @@ async function choose(idx) {
   locked = true;
   setButtonsDisabled(true);
   setError('');
-  playChoiceTone();
-
-  // Phase 2: track which choice was made (for GO BACK)
-  state.previousChoiceIndex = idx;
 
   const opt = currentScenario.options[idx];
 
@@ -1334,32 +1407,22 @@ async function choose(idx) {
     // Update stats from apply response
     if (applyData.next_stats) {
       Object.assign(state.stats, applyData.next_stats);
-      // Update analytics with resulting stats
-      fetch(API_BASE + '/api/choice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: state.session_id || '',
-          run_id: state.run_id,
-          age: state.age,
-          choice_index: idx,
-          label: opt.label,
-          effects: opt.effects || {},
-          stats_after: applyData.next_stats,
-        }),
-      }).catch(() => {});
     }
-
-    // Phase 2: record stat snapshot after choice
-    state.statHistory.push({ age: state.age, stats: { ...state.stats } });
-
+    renderStatBars();
     updateScene();
 
     // Check for death
     if (applyData.died) {
+      recordStatSnapshot(); // Record final stats at death
       logAnalytics('death', { age: state.age, cause: applyData.death_cause || 'unknown' });
       await handleDeath(applyData.death_cause || currentScenario.death_cause_hint || '');
       return;
+    }
+
+    // Close call — near-death flash
+    if (applyData.close_call) {
+      logAnalytics('close_call', { age: state.age, count: applyData.close_call_count });
+      await showCloseCallFlash(applyData.close_call_count);
     }
 
     // Relationship changes from scenario
@@ -1402,87 +1465,44 @@ async function handleDeath(cause) {
   setButtonsDisabled(true);
   el.btnA.style.display = 'none';
   el.btnB.style.display = 'none';
-  el.goBackBtn.style.display = 'none';
-  el.playAgain.style.display = 'block';
+  el.playAgain.style.display = 'none'; // hide old play-again
   state.stats.health = 0;
   updateScene();
   clearSave();
-  playDeathTone();
 
-  // Show RIP overlay
-  el.ripOverlay.style.display = 'block';
+  // Show death screen with RIP + graph
   el.ripAgeText.textContent = `Age ${state.age}`;
+  el.deathEpilogue.textContent = '';
+  el.deathScreen.classList.add('visible');
+
+  // Draw the stat graph
+  setTimeout(() => drawStatGraph(), 500);
 
   // Try to get an epitaph
   try {
     const epilogueData = await apiEpilogue(cause);
     if (epilogueData.text) {
       setTimeout(() => {
-        showText(epilogueData.text, () => {
-          // Phase 2: show structured epilogue coda after prose finishes
-          renderEpilogueCoda(epilogueData);
-        });
-      }, 1500);
+        el.deathEpilogue.textContent = '';
+        // Typewrite into the epilogue box
+        let i = 0;
+        const text = epilogueData.text;
+        const timer = setInterval(() => {
+          if (i < text.length) {
+            el.deathEpilogue.textContent += text[i++];
+            el.deathEpilogue.scrollTop = el.deathEpilogue.scrollHeight;
+          } else {
+            clearInterval(timer);
+          }
+        }, 18);
+      }, 2000);
     }
   } catch (e) {
     console.error('Epilogue failed:', e);
-    setTimeout(() => showText(`You lived to age ${state.age}. Rest in peace.`), 1500);
+    setTimeout(() => {
+      el.deathEpilogue.textContent = `You lived to age ${state.age}. Rest in peace.`;
+    }, 2000);
   }
-}
-
-// Phase 2: render the structured epilogue coda
-function renderEpilogueCoda(data) {
-  const coda = el.epilogueCoda;
-  if (!coda) return;
-
-  const birthStats = state.statHistory.length > 0 ? state.statHistory[0].stats : null;
-
-  let html = '';
-
-  // City + gender
-  html += `<div style="color:var(--gb1);font-size:7px;">${state.city.toUpperCase()} \u00B7 ${state.gender.toUpperCase()}</div>`;
-
-  // Desire callback
-  html += `<div class="coda-desire">"I wanted to become ${state.desire}"</div>`;
-
-  // Verdict (typed with delay)
-  if (data.verdict) {
-    html += `<div class="coda-verdict">${data.verdict}</div>`;
-  }
-
-  // Stat arcs
-  if (data.stat_arc && birthStats) {
-    html += '<div class="coda-stats">';
-    const STAT_KEYS = ['money','stability','status','health','stress','freedom','exposure'];
-    for (const k of STAT_KEYS) {
-      const birth = birthStats[k] !== undefined ? birthStats[k].toFixed(2) : '?';
-      const death = state.stats[k] !== undefined ? state.stats[k].toFixed(2) : '?';
-      const arc = data.stat_arc[k] || 'unknown';
-      html += `<div class="coda-stat-row">
-        <span class="coda-stat-label">${k.toUpperCase()}: ${birth} \u2192 ${death}</span>
-        <span class="coda-stat-arc">${arc}</span>
-      </div>`;
-    }
-    html += '</div>';
-  }
-
-  // Achievements
-  if (data.achievements) {
-    html += `<div class="coda-achievements">${data.achievements}</div>`;
-  }
-
-  // Lifespan
-  html += `<div class="coda-lifespan">LIVED ${state.age} YEARS</div>`;
-
-  coda.innerHTML = html;
-
-  // Fade in after a pause
-  setTimeout(() => {
-    coda.style.display = 'block';
-    coda.style.opacity = '0';
-    coda.style.transition = 'opacity 1.5s ease';
-    requestAnimationFrame(() => { coda.style.opacity = '1'; });
-  }, 2000);
 }
 
 function resetGame() {
@@ -1494,13 +1514,9 @@ function resetGame() {
   state.age = 0;
   state.history = [];
   state.relationships = [];
-  state.stats = { money: 0.5, stability: 0.5, status: 0.5, health: 0.5, stress: 0.5, freedom: 0.5, exposure: 0.5 };
-  // Phase 2 reset
-  state.goBackUsed = false;
-  state.previousScenario = null;
-  state.previousChoiceIndex = null;
   state.statHistory = [];
-
+  state.stats = { money: 0.5, stability: 0.5, status: 0.5, health: 0.5, stress: 0.5, freedom: 0.5, exposure: 0.5 };
+  state.location = '';
   el.hudAge.textContent = 'AGE 0';
   el.hudMeta.textContent = '';
   el.hudRelations.innerHTML = '';
@@ -1509,17 +1525,88 @@ function resetGame() {
   el.btnB.textContent = 'B';
   el.btnA.style.display = '';
   el.btnB.style.display = '';
-  el.goBackBtn.style.display = '';
   setButtonsDisabled(true);
   el.playAgain.style.display = 'none';
-  el.epilogueCoda.style.display = 'none';
-  el.epilogueCoda.innerHTML = '';
-  el.ripOverlay.style.display = 'none';
+  el.deathScreen.classList.remove('visible');
+  resetFeedbackForm();
   el.onboarding.style.display = 'flex';
   setError('');
   setLoading(false);
   clearSave();
   updateScene();
+}
+
+// ═══════════════════════════════════════════════
+// FEEDBACK FORM
+// ═══════════════════════════════════════════════
+let feedbackRating = 0;
+
+function initFeedbackForm() {
+  const stars = document.querySelectorAll('.fb-star');
+  const submitBtn = document.getElementById('fb-submit');
+  const thanks = document.getElementById('fb-thanks');
+  const textArea = document.getElementById('fb-text');
+
+  stars.forEach(star => {
+    star.addEventListener('click', () => {
+      feedbackRating = parseInt(star.dataset.star);
+      stars.forEach(s => {
+        s.classList.toggle('active', parseInt(s.dataset.star) <= feedbackRating);
+      });
+    });
+    star.addEventListener('mouseenter', () => {
+      const hv = parseInt(star.dataset.star);
+      stars.forEach(s => {
+        s.classList.toggle('active', parseInt(s.dataset.star) <= hv);
+      });
+    });
+    star.addEventListener('mouseleave', () => {
+      stars.forEach(s => {
+        s.classList.toggle('active', parseInt(s.dataset.star) <= feedbackRating);
+      });
+    });
+  });
+
+  submitBtn.addEventListener('click', () => {
+    const payload = {
+      session_id: state.session_id || '',
+      run_id: state.run_id,
+      rating: feedbackRating,
+      comment: textArea.value.trim(),
+      death_age: state.age,
+      city: state.city,
+      desire: state.desire,
+    };
+    // Send to dedicated feedback endpoint
+    fetch(API_BASE + '/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+    // Also log as event for redundancy
+    logAnalytics('feedback', { rating: feedbackRating, comment: textArea.value.trim() });
+
+    submitBtn.style.display = 'none';
+    textArea.style.display = 'none';
+    document.querySelector('.fb-stars').style.display = 'none';
+    document.querySelector('.fb-title').textContent = '';
+    thanks.style.display = 'block';
+  });
+}
+
+function resetFeedbackForm() {
+  feedbackRating = 0;
+  document.querySelectorAll('.fb-star').forEach(s => s.classList.remove('active'));
+  const ta = document.getElementById('fb-text');
+  if (ta) { ta.value = ''; ta.style.display = ''; }
+  const btn = document.getElementById('fb-submit');
+  if (btn) btn.style.display = '';
+  const sc = document.querySelector('.fb-stars');
+  if (sc) sc.style.display = '';
+  const title = document.querySelector('.fb-title');
+  if (title) title.textContent = 'HELP US IMPROVE';
+  const thx = document.getElementById('fb-thanks');
+  if (thx) thx.style.display = 'none';
 }
 
 // ═══════════════════════════════════════════════
@@ -1537,17 +1624,20 @@ window.addEventListener('DOMContentLoaded', () => {
   el.btnA = document.getElementById('btn-a');
   el.btnB = document.getElementById('btn-b');
   el.playAgain = document.getElementById('play-again');
-  el.ripOverlay = document.getElementById('rip-overlay');
+  el.deathScreen = document.getElementById('death-screen');
   el.ripAgeText = document.getElementById('rip-age-text');
-  el.goBackBtn = document.getElementById('go-back-btn');
-  el.goBackConfirm = document.getElementById('go-back-confirm');
-  el.goBackYes = document.getElementById('go-back-yes');
-  el.goBackNo = document.getElementById('go-back-no');
-  el.epilogueCoda = document.getElementById('epilogue-coda');
+  el.deathEpilogue = document.getElementById('death-epilogue');
+  el.statToggle = document.getElementById('stat-toggle');
+  el.statOverlay = document.getElementById('stat-overlay');
+  el.statBars = document.getElementById('stat-bars');
+  el.statClose = document.getElementById('stat-close');
   el.loadingOverlay = document.getElementById('loading-overlay');
   el.transitionOverlay = document.getElementById('transition-overlay');
   el.transitionText = document.getElementById('transition-text');
   el.errorBar = document.getElementById('error-bar');
+
+  // Init feedback form
+  initFeedbackForm();
 
   // Init Phaser
   phaserGame = new Phaser.Game({
@@ -1568,109 +1658,25 @@ window.addEventListener('DOMContentLoaded', () => {
   el.btnA.addEventListener('click', () => choose(0));
   el.btnB.addEventListener('click', () => choose(1));
   el.playAgain.querySelector('button').addEventListener('click', resetGame);
-
-  // ── GO BACK button logic ──
-  el.goBackBtn.addEventListener('click', () => {
-    if (state.goBackUsed || !state.previousScenario) return;
-    el.goBackConfirm.style.display = 'flex';
-  });
-
-  el.goBackNo.addEventListener('click', () => {
-    el.goBackConfirm.style.display = 'none';
-  });
-
-  el.goBackYes.addEventListener('click', () => {
-    el.goBackConfirm.style.display = 'none';
-    state.goBackUsed = true;
-    el.goBackBtn.style.display = 'none';
-    saveSession();
-
-    const prev = state.previousScenario;
-    if (!prev || !prev.options || prev.options.length < 2) return;
-
-    const trueUndo = Math.random() < 0.10;
-    setButtonsDisabled(true);
-
-    // Re-render previous scenario
-    const prevText = prev.text || prev.scenario || 'A moment from the past...';
-    showText(prevText, () => {
-      if (trueUndo) {
-        // 10% case: true undo — can actually re-choose
-        el.btnA.textContent = prev.options[0].label || 'Option A';
-        el.btnB.textContent = prev.options[1].label || 'Option B';
-        el.btnA.style.opacity = '1';
-        el.btnB.style.opacity = '1';
-        el.btnA.style.borderColor = '';
-        el.btnB.style.borderColor = '';
-        el.btnA.style.pointerEvents = '';
-        el.btnB.style.pointerEvents = '';
-        setButtonsDisabled(false);
-
-        // Override choose temporarily to use the previous scenario's options
-        const origScenario = currentScenario;
-        currentScenario = prev;
-
-        // Apply stress/stability penalty for time manipulation
-        const penaltyEffects = { stress: 0.15, stability: -0.10 };
-        apiApply(penaltyEffects).then(applyData => {
-          if (applyData.next_stats) Object.assign(state.stats, applyData.next_stats);
-          state.statHistory.push({ age: state.age, stats: { ...state.stats } });
-          updateScene();
-        }).catch(() => {});
-
-      } else {
-        // 90% case: regret only — look but can't change
-        const chosenIdx = state.previousChoiceIndex ?? 0;
-        el.btnA.textContent = prev.options[0].label || 'Option A';
-        el.btnB.textContent = prev.options[1].label || 'Option B';
-
-        // Mark chosen option
-        const chosenBtn = chosenIdx === 0 ? el.btnA : el.btnB;
-        const otherBtn = chosenIdx === 0 ? el.btnB : el.btnA;
-        chosenBtn.style.opacity = '0.5';
-        chosenBtn.style.borderColor = '#8b0000';
-        chosenBtn.textContent += ' (chosen)';
-        otherBtn.style.opacity = '0.7';
-        el.btnA.style.pointerEvents = 'none';
-        el.btnB.style.pointerEvents = 'none';
-
-        // Auto-advance back after 4 seconds
-        setTimeout(() => {
-          el.btnA.style.opacity = '1';
-          el.btnB.style.opacity = '1';
-          el.btnA.style.borderColor = '';
-          el.btnB.style.borderColor = '';
-          el.btnA.style.pointerEvents = '';
-          el.btnB.style.pointerEvents = '';
-          // Restore current scenario
-          if (currentScenario) {
-            const curText = currentScenario.text || currentScenario.scenario || '';
-            showTextInstant(curText);
-            if (currentScenario.options && currentScenario.options.length >= 2) {
-              el.btnA.textContent = currentScenario.options[0].label;
-              el.btnB.textContent = currentScenario.options[1].label;
-              setButtonsDisabled(false);
-            }
-          }
-        }, 4000);
-      }
-    });
-  });
+  document.getElementById('death-play-again').querySelector('button').addEventListener('click', resetGame);
+  el.statToggle.addEventListener('click', () => { renderStatBars(); el.statOverlay.style.display = 'flex'; });
+  el.statClose.addEventListener('click', () => { el.statOverlay.style.display = 'none'; });
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') el.goBackConfirm.style.display = 'none';
+    if (e.key === 'Escape') el.statOverlay.style.display = 'none';
     if (el.onboarding.style.display !== 'none') return;
     if (e.key === '1' || e.key === 'a') el.btnA.click();
     if (e.key === '2' || e.key === 'b') el.btnB.click();
+    if (e.key === 's' || e.key === 'S') el.statToggle.click();
   });
 
   // Restore session
   if (restoreSession()) {
     el.onboarding.style.display = 'none';
     el.hudAge.textContent = `AGE ${state.age}`;
-    el.hudMeta.textContent = state.city.toUpperCase();
-    if (state.goBackUsed) el.goBackBtn.style.display = 'none';
+    el.hudMeta.textContent = `${state.city.toUpperCase()} \u00B7 ${state.desire.toUpperCase()}`;
     renderRelations(state.relationships);
+    renderStatBars();
     updateScene();
     if (currentScenario) {
       showTextInstant(currentScenario.text || currentScenario.scenario || '');
