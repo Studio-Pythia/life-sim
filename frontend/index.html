@@ -1029,8 +1029,23 @@ function renderRelations(rels) {
   rels.slice(0, 5).forEach(r => {
     const chip = document.createElement('div');
     chip.className = 'rel-chip';
-    const role = r.role || 'acquaintance';
-    chip.innerHTML = `<span class="rel-role">${role}</span>${r.name || 'Unknown'}`;
+
+    // Parse name: "Mamma (mother)" → displayName="Mamma", relType="mother"
+    const raw = r.name || r.display || 'Unknown';
+    const parenMatch = raw.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+    let displayName = raw;
+    let relType = '';
+
+    if (parenMatch) {
+      displayName = parenMatch[1].trim();
+      relType = parenMatch[2].trim();
+    }
+
+    // r.role from API is attitude/disposition — show as tooltip only
+    const attitude = r.role || '';
+    if (attitude) chip.title = attitude;
+
+    chip.innerHTML = `<span class="rel-role">${relType || 'acquaintance'}</span>${displayName}`;
     el.hudRelations.appendChild(chip);
   });
 }
