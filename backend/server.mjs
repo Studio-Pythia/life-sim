@@ -168,9 +168,9 @@ function buildStatContext(stats) {
  * Random and organic — sometimes early, sometimes late.
  */
 function shouldParentDie(playerAge) {
-  if (playerAge < 4 || playerAge > 40) return false;
+  if (playerAge < 17 || playerAge > 50) return false;
   // Linear ramp: 0.03 at age 4, up to 0.60 at age 40
-  const t = (playerAge - 4) / (40 - 4); // 0..1
+  const t = (playerAge - 17) / (50 - 17); // 0..1
   const probability = 0.03 + t * 0.57;   // 0.03..0.60
   return Math.random() < probability;
 }
