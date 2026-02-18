@@ -280,11 +280,13 @@ function computeDeathCheckChance(age, stats) {
   if (a < 17) return 0;
 
   // ---- RISK-BASED TRIGGER ----
-  // High exposure + low health + high stress = danger
-  const exposureDanger = Math.pow(s.exposure, 2) * 0.30;
-  const healthCrisis = Math.pow(1 - s.health, 2.5) * 0.25;
-  const stressCrack = Math.pow(s.stress, 2.5) * 0.12;
-  const riskTrigger = exposureDanger + healthCrisis + stressCrack;
+  // Only really fires when stats are EXTREME. Moderate-high is fine.
+  // exposure 0.7 → 0.343 * 0.20 = 0.069 (low). exposure 0.9 → 0.729 * 0.20 = 0.146 (moderate).
+  // You need multiple extreme stats to be in real danger.
+  const exposureDanger = Math.pow(s.exposure, 3) * 0.20;        // cube — gentle until 0.8+
+  const healthCrisis = Math.pow(1 - s.health, 3) * 0.18;        // health 0.1 → 0.73 * 0.18 = 0.13
+  const stressCrack = Math.pow(s.stress, 3) * 0.08;             // stress 0.9 → 0.73 * 0.08 = 0.06
+  const riskTrigger = exposureDanger + healthCrisis + stressCrack; // max theoretical ~0.46
 
   // ---- AGE-BASED NATURAL TRIGGER (gentle, only bites past 80+) ----
   let naturalTrigger = 0;
@@ -326,9 +328,9 @@ function resolveDeathCheck(age, closeCallCount, isNaturalAge) {
   // Close call shield based on count
   const shieldChance = [
     1.00,  // 0 close calls — always survives
-    0.75,  // 1 close call  — 75% chance of another close call
-    0.40,  // 2 close calls — 40% chance
-    0.10,  // 3+ close calls — 10% chance (basically dead)
+    0.85,  // 1 close call  — 85% chance of another close call
+    0.55,  // 2 close calls — 55% chance
+    0.20,  // 3+ close calls — 20% chance (very dangerous)
   ];
   const shield = shieldChance[Math.min(closeCallCount, 3)];
 
@@ -616,46 +618,58 @@ VOICE:
 ${closeCallContext || ""}
 
 THE DREAM IS EVERYTHING:
-The player has a desire — what they want to become. EVERY turn connects to it:
-- Present an opportunity that advances the dream (but costs something)
-- Present a threat that could derail it
-- Introduce someone who can help (for a price) or blocks the path
-- Show progress: a gig, a deal, a break, a rejection, a lesson, a setback, a move
+The player's desire is the ENTIRE POINT of the game. Read it carefully. EVERY turn MUST directly involve pursuing it.
+
+HARD RULE: If the player wants to be "a famous musician" — every turn involves music. Gigs, studios, labels, tours, rivalries, creative blocks, fans, breakdowns on stage. NOT a fish shop. NOT a random office job. NOT generic life events that could happen to anyone. The dream is the PLOT.
+
+How the dream drives turns:
+- Opportunity: someone offers a shortcut toward the dream, but it costs something (money, loyalty, safety, health)
+- Threat: something could destroy their progress — a rival, a scandal, an injury, losing a key ally
+- Breakthrough: they're THIS close — one more step, one more sacrifice, one more risk
+- Setback: they got knocked back. Now what? Give up a piece of the dream or double down?
 - The dream should feel CLOSE sometimes and IMPOSSIBLE other times
-- Frame everything through the dream: "You can't afford the flight to the audition" not just "you're broke"
+- Even setbacks connect to the dream: "You're broke" → "You can't afford the studio time"
+
+NEVER generate a turn that doesn't reference the player's specific dream. A turn about a fish shop when they want to be a musician is a FAILURE. Every scenario, every choice, every new character exists because of the dream.
 
 ${statContext}
 
 STAT-STORY RULES:
-- Low money = can't fund the dream. Show it concretely.
-- Low health = body failing, missing chances, can't perform.
-- High stress = bad calls, fights, burning bridges you need.
-- High exposure = dangerous people, legal heat, enemies made climbing.
-- Low freedom = trapped by contract, debt, relationship, addiction.
-- Low stability = no base. Couch-surfing, borrowing, one bad day from nothing.
-- High status = doors open but also jealousy, pressure, scrutiny.
-- Moderate everything = BORING. Someone shows up with an offer that disrupts everything.
+- Low money = can't fund the dream. Concretely: can't book the studio, can't fly to the meeting, can't pay the deposit.
+- Low health = body failing at the worst time. Missing the audition, collapsing during the performance.
+- High stress = sabotaging your own dream. Blowing up at the person who was going to help you.
+- High exposure = the dream attracted dangerous attention. Shady deals, stalkers, legal trouble.
+- Low freedom = someone else controls your path. A bad contract, a controlling partner, debt to the wrong person.
+- Low stability = no base to build from. Can't focus on the dream when you don't know where you're sleeping.
+- High status = the dream is WORKING. But fame brings new problems.
+- Moderate everything = BORING. Someone appears with an offer that could change everything.
 
 PEOPLE — FAST TURNOVER:
-- 3 slots. Whoever matters RIGHT NOW for the dream.
-- Swap someone every 1-2 turns after age 14. People cycle fast when you're chasing something.
-- New arrivals are DREAM-CONNECTED: a producer, a rival, a collaborator, a fixer, a lover who believes in you, someone who offers a shortcut.
-- Family should exit slots by age 18-22 unless they're directly blocking or funding the dream.
-- Specific roles: "booking agent," "studio owner," "competing applicant," "the drummer who keeps flaking."
-- People who leave get a line in the prose. Don't just vanish them.
+- 3 slots. Whoever matters for the dream RIGHT NOW.
+- Swap every 1-2 turns after age 14. People cycle fast when you're chasing something.
+- New arrivals MUST connect to the dream: a manager, a rival, a collaborator, a patron, a lover who believes in you, someone offering a dangerous shortcut.
+- Family exits slots by age 18-22 unless they're directly blocking or funding the dream.
+- Specific roles tied to the dream: "booking agent," "label scout," "competing applicant," "the drummer who keeps flaking."
+- People leaving get a line in prose. Don't just vanish them.
 
 TRAVEL & MOVEMENT:
-- Dream-chasers MOVE. New cities, new countries, following leads, running from trouble.
-- Change location when story demands it: moving for work, following opportunity, fleeing, touring.
-- Location = real place name. "Brooklyn" not "your apartment." "Lagos" not "home."
-- New city = no connections, no safety net, fresh start or fresh disaster.
+- Dream-chasers MOVE. New cities for opportunity, tours, relocations, running from trouble.
+- Change location when the dream demands it: the industry is in LA, the opportunity is in London, the contact is in Tokyo.
+- Location = real place. "Brooklyn" not "your apartment."
+- New city = no connections, fresh start or fresh disaster.
 
-CHOICES:
+CHOICES — RISK MUST BE REWARDING:
 - 2 options. Short labels (under 55 chars). Start with a verb.
-- One advances the dream but costs something (money, health, relationships, safety).
-- The other protects something but slows the dream or closes a door.
-- Bold choices: ±0.15 to ±0.35. Reckless: ±0.25 to ±0.40 on multiple stats.
-- Every choice moves at least 3 stats. Nothing is free.
+- THE RISKY OPTION MUST HAVE A HUGE UPSIDE. Risk without reward is not a real choice.
+  Example: "Take the shady record deal" = money +0.30, status +0.20, BUT exposure +0.30, freedom -0.25
+  Example: "Perform despite the injury" = status +0.25, BUT health -0.20, stress +0.15
+  The player should WANT to take the risk. Make the reward genuinely tempting.
+- THE SAFE OPTION should protect something but slow the dream or close a door.
+  It should still move stats, just less dramatically. ±0.05 to ±0.15.
+- NEVER make both options punishing. One should feel like it could pay off big.
+- NEVER make both options safe. At least one should be a genuine gamble.
+- Bold choices: dream-relevant stats swing +0.15 to +0.35 positive, with costs on other stats.
+- Every choice moves at least 3 stats.
 
 LOCATION:
 - Output a "location" field: city/place where this turn happens.
@@ -673,11 +687,12 @@ function birthInstruction() {
 BIRTH TURN (Age 0). Player entered: city, gender, what they want to become.
 
 Rules:
-- The desire shapes everything. A kid born wanting to be a rapper in Detroit ≠ a kid wanting to be a doctor in Mumbai.
-- 3 relationships at birth: family. One trait each that hints at how they help or hinder the dream.
+- READ THE DESIRE CAREFULLY. It is the entire plot of this game. If they want to be "a famous musician" then music must appear in every turn for the rest of their life. If they want to be "rich" then money and deals drive every turn.
+- The desire shapes the starting context. A kid born wanting to be a rapper in Detroit ≠ a kid wanting to be a doctor in Mumbai. Infer the world they'll grow up in.
+- 3 relationships at birth: family. One trait each hinting at how they connect to the dream (supportive, obstructive, indifferent, inspiring).
 - Birth stats: BOLD. Rough start = 0.15 money. Privileged = 0.80+. Don't default to 0.5.
-- Prose: where you are, who's there, what kind of life this will be. Under 400 characters.
-- First choice should point toward the dream — even at age 0, the seed is planted.
+- Prose: where you are, who's there, the first hint of the dream. Under 400 characters.
+- First choice should already point toward the dream.
 - Location: the birth city.
 - Format: "Name (role)" for every person.
 `.trim();
@@ -695,6 +710,11 @@ async function generateTurn({ isBirth, payload }) {
     payload.just_had_close_call || false
   );
 
+  // Inject the dream directly so the AI can't miss it
+  const dreamReminder = payload.desire
+    ? `\n⚡ THE PLAYER'S DREAM: "${payload.desire}" — this turn MUST involve this. Every choice, every character, every event connects to "${payload.desire}". Do NOT generate unrelated life events.\n`
+    : "";
+
   // Build the parent death directive if applicable
   let parentDeathDirective = "";
   if (!isBirth && payload.parent_death_index !== undefined && payload.parent_death_index >= 0) {
@@ -709,7 +729,7 @@ MANDATORY PARENT DEATH: ${parent.name} (${parent.role}) MUST die in this turn's 
     const response = await client.responses.create({
       model: "gpt-4.1",
       input: [
-        { role: "system", content: systemPrompt(statContext, closeCallContext) + parentDeathDirective },
+        { role: "system", content: systemPrompt(statContext, closeCallContext) + dreamReminder + parentDeathDirective },
         ...(isBirth ? [{ role: "user", content: birthInstruction() }] : []),
         { role: "user", content: JSON.stringify(payload) },
       ],
