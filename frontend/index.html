@@ -1182,6 +1182,7 @@ async function apiEpilogue(cause) {
       history: state.history.slice(-30),
       cause,
       stat_history: state.statHistory.slice(-30),
+      run_id: state.run_id,
     }),
   });
   const j = await r.json().catch(() => null);
@@ -1323,6 +1324,20 @@ async function choose(idx) {
     // Update stats from apply response
     if (applyData.next_stats) {
       Object.assign(state.stats, applyData.next_stats);
+      // Update analytics with resulting stats
+      fetch(API_BASE + '/api/choice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: state.session_id || '',
+          run_id: state.run_id,
+          age: state.age,
+          choice_index: idx,
+          label: opt.label,
+          effects: opt.effects || {},
+          stats_after: applyData.next_stats,
+        }),
+      }).catch(() => {});
     }
 
     // Phase 2: record stat snapshot after choice
