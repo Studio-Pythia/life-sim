@@ -62,26 +62,29 @@
 
     #stat-toggle {
       position: absolute; top: 32px; right: 10px;
-      font-family: inherit; font-size: 7px; padding: 4px 8px;
-      background: var(--gb0); color: var(--gb2); border: 1px solid var(--gb1);
+      font-family: inherit; font-size: 10px; padding: 8px 18px;
+      background: var(--gb0); color: var(--gb3); border: 2px solid var(--gb2);
       cursor: pointer; pointer-events: auto; z-index: 20;
+      letter-spacing: 2px;
+      animation: statPulse 2s ease-in-out infinite;
+    }
+    @keyframes statPulse {
+      0%, 100% { background: var(--gb0); color: var(--gb3); border-color: var(--gb2); box-shadow: 0 0 4px rgba(139,172,15,0.2); }
+      50% { background: var(--gb1); color: var(--gb3); border-color: var(--gb3); box-shadow: 0 0 12px rgba(155,188,15,0.5); }
     }
 
     #hud-relations {
       position: absolute; top: 50px; left: 10px; display: flex; gap: 6px;
-      flex-wrap: wrap; max-width: 60%; pointer-events: auto; z-index: 15;
+      flex-direction: column; max-width: 45%; pointer-events: auto; z-index: 15;
     }
 
     .rel-chip {
-      display: flex; align-items: center; gap: 4px; padding: 3px 6px;
-      background: rgba(15,56,15,0.85); border: 1px solid var(--gb1);
-      font-size: 6px; color: var(--gb2);
+      display: flex; flex-direction: column; gap: 2px; padding: 5px 10px;
+      background: rgba(15,56,15,0.9); border: 2px solid var(--gb1);
+      font-size: 8px; color: var(--gb3);
     }
-
-    .rel-icon {
-      width: 16px; height: 16px; border-radius: 2px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10px; background: var(--gb1);
+    .rel-chip .rel-role {
+      font-size: 6px; color: var(--gb2); text-transform: uppercase; letter-spacing: 1px;
     }
 
     #dialogue-area { padding: 0 12px 12px; pointer-events: auto; }
@@ -225,10 +228,10 @@
       #hud-age { font-size: 11px; }
       #dialogue-box { font-size: 9px; min-height: 80px; max-height: 120px; padding: 10px 12px; }
       .choice-btn { font-size: 8px; padding: 8px 10px; }
-      .rel-chip { font-size: 6px; }
-      .rel-icon { width: 14px; height: 14px; }
+      .rel-chip { font-size: 7px; }
+      .rel-chip .rel-role { font-size: 5px; }
       #onboarding-box h1 { font-size: 16px; }
-      #stat-toggle { font-size: 6px; }
+      #stat-toggle { font-size: 8px; padding: 6px 14px; }
     }
 
     @media (max-height: 500px) {
@@ -764,8 +767,8 @@ function renderRelations(rels) {
   rels.slice(0, 5).forEach(r => {
     const chip = document.createElement('div');
     chip.className = 'rel-chip';
-    const icon = REL_ICONS[r.role] || REL_ICONS.default;
-    chip.innerHTML = `<span class="rel-icon">${icon}</span> ${r.name || 'Unknown'}`;
+    const role = r.role || 'acquaintance';
+    chip.innerHTML = `<span class="rel-role">${role}</span>${r.name || 'Unknown'}`;
     el.hudRelations.appendChild(chip);
   });
 }
