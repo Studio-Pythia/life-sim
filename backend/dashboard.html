@@ -477,6 +477,7 @@
     <div class="metric-card"><div class="label">Avg Death Age</div><div class="value orange" id="mAvgAge">—</div></div>
     <div class="metric-card"><div class="label">Youngest Death</div><div class="value red" id="mYoungest">—</div></div>
     <div class="metric-card"><div class="label">Oldest Death</div><div class="value purple" id="mOldest">—</div></div>
+    <div class="metric-card"><div class="label">Avg Rating</div><div class="value" id="mAvgRating" style="color:var(--accent);">—</div></div>
   </div>
 
   <!-- Tabs -->
@@ -504,6 +505,24 @@
       <div class="section-title">Recent Runs</div>
       <div class="table-wrap scroll-table" id="recentTable">
         <p class="loading">Loading...</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Player Feedback <span class="count" id="fbCount"></span></div>
+      <div class="two-col">
+        <div>
+          <div id="fbSummary" style="margin-bottom:12px;">
+            <p class="loading">Loading...</p>
+          </div>
+          <div id="fbDistribution"></div>
+        </div>
+        <div>
+          <div class="section-title" style="font-size:11px;">Recent Comments</div>
+          <div class="table-wrap scroll-table" id="fbRecent" style="max-height:260px;">
+            <p class="loading">Loading...</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -565,6 +584,7 @@
         <button class="refresh-btn" onclick="exportData('cities')">City Stats JSON</button>
         <button class="refresh-btn" onclick="exportData('choices')">Choice Patterns JSON</button>
         <button class="refresh-btn" onclick="exportData('stats')">Stat Averages JSON</button>
+        <button class="refresh-btn" onclick="exportData('feedback')">Feedback JSON</button>
       </div>
     </div>
   </div>
@@ -622,6 +642,11 @@ async function loadAll() {
     const stats = await api('/api/analytics/stat-averages');
     renderStatsChart(stats);
   } catch (err) { console.error('Stats load failed:', err); }
+
+  try {
+    const fb = await api('/api/analytics/feedback');
+    renderFeedback(fb);
+  } catch (err) { console.error('Feedback load failed:', err); }
 }
 
 // ─── Render summary metrics ───
@@ -905,6 +930,7 @@ async function exportData(type) {
     cities: '/api/analytics/cities',
     choices: '/api/analytics/choices',
     stats: '/api/analytics/stat-averages',
+    feedback: '/api/analytics/feedback',
   };
 
   try {
@@ -922,6 +948,64 @@ async function exportData(type) {
 }
 
 // ─── Init ───
+// ─── Render feedback ───
+function renderFeedback(fb) {
+  const countEl = document.getElementById('fbCount');
+  const summaryEl = document.getElementById('fbSummary');
+  const distEl = document.getElementById('fbDistribution');
+  const recentEl = document.getElementById('fbRecent');
+
+  if (countEl) countEl.textContent = fb.total || 0;
+
+  // Metric card
+  const avgRatingEl = document.getElementById('mAvgRating');
+  if (avgRatingEl) avgRatingEl.textContent = fb.avg_rating != null ? fb.avg_rating + ' ★' : '—';
+
+  // Summary
+  const stars = fb.avg_rating != null ? '★'.repeat(Math.round(fb.avg_rating)) + '☆'.repeat(5 - Math.round(fb.avg_rating)) : '—';
+  summaryEl.innerHTML = `
+    <div style="font-size:24px;letter-spacing:2px;color:var(--accent);margin-bottom:4px;">${stars}</div>
+    <div style="font-size:11px;color:var(--dim);">Average: <span style="color:var(--text);font-weight:600;">${fb.avg_rating != null ? fb.avg_rating : '—'}</span> / 5 from <span style="color:var(--text);">${fb.total}</span> responses</div>
+  `;
+
+  // Distribution bars
+  const dist = fb.distribution || [];
+  const maxCount = Math.max(1, ...dist.map(d => d.count));
+  distEl.innerHTML = dist.sort((a, b) => b.rating - a.rating).map(d => {
+    const pct = Math.round((d.count / maxCount) * 100);
+    const starLabel = d.rating === 0 ? '0 ★' : '★'.repeat(d.rating);
+    return `<div class="bar-row">
+      <span class="bar-label" style="width:60px;font-size:10px;">${starLabel}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--accent);"></div></div>
+      <span class="bar-value" style="min-width:30px;">${d.count}</span>
+    </div>`;
+  }).join('');
+
+  // Recent comments
+  const comments = (fb.recent || []).filter(r => r.comment && r.comment.trim());
+  if (!comments.length) {
+    recentEl.innerHTML = '<p style="color:var(--dim);font-size:11px;padding:12px;">No comments yet.</p>';
+    return;
+  }
+  recentEl.innerHTML = `<table><thead><tr><th>★</th><th>Comment</th><th>City</th><th>Age</th><th>When</th></tr></thead><tbody>` +
+    comments.map(r => {
+      const when = r.created_at ? new Date(r.created_at).toLocaleDateString() : '—';
+      return `<tr>
+        <td style="color:var(--accent);">${r.rating ?? '—'}</td>
+        <td style="max-width:280px;white-space:normal;line-height:1.4;">${escapeHtml(r.comment)}</td>
+        <td>${r.city || '—'}</td>
+        <td>${r.death_age ?? '—'}</td>
+        <td>${when}</td>
+      </tr>`;
+    }).join('') + `</tbody></table>`;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
 loadAll();
 </script>
 

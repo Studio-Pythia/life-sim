@@ -112,6 +112,20 @@ async function runMigrations() {
     );
     CREATE INDEX IF NOT EXISTS idx_snapshots_run ON stat_snapshots(run_id);
     CREATE INDEX IF NOT EXISTS idx_snapshots_run_age ON stat_snapshots(run_id, age);
+
+    CREATE TABLE IF NOT EXISTS feedback (
+      id            SERIAL PRIMARY KEY,
+      session_id    TEXT,
+      run_id        TEXT,
+      rating        INT CHECK (rating >= 0 AND rating <= 5),
+      comment       TEXT,
+      death_age     INT,
+      city          TEXT,
+      desire        TEXT,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at);
+    CREATE INDEX IF NOT EXISTS idx_feedback_rating ON feedback(rating);
   `;
 
   await pool.query(schema);
@@ -383,6 +397,51 @@ export async function getStatAverages() {
     ORDER BY age
   `);
   return res.rows;
+}
+
+/** Log player feedback from the death screen */
+export async function logFeedback({ session_id, run_id, rating, comment, death_age, city, desire }) {
+  memLog({ type: "feedback", session_id, run_id, data: { rating, comment } });
+
+  if (!dbReady) return;
+  try {
+    await pool.query(
+      `INSERT INTO feedback (session_id, run_id, rating, comment, death_age, city, desire)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [session_id || null, run_id || null, rating, comment || null, death_age, city || null, desire || null]
+    );
+  } catch (err) {
+    console.error("[analytics] logFeedback error:", err.message);
+  }
+}
+
+/** Feedback summary for dashboard */
+export async function getFeedbackSummary() {
+  if (!dbReady) {
+    const fbEvents = MEM_EVENTS.filter(e => e.type === "feedback");
+    const ratings = fbEvents.map(e => e.data?.rating).filter(r => r != null);
+    return {
+      db_connected: false,
+      total: fbEvents.length,
+      avg_rating: ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(2) : null,
+      distribution: [0, 1, 2, 3, 4, 5].map(r => ({ rating: r, count: ratings.filter(v => v === r).length })),
+      recent: fbEvents.slice(-20).reverse().map(e => ({ rating: e.data?.rating, comment: e.data?.comment, ts: e.ts })),
+    };
+  }
+
+  const [summaryRes, recentRes, distRes] = await Promise.all([
+    pool.query(`SELECT COUNT(*) AS total, ROUND(AVG(rating)::numeric, 2) AS avg_rating FROM feedback`),
+    pool.query(`SELECT rating, comment, city, desire, death_age, created_at FROM feedback ORDER BY created_at DESC LIMIT 30`),
+    pool.query(`SELECT rating, COUNT(*) AS count FROM feedback GROUP BY rating ORDER BY rating DESC`),
+  ]);
+
+  return {
+    db_connected: true,
+    total: parseInt(summaryRes.rows[0].total),
+    avg_rating: summaryRes.rows[0].avg_rating ? parseFloat(summaryRes.rows[0].avg_rating) : null,
+    distribution: distRes.rows.map(r => ({ rating: parseInt(r.rating), count: parseInt(r.count) })),
+    recent: recentRes.rows,
+  };
 }
 
 export function isDbReady() {

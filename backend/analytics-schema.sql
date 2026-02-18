@@ -78,6 +78,22 @@ CREATE TABLE IF NOT EXISTS stat_snapshots (
 CREATE INDEX IF NOT EXISTS idx_snapshots_run ON stat_snapshots(run_id);
 CREATE INDEX IF NOT EXISTS idx_snapshots_run_age ON stat_snapshots(run_id, age);
 
+-- Feedback: player ratings and comments from the death screen
+CREATE TABLE IF NOT EXISTS feedback (
+  id            SERIAL PRIMARY KEY,
+  session_id    TEXT,
+  run_id        TEXT,
+  rating        INT CHECK (rating >= 0 AND rating <= 5),
+  comment       TEXT,
+  death_age     INT,
+  city          TEXT,
+  desire        TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at);
+CREATE INDEX IF NOT EXISTS idx_feedback_rating ON feedback(rating);
+
 -- ══════════════════════════════════════════════════════════
 -- USEFUL VIEWS for quick querying
 -- ══════════════════════════════════════════════════════════
@@ -125,3 +141,17 @@ FROM runs
 WHERE desire IS NOT NULL AND desire != ''
 GROUP BY LOWER(TRIM(desire))
 ORDER BY times_chosen DESC;
+
+-- Feedback summary
+CREATE OR REPLACE VIEW feedback_summary AS
+SELECT
+  COUNT(*) AS total_feedback,
+  ROUND(AVG(rating)::numeric, 2) AS avg_rating,
+  COUNT(*) FILTER (WHERE rating = 5) AS five_star,
+  COUNT(*) FILTER (WHERE rating = 4) AS four_star,
+  COUNT(*) FILTER (WHERE rating = 3) AS three_star,
+  COUNT(*) FILTER (WHERE rating = 2) AS two_star,
+  COUNT(*) FILTER (WHERE rating = 1) AS one_star,
+  COUNT(*) FILTER (WHERE rating = 0) AS zero_star,
+  COUNT(*) FILTER (WHERE comment IS NOT NULL AND comment != '') AS with_comments
+FROM feedback;
