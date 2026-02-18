@@ -137,12 +137,22 @@
       transition: all 0.1s;
     }
 
-    .choice-btn:hover:not(:disabled) {
-      background: var(--gb1); color: var(--gb3);
-      box-shadow: 0 0 10px rgba(155,188,15,0.2);
+    .choice-btn:not(:disabled) {
+      animation: choiceGlow 1.8s ease-in-out infinite;
     }
 
-    .choice-btn:disabled { opacity: 0.4; cursor: default; }
+    .choice-btn:hover:not(:disabled) {
+      background: var(--gb1); color: var(--gb3);
+      box-shadow: 0 0 14px rgba(155,188,15,0.5);
+      animation: none;
+    }
+
+    @keyframes choiceGlow {
+      0%, 100% { border-color: var(--gb1); box-shadow: 0 0 4px rgba(155,188,15,0.1); }
+      50% { border-color: var(--gb3); box-shadow: 0 0 16px rgba(155,188,15,0.45), inset 0 0 8px rgba(155,188,15,0.08); }
+    }
+
+    .choice-btn:disabled { opacity: 0.4; cursor: default; animation: none; }
 
     #play-again { display: none; text-align: center; margin-top: 10px; }
     #play-again button {
