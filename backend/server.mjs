@@ -168,10 +168,10 @@ function buildStatContext(stats) {
  * Random and organic — sometimes early, sometimes late.
  */
 function shouldParentDie(playerAge) {
-  if (playerAge < 17 || playerAge > 50) return false;
-  // Linear ramp: 0.03 at age 4, up to 0.60 at age 40
-  const t = (playerAge - 17) / (50 - 17); // 0..1
-  const probability = 0.03 + t * 0.57;   // 0.03..0.60
+  if (playerAge < 4 || playerAge > 40) return false;
+  // Linear ramp: 0.03 at age 4, up to 0.83 at age 40
+  const t = (playerAge - 4) / (40 - 17); // 0..1
+  const probability = 0.03 + t * 0.8;   // 0.03..0.60
   return Math.random() < probability;
 }
 
@@ -204,9 +204,9 @@ function computeMortalityChance(age, stats) {
 
   // ---- RISK-BASED DEATH (can happen at any age if you live dangerously) ----
   // This is the "you played with fire" component
-  const exposureDanger = Math.pow(s.exposure, 2.5) * 0.35;       // exposure 1.0 → 0.35
-  const healthCrisis = Math.pow(1 - s.health, 3) * 0.30;         // health 0.0 → 0.30
-  const stressCrack = Math.pow(s.stress, 3) * 0.15;              // stress 1.0 → 0.15
+  const exposureDanger = Math.pow(s.exposure, 2.5) * 0.15;       // exposure 1.0 → 0.35
+  const healthCrisis = Math.pow(1 - s.health, 3) * 0.10;         // health 0.0 → 0.30
+  const stressCrack = Math.pow(s.stress, 3) * 0.05;              // stress 1.0 → 0.15
   const riskDeath = exposureDanger + healthCrisis + stressCrack;  // max theoretical ~0.80
 
   // ---- AGE-BASED NATURAL DEATH (very gentle curve, only real threat past 85+) ----
