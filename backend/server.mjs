@@ -29,6 +29,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(express.json({ limit: "2mb" }));
 
 const PORT = process.env.PORT || 8787;
@@ -753,6 +754,17 @@ app.get("/api/analytics/stat-averages", async (_, res) => {
     return res.json(await analytics.getStatAverages());
   } catch (err) {
     return res.status(500).json({ error: "stats_failed", message: err?.message });
+  }
+});
+
+// Leaderboard data (public)
+app.get("/api/leaderboard", async (_, res) => {
+  try {
+    const data = await analytics.getLeaderboard();
+    if (!data) return res.json({ db_connected: false });
+    return res.json({ db_connected: true, ...data });
+  } catch (err) {
+    return res.status(500).json({ error: "leaderboard_failed", message: err?.message });
   }
 });
 
