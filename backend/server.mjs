@@ -629,7 +629,7 @@ MANDATORY PARENT DEATH: ${parent.name} (${parent.role}) MUST die in this turn's 
         ...(isBirth ? [{ role: "user", content: birthInstruction() }] : []),
         { role: "user", content: JSON.stringify(payload) },
       ],
-      max_output_tokens: 1200,
+      max_output_tokens: 700,
       text: {
         format: {
           type: "json_schema",
@@ -1284,7 +1284,7 @@ Output must be valid JSON matching the schema exactly.
           { role: "system", content: sys },
           { role: "user", content: user },
         ],
-        max_output_tokens: 900,
+        max_output_tokens: 600,
         text: {
           format: {
             type: "json_schema",
