@@ -281,12 +281,11 @@ function computeDeathCheckChance(age, stats) {
 
   // ---- RISK-BASED TRIGGER ----
   // Only really fires when stats are EXTREME. Moderate-high is fine.
-  // exposure 0.7 → 0.343 * 0.20 = 0.069 (low). exposure 0.9 → 0.729 * 0.20 = 0.146 (moderate).
-  // You need multiple extreme stats to be in real danger.
+  // Need MULTIPLE extreme stats to be in real danger — no single stat kills you.
   const exposureDanger = Math.pow(s.exposure, 3) * 0.20;        // cube — gentle until 0.8+
-  const healthCrisis = Math.pow(1 - s.health, 3) * 0.18;        // health 0.1 → 0.73 * 0.18 = 0.13
-  const stressCrack = Math.pow(s.stress, 3) * 0.08;             // stress 0.9 → 0.73 * 0.08 = 0.06
-  const riskTrigger = exposureDanger + healthCrisis + stressCrack; // max theoretical ~0.46
+  const healthCrisis = Math.pow(1 - s.health, 3) * 0.10;        // softened — low health alone won't kill
+  const stressCrack = Math.pow(s.stress, 3) * 0.06;             // minor contributor
+  const riskTrigger = exposureDanger + healthCrisis + stressCrack; // max theoretical ~0.36
 
   // ---- AGE-BASED NATURAL TRIGGER (gentle, only bites past 80+) ----
   let naturalTrigger = 0;
@@ -343,13 +342,13 @@ function resolveDeathCheck(age, closeCallCount, isNaturalAge) {
   }
 }
 
-// Close call stat penalties — surviving has a cost
+// Close call stat penalties — surviving has a cost, but shouldn't doom you
 function closeCallPenalties() {
   return {
-    health: -0.20,    // body takes a hit
-    stress: +0.25,    // traumatic
-    exposure: -0.10,  // you pull back from danger (briefly)
-    stability: -0.10, // life shaken
+    health: -0.10,    // bruised, not broken
+    stress: +0.20,    // shaken up
+    exposure: -0.15,  // you pull back from danger
+    stability: -0.05, // life rattled
   };
 }
 
@@ -1298,6 +1297,8 @@ app.post("/api/apply", (req, res) => {
             next_stats[k] = clamp01(next_stats[k] + penalties[k]);
           }
         }
+        // Health floor — close calls shouldn't doom you to 0 health
+        if (next_stats.health < 0.10) next_stats.health = 0.10;
         closeCallCount++;
       }
     }
