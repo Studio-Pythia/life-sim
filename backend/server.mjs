@@ -629,7 +629,7 @@ MANDATORY PARENT DEATH: ${parent.name} (${parent.role}) MUST die in this turn's 
         ...(isBirth ? [{ role: "user", content: birthInstruction() }] : []),
         { role: "user", content: JSON.stringify(payload) },
       ],
-      max_output_tokens: 700,
+      max_output_tokens: 1200,
       text: {
         format: {
           type: "json_schema",
@@ -758,13 +758,22 @@ app.get("/api/analytics/stat-averages", async (_, res) => {
 
 // ─── Dashboard ───
 app.get("/dashboard", (_, res) => {
-  try {
-    const html = readFileSync(join(__dirname, "dashboard.html"), "utf-8");
-    res.setHeader("Content-Type", "text/html");
-    return res.send(html);
-  } catch {
-    return res.status(500).send("Dashboard file not found. Make sure dashboard.html is in the same directory as server.mjs.");
+  // Try multiple paths — Railway's cwd may differ from __dirname
+  const paths = [
+    join(__dirname, "dashboard.html"),
+    join(process.cwd(), "dashboard.html"),
+    "/app/dashboard.html",
+  ];
+  for (const p of paths) {
+    try {
+      const html = readFileSync(p, "utf-8");
+      res.setHeader("Content-Type", "text/html");
+      return res.send(html);
+    } catch { /* try next */ }
   }
+  return res.status(500).send(
+    "dashboard.html not found. Make sure it's committed to your repo root alongside server.mjs. Tried: " + paths.join(", ")
+  );
 });
 
 // ----------------------
@@ -1284,7 +1293,7 @@ Output must be valid JSON matching the schema exactly.
           { role: "system", content: sys },
           { role: "user", content: user },
         ],
-        max_output_tokens: 600,
+        max_output_tokens: 900,
         text: {
           format: {
             type: "json_schema",
