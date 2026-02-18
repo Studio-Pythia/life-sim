@@ -76,14 +76,14 @@ function randomInt(min, maxInclusive) {
 }
 
 function jumpYears(currentAge) {
-  // Tighter jumps everywhere = more turns = more drama
-  if (currentAge < 1) return randomInt(3, 6);       // birth → early childhood
-  if (currentAge < 14) return randomInt(4, 8);       // childhood → teen
-  if (currentAge < 25) return randomInt(4, 9);       // teen/young adult — TIGHTEST, most drama
-  if (currentAge < 40) return randomInt(5, 12);       // prime years — still tight
-  if (currentAge < 60) return randomInt(6, 12);       // middle age
-  if (currentAge < 80) return randomInt(7, 12);       // senior years — tighter for late-life drama
-  return randomInt(8, 12);                             // elderly — each year counts
+  // Tight jumps = more decisions = more dream progress
+  if (currentAge < 1) return randomInt(3, 5);       // birth → early childhood
+  if (currentAge < 14) return randomInt(3, 6);       // childhood — move fast
+  if (currentAge < 25) return randomInt(2, 5);       // teen/young adult — TIGHTEST, peak dream-chasing
+  if (currentAge < 40) return randomInt(3, 7);       // prime years — still tight
+  if (currentAge < 60) return randomInt(4, 8);       // middle age
+  if (currentAge < 80) return randomInt(5, 10);      // senior
+  return randomInt(6, 12);                            // elderly
 }
 
 function runNonce() {
@@ -512,11 +512,12 @@ const TurnJSONSchema = {
     additionalProperties: false,
     properties: {
       text: { type: "string" },
+      location: { type: "string" },
       options: { type: "array", minItems: 2, maxItems: 2, items: OPTION_SCHEMA },
       relationship_changes: REL_CHANGE_SCHEMA,
       death_cause_hint: { type: "string" },
     },
-    required: ["text", "options", "relationship_changes", "death_cause_hint"],
+    required: ["text", "location", "options", "relationship_changes", "death_cause_hint"],
   },
 };
 
@@ -528,6 +529,7 @@ const BirthJSONSchema = {
     additionalProperties: false,
     properties: {
       text: { type: "string" },
+      location: { type: "string" },
       options: { type: "array", minItems: 2, maxItems: 2, items: OPTION_SCHEMA },
       relationships: {
         type: "array",
@@ -559,7 +561,7 @@ const BirthJSONSchema = {
       },
       death_cause_hint: { type: "string" },
     },
-    required: ["text", "options", "relationships", "birth_stats", "death_cause_hint"],
+    required: ["text", "location", "options", "relationships", "birth_stats", "death_cause_hint"],
   },
 };
 
@@ -602,107 +604,82 @@ const EpilogueJSONSchema = {
 // ----------------------
 function systemPrompt(statContext, closeCallContext) {
   return `
-You generate raw, unpredictable life moments for a binary-choice simulator. Every life should feel singular — strange, beautiful, ugly, surprising. You are writing a life, not a career plan.
+You write turns for a life simulator where the player is chasing a dream. Every turn is a decision on the road to what they want to become. This is not a biography — it's a chase.
 
-TONE:
-- Gritty literary fiction, not YA or self-help. Think: Denis Johnson, Ottessa Moshfegh, Hanya Yanagihara, Roberto Bolaño.
-- Lives should feel messy, contradictory, and real. People make terrible decisions. Good things happen to bad people. Kindness appears in unexpected places.
-- Not every moment is dramatic — sometimes the most important scenes are quiet (a conversation at 3am, a letter never sent, the smell of a kitchen).
-- But also: do NOT be boring. These lives should make players lean forward.
+VOICE:
+- Second person, present tense. Short sentences. Punchy.
+- Write like someone telling a story at a bar, not narrating a novel.
+- No flowery language. No "the weight of the world settles upon your shoulders." Just say what happens.
+- Specific details only. Names, places, objects, amounts. "You owe Rina 4,000" not "you're in financial trouble."
+- Max 500 characters. Tighter is better. Every word earns its place.
 
 ${closeCallContext || ""}
-═══════════════════════════════════════════════════
-STATS ARE THE SPINE OF THE STORY — THIS IS CRITICAL
-═══════════════════════════════════════════════════
 
-The player's stats are not just numbers — they ARE the story. Every scenario MUST reflect the player's current stat reality:
+THE DREAM IS EVERYTHING:
+The player has a desire — what they want to become. EVERY turn connects to it:
+- Present an opportunity that advances the dream (but costs something)
+- Present a threat that could derail it
+- Introduce someone who can help (for a price) or blocks the path
+- Show progress: a gig, a deal, a break, a rejection, a lesson, a setback, a move
+- The dream should feel CLOSE sometimes and IMPOSSIBLE other times
+- Frame everything through the dream: "You can't afford the flight to the audition" not just "you're broke"
 
 ${statContext}
 
-STAT-STORY INTEGRATION RULES:
-- If money is critically low, the character is VISIBLY desperate — skipping meals, borrowing from dangerous people, sleeping in cars, selling possessions. The scenario MUST show this.
-- If health is very low, the character is PHYSICALLY falling apart — can't climb stairs, coughing blood, trembling hands, hospital visits. Reference the body.
-- If stress is extreme, the character is MENTALLY cracking — paranoia, insomnia, lashing out at loved ones, substance use to cope, bad snap decisions.
-- If exposure is high, the scenario should involve DANGEROUS situations — you're known to the wrong people, you're in over your head, someone's watching you.
-- If freedom is low, the character is TRAPPED — controlled by a partner, institution, debt, obligation, addiction, or contract. They can't just leave.
-- If stability is low, everything is PRECARIOUS — the apartment is temporary, the job could end tomorrow, one bad day ruins everything.
-- If status is high, people RECOGNIZE them — fame, notoriety, reputation. This creates problems AND opportunities.
-- If multiple stats are extreme, COMBINE them. Broke + high stress + low health = someone spiraling. Rich + high exposure + low stability = empire about to crumble.
-- MODERATE stats are BORING. When all stats are moderate, your job is to CREATE the event that pushes something to an extreme. Moderate lives need disruption.
+STAT-STORY RULES:
+- Low money = can't fund the dream. Show it concretely.
+- Low health = body failing, missing chances, can't perform.
+- High stress = bad calls, fights, burning bridges you need.
+- High exposure = dangerous people, legal heat, enemies made climbing.
+- Low freedom = trapped by contract, debt, relationship, addiction.
+- Low stability = no base. Couch-surfing, borrowing, one bad day from nothing.
+- High status = doors open but also jealousy, pressure, scrutiny.
+- Moderate everything = BORING. Someone shows up with an offer that disrupts everything.
 
-VOLATILITY RULES — EVERYTHING TURNED UP:
-- ~30% of turns should involve something DRASTICALLY unexpected: sudden wealth, devastating loss, a crime, a betrayal, an accident, falling in love with the wrong person, a secret revealed, getting fired, a pregnancy, an arrest, a windfall, an addiction spiral, fleeing a country, a viral moment, a natural disaster, a diagnosis, a robbery, a fire, witnessing something you can't forget.
-- ~25% should be slow-burn turning points with TEETH: not "your relationship is getting complicated" but "you find the messages on their phone and your hands are shaking."
-- ~25% should involve genuine moral dilemmas where BOTH options cost something real.
-- ~20% should be character-driven eruptions: someone in your life does something unforgivable, or unbearably kind.
-- NEVER generate a "your career is going well, do you want to push harder or relax?" turn. That is BANNED. Find the conflict, the betrayal, the secret, the disaster, the opportunity that could destroy everything.
-- The COMFORTABLE MIDDLE is the enemy. If life is going well, BREAK something. If life is terrible, offer a terrible temptation.
+PEOPLE — FAST TURNOVER:
+- 3 slots. Whoever matters RIGHT NOW for the dream.
+- Swap someone every 1-2 turns after age 14. People cycle fast when you're chasing something.
+- New arrivals are DREAM-CONNECTED: a producer, a rival, a collaborator, a fixer, a lover who believes in you, someone who offers a shortcut.
+- Family should exit slots by age 18-22 unless they're directly blocking or funding the dream.
+- Specific roles: "booking agent," "studio owner," "competing applicant," "the drummer who keeps flaking."
+- People who leave get a line in the prose. Don't just vanish them.
 
-EFFECT MAGNITUDE RULES — GO BIG:
-- Effects range from -0.40 to +0.40. USE THE FULL RANGE.
-- Safe, boring choices should still move stats by ±0.05 to ±0.15. Nothing is free.
-- Bold choices MUST have bold effects. Minimum ±0.15, ideally ±0.20 to ±0.35.
-- RECKLESS choices (rob someone, start an affair, take the drug deal, bet everything) should have EXTREME effects: ±0.25 to ±0.40 on multiple stats.
-- Every choice should move at least 3 stats meaningfully (±0.08+).
-- If a choice involves physical danger, exposure MUST increase significantly (+0.15 to +0.35).
-- If a choice involves financial risk, money should swing hard.
-- Stress should move on almost every choice. Life is stressful.
-- ASYMMETRIC effects are great: a choice that gives +0.30 money but +0.25 exposure and -0.20 stability is a real dilemma.
-- Choices should NEVER both be "sensible." At least one should be reckless, emotional, impulsive, or morally grey.
+TRAVEL & MOVEMENT:
+- Dream-chasers MOVE. New cities, new countries, following leads, running from trouble.
+- Change location when story demands it: moving for work, following opportunity, fleeing, touring.
+- Location = real place name. "Brooklyn" not "your apartment." "Lagos" not "home."
+- New city = no connections, no safety net, fresh start or fresh disaster.
 
-RELATIONSHIP RULES — CRITICAL:
-- You have 3 relationship slots. These are the most important people in the player's life RIGHT NOW.
-- People MUST change over time. A 40-year-old should NOT still have "mother" and "father" as 2 of their 3 slots unless those relationships are actively central to the drama.
-- USE relationship_changes to rotate characters in and out:
-  • Friendships end. Partners leave. Children grow distant. Mentors disappear.
-  • New people arrive: lovers, rivals, cellmates, business partners, neighbors who change your life, a child you didn't expect.
-  • When setting new_person to null, the death/departure MUST be referenced in the prose text.
-  • Aim to rotate at least 1 relationship every 2-3 turns after age 20.
-- Relationship roles should be specific and evocative: not just "friend" but "childhood friend," "cellmate," "business rival," "estranged sister," "AA sponsor," "affair," "parole officer," "the one who got away."
+CHOICES:
+- 2 options. Short labels (under 55 chars). Start with a verb.
+- One advances the dream but costs something (money, health, relationships, safety).
+- The other protects something but slows the dream or closes a door.
+- Bold choices: ±0.15 to ±0.35. Reckless: ±0.25 to ±0.40 on multiple stats.
+- Every choice moves at least 3 stats. Nothing is free.
 
-PROSE RULES:
-- Always address the player as "you."
-- First names only. Every person mentioned: Name (role). Role AFTER name.
-- One paragraph, max ~900 characters. No headings, no lists, no tables.
-- Include sensory details: a sound, a smell, a texture, a weather detail, a specific object.
-- The prose MUST reflect the stat context above. If they're broke, show it. If they're sick, show it. If they're stressed, show it in their behavior.
-- The prose should make the player FEEL something — dread, hope, guilt, nostalgia, excitement, shame, rage.
-- Include the player's living situation, how they survive financially, and what's happening RIGHT NOW.
-- Never use the word "pivot."
-
-CHOICE RULES:
-- Exactly 2 choices. Keep labels SHORT (under 65 chars). Start with a verb.
-- Choices should be genuinely different paths with genuinely different consequences.
-- At least one choice should carry REAL risk — moral, financial, relational, physical, legal.
-- The "safe" choice should still cost something. Safety has a price.
+LOCATION:
+- Output a "location" field: city/place where this turn happens.
+- Start with birth city, but MOVE them when the dream demands it.
 
 DEATH_CAUSE_HINT:
-- Always provide a plausible cause of death relevant to the current scenario AND stat levels.
-- If health is low, reference the body failing. If exposure is high, reference the danger catching up.
-- Make it specific: not "health complications" but "liver failure," "car accident on the coast road," "overdose in a motel bathroom," "heart attack while arguing," "stabbed outside the bar," "fell from the scaffolding."
+- Short, specific. "Overdose in a tour bus," "stabbed at the after-party," "heart attack mid-set."
 
-Output must be valid JSON matching the schema exactly.
+Output valid JSON matching the schema.
 `.trim();
 }
 
 function birthInstruction() {
   return `
-This is the BIRTH turn (Age 0). The player has just entered their city, gender, and what they want to become.
+BIRTH TURN (Age 0). Player entered: city, gender, what they want to become.
 
-You must:
-- Infer a vivid, specific starting context from city + gender + desire.
-- Don't be generic. A birth in Lagos is different from a birth in Oslo. A kid who wants to be "free" is different from one who wants to be "rich."
-- Generate 3 relationships (first name + role). These must make sense at birth:
-  Example roles: mother, father, grandmother, guardian, older sibling, family friend, midwife, neighbor.
-  Give them PERSONALITY through the prose — one sentence about each that hints at who they are.
-- Compute birth_stats (0..1) for all 7 stats. These should reflect the starting circumstances:
-  A birth into poverty in a war zone ≠ a birth into stability in suburban Connecticut.
-  Be BOLD with birth stats — don't default to 0.5. A rough start should have 0.15 money, 0.20 stability. A privileged start should have 0.85 money.
-- Write prose describing the birth context. Make it atmospheric — the room, the sounds, who's there, what the city smells like.
-- The first choice should be meaningful and hint at the life to come. Not trivial.
-- Effects on the first choice should already be SIGNIFICANT (±0.10 to ±0.25). The first choice matters.
-
-Remember: any person mentioned must be "Name (role)".
+Rules:
+- The desire shapes everything. A kid born wanting to be a rapper in Detroit ≠ a kid wanting to be a doctor in Mumbai.
+- 3 relationships at birth: family. One trait each that hints at how they help or hinder the dream.
+- Birth stats: BOLD. Rough start = 0.15 money. Privileged = 0.80+. Don't default to 0.5.
+- Prose: where you are, who's there, what kind of life this will be. Under 400 characters.
+- First choice should point toward the dream — even at age 0, the seed is planted.
+- Location: the birth city.
+- Format: "Name (role)" for every person.
 `.trim();
 }
 
@@ -736,7 +713,7 @@ MANDATORY PARENT DEATH: ${parent.name} (${parent.role}) MUST die in this turn's 
         ...(isBirth ? [{ role: "user", content: birthInstruction() }] : []),
         { role: "user", content: JSON.stringify(payload) },
       ],
-      max_output_tokens: 800,
+      max_output_tokens: 1200,
       text: {
         format: {
           type: "json_schema",
@@ -1004,6 +981,7 @@ app.post("/api/turn", async (req, res) => {
 
     const scenario = {
       text: String(out.text || ""),
+      location: String(out.location || payload.city || ""),
       options: [
         {
           label: String(out.options?.[0]?.label || "A"),
@@ -1145,6 +1123,7 @@ app.post("/api/turn", async (req, res) => {
 
         const scA = {
           text: String(outA.text || ""),
+          location: String(outA.location || payload.city || ""),
           options: [
             { label: String(outA.options?.[0]?.label || "A"), effects: normalizeEffects(outA.options?.[0]?.effects) },
             { label: String(outA.options?.[1]?.label || "B"), effects: normalizeEffects(outA.options?.[1]?.effects) },
@@ -1155,6 +1134,7 @@ app.post("/api/turn", async (req, res) => {
 
         const scB = {
           text: String(outB.text || ""),
+          location: String(outB.location || payload.city || ""),
           options: [
             { label: String(outB.options?.[0]?.label || "A"), effects: normalizeEffects(outB.options?.[0]?.effects) },
             { label: String(outB.options?.[1]?.label || "B"), effects: normalizeEffects(outB.options?.[1]?.effects) },
@@ -1487,7 +1467,7 @@ Output must be valid JSON matching the schema exactly.
           { role: "system", content: sys },
           { role: "user", content: user },
         ],
-        max_output_tokens: 700,
+        max_output_tokens: 900,
         text: {
           format: {
             type: "json_schema",
