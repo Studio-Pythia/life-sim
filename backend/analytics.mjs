@@ -305,14 +305,18 @@ export async function getPlayerJourney(run_id) {
 export async function getDeathBoard({ sort = "oldest", limit = 50, city = null } = {}) {
   if (!dbReady) return [];
 
-  const order = sort === "youngest" ? "ASC" : "DESC";
+  let orderCol = "death_age";
+  let orderDir = "DESC";
+  if (sort === "youngest") { orderCol = "death_age"; orderDir = "ASC"; }
+  else if (sort === "newest") { orderCol = "ended_at"; orderDir = "DESC NULLS LAST"; }
+
   const where = city ? `WHERE death_age IS NOT NULL AND LOWER(city) = LOWER($2)` : `WHERE death_age IS NOT NULL`;
   const params = city ? [limit, city] : [limit];
 
   const res = await pool.query(
     `SELECT run_id, city, desire, gender, death_age, death_cause, verdict, started_at
      FROM runs ${where}
-     ORDER BY death_age ${order}
+     ORDER BY ${orderCol} ${orderDir}
      LIMIT $1`,
     params
   );
@@ -383,4 +387,79 @@ export async function getStatAverages() {
 
 export function isDbReady() {
   return dbReady;
+}
+
+/** Leaderboard — all the data the public leaderboard needs in one call */
+export async function getLeaderboard() {
+  if (!dbReady) return null;
+
+  const [
+    globalRes, oldestRes, youngestRes, recentRes,
+    citiesRes, desiresRes, causeRes
+  ] = await Promise.all([
+    // Global stats
+    pool.query(`
+      SELECT COUNT(*) AS total_lives,
+        COUNT(death_age) AS completed,
+        ROUND(AVG(death_age)) AS avg_age,
+        MIN(death_age) AS youngest,
+        MAX(death_age) AS oldest,
+        COUNT(DISTINCT city) AS unique_cities,
+        COUNT(DISTINCT LOWER(TRIM(desire))) AS unique_desires
+      FROM runs
+    `),
+    // Hall of Elders — top 20 longest lives
+    pool.query(`
+      SELECT run_id, city, desire, gender, death_age, death_cause, verdict
+      FROM runs WHERE death_age IS NOT NULL
+      ORDER BY death_age DESC LIMIT 20
+    `),
+    // Gone Too Soon — top 20 shortest lives
+    pool.query(`
+      SELECT run_id, city, desire, gender, death_age, death_cause, verdict
+      FROM runs WHERE death_age IS NOT NULL
+      ORDER BY death_age ASC LIMIT 20
+    `),
+    // Recent deaths
+    pool.query(`
+      SELECT run_id, city, desire, gender, death_age, death_cause, verdict, ended_at
+      FROM runs WHERE death_age IS NOT NULL
+      ORDER BY ended_at DESC NULLS LAST LIMIT 20
+    `),
+    // Most dangerous cities (min 2 runs)
+    pool.query(`
+      SELECT city, COUNT(*) AS lives, ROUND(AVG(death_age)) AS avg_age,
+        MIN(death_age) AS youngest, MAX(death_age) AS oldest
+      FROM runs WHERE death_age IS NOT NULL AND city IS NOT NULL AND city != ''
+      GROUP BY city HAVING COUNT(*) >= 2
+      ORDER BY AVG(death_age) ASC LIMIT 15
+    `),
+    // Most popular desires
+    pool.query(`
+      SELECT LOWER(TRIM(desire)) AS desire, COUNT(*) AS times,
+        ROUND(AVG(death_age)) AS avg_age,
+        COUNT(*) FILTER (WHERE death_age >= 70) AS elders,
+        COUNT(*) FILTER (WHERE death_age < 25) AS cut_short
+      FROM runs WHERE desire IS NOT NULL AND desire != ''
+      GROUP BY LOWER(TRIM(desire))
+      ORDER BY times DESC LIMIT 15
+    `),
+    // Most common causes of death
+    pool.query(`
+      SELECT death_cause, COUNT(*) AS count, ROUND(AVG(death_age)) AS avg_age
+      FROM runs WHERE death_cause IS NOT NULL AND death_cause != '' AND death_cause != 'unknown'
+      GROUP BY death_cause
+      ORDER BY count DESC LIMIT 10
+    `),
+  ]);
+
+  return {
+    global: globalRes.rows[0],
+    oldest: oldestRes.rows,
+    youngest: youngestRes.rows,
+    recent: recentRes.rows,
+    dangerous_cities: citiesRes.rows,
+    popular_desires: desiresRes.rows,
+    common_causes: causeRes.rows,
+  };
 }
