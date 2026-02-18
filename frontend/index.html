@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
   <title>Dreamland</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
   <style>
@@ -22,7 +22,7 @@
       color: var(--gb3);
       font-family: 'Press Start 2P', monospace;
       overflow: hidden;
-      width: 100vw; height: 100vh;
+      width: 100vw; height: 100vh; height: 100dvh;
       display: flex; align-items: center; justify-content: center;
       image-rendering: pixelated;
     }
@@ -132,6 +132,13 @@
     }
 
     .choice-btn:disabled { opacity: 0.4; cursor: default; animation: none; }
+
+    .choice-btn:focus { outline: none; }
+    .choice-btn { -webkit-tap-highlight-color: transparent; }
+    @media (hover: none) {
+      .choice-btn:hover:not(:disabled) { background: var(--gb0); box-shadow: none; animation: choiceGlow 1.8s ease-in-out infinite; }
+      .choice-btn:active:not(:disabled) { background: var(--gb1); color: var(--gb3); box-shadow: 0 0 14px rgba(155,188,15,0.5); animation: none; }
+    }
 
     #play-again { display: none; text-align: center; margin-top: 10px; }
     #play-again button {
@@ -365,7 +372,7 @@
 
     /* Responsive */
     @media (max-width: 640px) {
-      #game-wrapper { border-width: 2px; aspect-ratio: auto; height: 100vh; max-height: 100vh; }
+      #game-wrapper { border-width: 2px; aspect-ratio: auto; height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
       #hud { padding: 6px 8px; }
       #hud-age { font-size: 11px; }
       #dialogue-box { font-size: 9px; min-height: 80px; max-height: 120px; padding: 10px 12px; }
@@ -1655,8 +1662,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Event listeners
   el.startBtn.addEventListener('click', e => { e.preventDefault(); startGame(); });
-  el.btnA.addEventListener('click', () => choose(0));
-  el.btnB.addEventListener('click', () => choose(1));
+  el.btnA.addEventListener('click', () => { el.btnA.blur(); choose(0); });
+  el.btnB.addEventListener('click', () => { el.btnB.blur(); choose(1); });
   el.playAgain.querySelector('button').addEventListener('click', resetGame);
   document.getElementById('death-play-again').querySelector('button').addEventListener('click', resetGame);
   el.statToggle.addEventListener('click', () => { renderStatBars(); el.statOverlay.style.display = 'flex'; });
