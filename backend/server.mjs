@@ -20,6 +20,13 @@ import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import OpenAI from "openai";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import * as analytics from "./analytics.mjs";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
@@ -305,14 +312,17 @@ setInterval(() => {
 }, 1000 * 60 * 5);
 
 // ----------------------
-// Analytics (in-memory ring buffer — last 5000 events)
+// Analytics (persistent via PostgreSQL, fallback to in-memory)
 // ----------------------
-const ANALYTICS = [];
-const ANALYTICS_MAX = 5000;
-
+// The analytics module handles both DB and in-memory fallback.
+// We keep the legacy logEvent signature for backward compat.
 function logEvent(event) {
-  ANALYTICS.push({ ...event, ts: Date.now() });
-  if (ANALYTICS.length > ANALYTICS_MAX) ANALYTICS.shift();
+  analytics.logEvent({
+    type: event.type,
+    session_id: event.session_id,
+    run_id: event.run_id,
+    data: event.data,
+  });
 }
 
 // ----------------------
@@ -619,7 +629,7 @@ MANDATORY PARENT DEATH: ${parent.name} (${parent.role}) MUST die in this turn's 
         ...(isBirth ? [{ role: "user", content: birthInstruction() }] : []),
         { role: "user", content: JSON.stringify(payload) },
       ],
-      max_output_tokens: 600,
+      max_output_tokens: 1200,
       text: {
         format: {
           type: "json_schema",
@@ -666,7 +676,7 @@ app.get("/api/session/:sessionId/:runId", (req, res) => {
 });
 
 // ----------------------
-// Analytics endpoint
+// Analytics endpoints
 // ----------------------
 app.post("/api/analytics", (req, res) => {
   const event = req.body;
@@ -682,38 +692,79 @@ app.post("/api/analytics", (req, res) => {
   return res.json({ ok: true });
 });
 
-// Read-only analytics summary (for you to check)
-app.get("/api/analytics/summary", (_, res) => {
-  const total = ANALYTICS.length;
-  const counts = {};
-  let totalDeathAge = 0;
-  let deathCount = 0;
-  const desires = {};
-
-  for (const e of ANALYTICS) {
-    counts[e.type] = (counts[e.type] || 0) + 1;
-
-    if (e.type === "death" && e.data?.age) {
-      totalDeathAge += Number(e.data.age);
-      deathCount++;
-    }
-    if (e.type === "game_start" && e.data?.desire) {
-      const d = String(e.data.desire).toLowerCase().trim();
-      desires[d] = (desires[d] || 0) + 1;
-    }
+// Summary (backward compatible + enhanced)
+app.get("/api/analytics/summary", async (_, res) => {
+  try {
+    const summary = await analytics.getSummary();
+    // Add legacy fields for backward compat
+    summary.active_sessions = SESSIONS.size;
+    summary.prefetch_entries = PREFETCH.size;
+    return res.json(summary);
+  } catch (err) {
+    return res.status(500).json({ error: "summary_failed", message: err?.message });
   }
+});
 
-  return res.json({
-    total_events: total,
-    event_counts: counts,
-    avg_death_age: deathCount > 0 ? Math.round(totalDeathAge / deathCount) : null,
-    top_desires: Object.entries(desires)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 20)
-      .map(([desire, count]) => ({ desire, count })),
-    active_sessions: SESSIONS.size,
-    prefetch_entries: PREFETCH.size,
-  });
+// Player journey — follow one player's entire life
+app.get("/api/analytics/journey/:runId", async (req, res) => {
+  try {
+    const journey = await analytics.getPlayerJourney(req.params.runId);
+    if (!journey) return res.status(404).json({ error: "not_found" });
+    return res.json(journey);
+  } catch (err) {
+    return res.status(500).json({ error: "journey_failed", message: err?.message });
+  }
+});
+
+// Death board
+app.get("/api/analytics/deaths", async (req, res) => {
+  try {
+    const sort = req.query.sort === "youngest" ? "youngest" : req.query.sort === "newest" ? "newest" : "oldest";
+    const limit = Math.min(parseInt(req.query.limit) || 50, 500);
+    const city = req.query.city || null;
+    const deaths = await analytics.getDeathBoard({ sort, limit, city });
+    return res.json(deaths);
+  } catch (err) {
+    return res.status(500).json({ error: "deaths_failed", message: err?.message });
+  }
+});
+
+// City stats
+app.get("/api/analytics/cities", async (_, res) => {
+  try {
+    return res.json(await analytics.getCityStats());
+  } catch (err) {
+    return res.status(500).json({ error: "cities_failed", message: err?.message });
+  }
+});
+
+// Choice patterns
+app.get("/api/analytics/choices", async (_, res) => {
+  try {
+    return res.json(await analytics.getChoicePatterns());
+  } catch (err) {
+    return res.status(500).json({ error: "choices_failed", message: err?.message });
+  }
+});
+
+// Stat averages by age
+app.get("/api/analytics/stat-averages", async (_, res) => {
+  try {
+    return res.json(await analytics.getStatAverages());
+  } catch (err) {
+    return res.status(500).json({ error: "stats_failed", message: err?.message });
+  }
+});
+
+// ─── Dashboard ───
+app.get("/dashboard", (_, res) => {
+  try {
+    const html = readFileSync(join(__dirname, "dashboard.html"), "utf-8");
+    res.setHeader("Content-Type", "text/html");
+    return res.send(html);
+  } catch {
+    return res.status(500).send("Dashboard file not found. Make sure dashboard.html is in the same directory as server.mjs.");
+  }
 });
 
 // ----------------------
@@ -870,13 +921,26 @@ app.post("/api/turn", async (req, res) => {
 
     // Log analytics
     if (isBirth) {
-      logEvent({
-        type: "game_start",
+      analytics.logGameStart({
         session_id,
         run_id,
-        data: { gender: payload.gender, city: payload.city, desire: payload.desire },
+        gender: payload.gender,
+        city: payload.city,
+        desire: payload.desire,
       });
     }
+
+    // Log this turn to the database
+    analytics.logTurn({
+      run_id,
+      age: age_to,
+      scenario_text: scenario.text,
+      option_a: scenario.options[0]?.label,
+      option_b: scenario.options[1]?.label,
+      stats_before: isBirth ? normalizeStats(out.birth_stats) : payload.stats,
+      relationships,
+      death_cause_hint: scenario.death_cause_hint,
+    });
 
     // Prefetch next A + B in background
     (async () => {
@@ -1069,6 +1133,14 @@ app.post("/api/apply", (req, res) => {
         run_id,
         data: { age, probability: pDeath },
       });
+
+      // Persistent: mark the run as ended
+      analytics.logDeath({
+        run_id,
+        age,
+        cause: req.body?.death_cause_hint || "unknown",
+        final_stats: next_stats,
+      });
     }
 
     return res.json({ next_stats, died, death_probability: pDeath });
@@ -1082,13 +1154,26 @@ app.post("/api/apply", (req, res) => {
 
 // Log choices
 app.post("/api/choice", (req, res) => {
-  const { session_id, run_id, age, choice_index, label } = req.body || {};
+  const { session_id, run_id, age, choice_index, label, effects, stats_after } = req.body || {};
+
+  // Legacy event log
   logEvent({
     type: "choice",
     session_id: String(session_id || ""),
     run_id: String(run_id || ""),
     data: { age: Number(age || 0), choice_index, label: String(label || "") },
   });
+
+  // Rich analytics — log the choice with stat changes
+  analytics.logChoice({
+    run_id: String(run_id || ""),
+    age: Number(age || 0),
+    chosen: choice_index === 0 ? "A" : "B",
+    chosen_label: String(label || ""),
+    effects: effects || {},
+    stats_after: stats_after || {},
+  });
+
   return res.json({ ok: true });
 });
 
@@ -1199,7 +1284,7 @@ Output must be valid JSON matching the schema exactly.
           { role: "system", content: sys },
           { role: "user", content: user },
         ],
-        max_output_tokens: 400,
+        max_output_tokens: 900,
         text: {
           format: {
             type: "json_schema",
@@ -1219,12 +1304,27 @@ Output must be valid JSON matching the schema exactly.
     });
 
     // Return structured epilogue
-    res.json({
+    const epilogueResult = {
       text: String(result.text || `You die at ${age}. Cause: ${cause}.`),
       achievements: String(result.achievements || ""),
       stat_arc: result.stat_arc || {},
       verdict: String(result.verdict || ""),
-    });
+    };
+
+    // Persist verdict + achievements to the run record
+    const run_id = String(req.body?.run_id || "");
+    if (run_id) {
+      analytics.logDeath({
+        run_id,
+        age,
+        cause,
+        final_stats: stats,
+        verdict: epilogueResult.verdict,
+        achievements: epilogueResult.achievements,
+      });
+    }
+
+    res.json(epilogueResult);
   } catch (err) {
     console.error("EPILOGUE FAILED:", err);
     res.status(500).json({
@@ -1234,8 +1334,13 @@ Output must be valid JSON matching the schema exactly.
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Phase 1: volatile lives, rare natural death, parent mortality, stat-driven stories`);
-  console.log(`Phase 2: enhanced epilogue (achievements, stat arc, verdict)`);
+// Initialize analytics DB then start server
+analytics.initAnalytics().then((dbOk) => {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Phase 1: volatile lives, rare natural death, parent mortality, stat-driven stories`);
+    console.log(`Phase 2: enhanced epilogue (achievements, stat arc, verdict)`);
+    console.log(`Analytics: ${dbOk ? "PostgreSQL connected — persistent" : "in-memory only (set DATABASE_URL for persistence)"}`);
+    console.log(`Dashboard: http://localhost:${PORT}/dashboard`);
+  });
 });
