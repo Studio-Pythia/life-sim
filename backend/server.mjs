@@ -1,4 +1,4 @@
-// server.mjs — Phase 1: VOLATILE LIVES
+// server.mjs — Phase 2: MUSEUM QUALITY
 // Life Sim Backend (Express + OpenAI Structured Outputs)
 //
 // Phase 1 upgrades:
@@ -9,6 +9,11 @@
 // ✅ Stats deeply connected to narrative — AI references stat levels in prose
 // ✅ Effect ranges widened: -0.40 to +0.40 for bold choices
 // ✅ All Phase 0 features preserved (sessions, retry, analytics, prefetch)
+//
+// Phase 2 upgrades:
+// ✅ Enhanced epilogue: structured output with achievements, stat arc, verdict
+// ✅ Accepts stat_history for richer retrospective analysis
+// ✅ Desire callback in epilogue — the gap between wanting and getting
 
 import "dotenv/config";
 import express from "express";
@@ -443,6 +448,40 @@ const BirthJSONSchema = {
       death_cause_hint: { type: "string" },
     },
     required: ["text", "options", "relationships", "birth_stats", "death_cause_hint"],
+  },
+};
+
+// ----------------------
+// Epilogue structured output schema (Phase 2)
+// ----------------------
+const STAT_ARC_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    money: { type: "string" },
+    stability: { type: "string" },
+    status: { type: "string" },
+    health: { type: "string" },
+    stress: { type: "string" },
+    freedom: { type: "string" },
+    exposure: { type: "string" },
+  },
+  required: ["money", "stability", "status", "health", "stress", "freedom", "exposure"],
+};
+
+const EpilogueJSONSchema = {
+  name: "Epilogue",
+  strict: true,
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      text: { type: "string" },
+      achievements: { type: "string" },
+      stat_arc: STAT_ARC_SCHEMA,
+      verdict: { type: "string" },
+    },
+    required: ["text", "achievements", "stat_arc", "verdict"],
   },
 };
 
@@ -1053,7 +1092,34 @@ app.post("/api/choice", (req, res) => {
   return res.json({ ok: true });
 });
 
-// Death epilogue (with retry)
+// ----------------------
+// Stat arc helper — compute trajectory words from stat history
+// ----------------------
+function computeStatArcHints(statHistory, finalStats) {
+  if (!Array.isArray(statHistory) || statHistory.length < 2) return null;
+  const hints = {};
+  for (const k of STAT_KEYS) {
+    const values = statHistory.map(s => s.stats?.[k] ?? 0.5);
+    const first = values[0];
+    const last = finalStats?.[k] ?? values[values.length - 1];
+    const max = Math.max(...values);
+    const min = Math.min(...values);
+    const range = max - min;
+    const delta = last - first;
+    // Compute a human-readable trajectory hint for the AI
+    if (range > 0.5 && Math.abs(delta) < 0.15) hints[k] = "volatile";
+    else if (delta > 0.25) hints[k] = "rose significantly";
+    else if (delta > 0.10) hints[k] = "slow climb";
+    else if (delta < -0.25) hints[k] = "collapsed";
+    else if (delta < -0.10) hints[k] = "declined";
+    else if (max - last > 0.30 && max > first + 0.15) hints[k] = "peaked then fell";
+    else if (last - min > 0.30 && min < first - 0.15) hints[k] = "hit bottom then recovered";
+    else hints[k] = "steady";
+  }
+  return hints;
+}
+
+// Death epilogue — Phase 2: structured output with achievements, stat arc, verdict
 app.post("/api/epilogue", async (req, res) => {
   try {
     const age = Number(req.body?.age ?? 0);
@@ -1066,26 +1132,52 @@ app.post("/api/epilogue", async (req, res) => {
     const relationships = withDisplayRelationships(req.body?.relationships || []);
     const history = Array.isArray(req.body?.history) ? req.body.history.slice(-20) : [];
 
+    // Phase 2: accept stat_history for richer epilogue
+    const statHistory = Array.isArray(req.body?.stat_history) ? req.body.stat_history.slice(-30) : [];
+    const birthStats = statHistory.length > 0 ? normalizeStats(statHistory[0]?.stats) : null;
+    const arcHints = computeStatArcHints(statHistory, stats);
+
     const statSummary = buildStatContext(stats);
+
+    // Build stat trajectory context for the AI
+    let statTrajectory = "";
+    if (birthStats && arcHints) {
+      statTrajectory = `\nSTAT TRAJECTORIES (birth → death):\n`;
+      for (const k of STAT_KEYS) {
+        statTrajectory += `  ${k.toUpperCase()}: ${birthStats[k].toFixed(2)} → ${stats[k].toFixed(2)} (${arcHints[k]})\n`;
+      }
+    }
 
     const sys = `
 Write a death epilogue for a life simulator. This is the final screen the player sees. Make it count.
 
-${statSummary}
+The player was born in ${city}. They were ${gender}. They wanted to become: "${desire}".
+They died at age ${age}. Cause of death: ${cause}.
 
-Rules:
-- Address the player as "you."
-- Any person mentioned: Name (role).
-- No headings, no lists, no moralising, no "lessons learned."
-- 500–900 characters.
-- Open with the immediate moment of death — where you are, what you see, who's there (or who isn't).
-- The death scene MUST reflect the final stats. If health was critically low, the body was already failing. If exposure was extreme, the danger finally caught up. If they were rich, describe the expensive room they die in. If they were broke, describe the bare walls.
-- Include 2–3 specific sensory details from the life: a recurring smell, a room you always returned to, a song, a piece of clothing, a food, a view from a window.
-- Reference at least one relationship — what they meant, what was left unsaid, or where they are now.
-- State the cause of death plainly in one sentence.
-- The emotional register should fit the life: a wild life gets a wild death. A quiet life gets a quiet one. A tragic life gets tenderness.
-- End with one image — not a moral, not a summary, just a single concrete image that lingers.
-- Do NOT use phrases like "the universe," "your story," "your journey," "chapter." This is not a book report.
+${statSummary}
+${statTrajectory}
+
+You must generate FOUR fields in your JSON response:
+
+1. "text": The death prose (500–900 characters).
+   - Address the player as "you."
+   - Any person mentioned: Name (role).
+   - No headings, no lists, no moralising, no "lessons learned."
+   - Open with the immediate moment of death — where you are, what you see, who's there (or who isn't).
+   - The death scene MUST reflect the final stats. If health was critically low, the body was already failing. If exposure was extreme, the danger finally caught up. If they were rich, describe the expensive room they die in. If they were broke, describe the bare walls.
+   - Include 2–3 specific sensory details from the life: a recurring smell, a room you always returned to, a song, a piece of clothing, a food, a view from a window.
+   - Reference at least one relationship — what they meant, what was left unsaid, or where they are now.
+   - State the cause of death plainly in one sentence.
+   - End with one image — not a moral, not a summary, just a single concrete image that lingers.
+   - Do NOT use phrases like "the universe," "your story," "your journey," "chapter."
+
+2. "achievements": A single paragraph (200–400 characters) of what this person actually accomplished — not aspirational, not kind. Brutally honest. Did they get what they wanted? Did they get something else instead? Did they waste it? Reference specific things from the life — the city, the relationships, the choices. This is an obituary written by someone who doesn't owe the dead anything.
+
+3. "stat_arc": For each of the 7 stats, a SHORT phrase (2-4 words max) describing the trajectory across the whole life. Examples: "rose steadily", "collapsed early", "always volatile", "peaked then fell", "never recovered", "slow steady climb", "rock bottom". Base this on the stat trajectories provided above.
+
+4. "verdict": One sentence. Not a moral. A factual, devastating observation about the gap between what they wanted and what they got. Example: "You wanted to be a famous musician; you died a landlord in Reno with a guitar you hadn't touched in twenty years." Reference their specific desire ("${desire}") and their actual outcome based on final stats and life history. If they actually achieved it, acknowledge it — but note what it cost.
+
+Output must be valid JSON matching the schema exactly.
 `.trim();
 
     const user = JSON.stringify({
@@ -1100,20 +1192,41 @@ Rules:
       history,
     });
 
-    const text = await withRetry(async () => {
+    const result = await withRetry(async () => {
       const r = await client.responses.create({
         model: "gpt-4.1",
         input: [
           { role: "system", content: sys },
           { role: "user", content: user },
         ],
-        max_output_tokens: 400,
+        max_output_tokens: 900,
+        text: {
+          format: {
+            type: "json_schema",
+            name: EpilogueJSONSchema.name,
+            strict: true,
+            schema: EpilogueJSONSchema.schema,
+          },
+        },
       });
-      return (r.output_text || "").trim() || `You die at ${age}. Cause: ${cause}.`;
+      const raw = r.output_text;
+      if (!raw) throw new Error("OpenAI returned empty output_text");
+      try {
+        return JSON.parse(raw);
+      } catch {
+        throw new Error("Epilogue output not parseable JSON");
+      }
     });
 
-    res.json({ text });
+    // Return structured epilogue
+    res.json({
+      text: String(result.text || `You die at ${age}. Cause: ${cause}.`),
+      achievements: String(result.achievements || ""),
+      stat_arc: result.stat_arc || {},
+      verdict: String(result.verdict || ""),
+    });
   } catch (err) {
+    console.error("EPILOGUE FAILED:", err);
     res.status(500).json({
       error: "epilogue_failed",
       message: err?.message || String(err),
@@ -1123,5 +1236,6 @@ Rules:
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Phase 1 features: volatile lives, rare natural death, parent mortality, stat-driven stories`);
+  console.log(`Phase 1: volatile lives, rare natural death, parent mortality, stat-driven stories`);
+  console.log(`Phase 2: enhanced epilogue (achievements, stat arc, verdict)`);
 });
