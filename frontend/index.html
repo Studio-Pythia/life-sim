@@ -130,6 +130,30 @@
       cursor: pointer;
     }
 
+    #rip-overlay {
+      display: none;
+      position: absolute; left: 0; right: 0;
+      top: 20%; z-index: 50;
+      text-align: center; pointer-events: none;
+    }
+    #rip-overlay .rip-text {
+      font-size: 28px; color: var(--gb3);
+      text-shadow: 3px 3px 0 var(--gb0), -1px -1px 0 var(--gb1), 0 0 20px rgba(155,188,15,0.4);
+      letter-spacing: 8px;
+      animation: ripFadeIn 2s ease-out forwards;
+      opacity: 0;
+    }
+    #rip-overlay .rip-age {
+      font-size: 14px; color: var(--gb2);
+      margin-top: 8px; letter-spacing: 4px;
+      animation: ripFadeIn 2.5s ease-out forwards;
+      opacity: 0;
+    }
+    @keyframes ripFadeIn {
+      0% { opacity: 0; transform: translateY(-10px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
     #onboarding-overlay {
       position: absolute; inset: 0; z-index: 200;
       background: var(--gb0); display: flex; align-items: center;
@@ -262,6 +286,11 @@
       </div>
       <div id="play-again"><button>&#9654; PLAY AGAIN</button></div>
     </div>
+  </div>
+
+  <div id="rip-overlay">
+    <div class="rip-text">R.I.P.</div>
+    <div class="rip-age" id="rip-age-text"></div>
   </div>
 
   <div id="onboarding-overlay">
@@ -654,10 +683,84 @@ class LifeScene extends Phaser.Scene {
     const spriteY = floorY - spriteH + 8;
     drawSprite(this.gfx, spriteMap, spriteX, spriteY, spriteScale);
 
-    // Death overlay
+    // Death overlay — graveyard scene with coffin
     if (stats.health <= 0) {
-      this.gfx.fillStyle(0x000000, 0.6);
+      // Darken the background
+      this.gfx.fillStyle(0x0f380f, 0.85);
       this.gfx.fillRect(0, 0, W, H);
+
+      const cx = Math.floor(W / 2);
+      const groundY = Math.floor(H * 0.62);
+      const s = Math.max(3, Math.floor(W / 200)); // pixel scale
+
+      // Ground
+      this.gfx.fillStyle(GB.DARK, 1);
+      this.gfx.fillRect(0, groundY, W, H - groundY);
+      // Ground top line
+      this.gfx.fillStyle(GB.LIGHT, 1);
+      this.gfx.fillRect(0, groundY, W, s);
+
+      // --- Central cross / gravestone ---
+      const stoneW = s * 14;
+      const stoneH = s * 22;
+      const stoneX = cx - stoneW / 2;
+      const stoneY = groundY - stoneH;
+
+      // Stone body
+      this.gfx.fillStyle(GB.DARK, 1);
+      this.gfx.fillRect(stoneX, stoneY + s * 4, stoneW, stoneH - s * 4);
+      // Stone top (rounded look)
+      this.gfx.fillRect(stoneX + s * 2, stoneY, stoneW - s * 4, s * 4);
+      this.gfx.fillRect(stoneX + s, stoneY + s, stoneW - s * 2, s * 3);
+      // Stone inner face
+      this.gfx.fillStyle(GB.LIGHT, 1);
+      this.gfx.fillRect(stoneX + s * 2, stoneY + s * 3, stoneW - s * 4, stoneH - s * 6);
+      // Cross on stone
+      this.gfx.fillStyle(GB.DARK, 1);
+      const crossCx = cx;
+      const crossCy = stoneY + s * 9;
+      // Vertical bar
+      this.gfx.fillRect(crossCx - s, crossCy - s * 5, s * 2, s * 10);
+      // Horizontal bar
+      this.gfx.fillRect(crossCx - s * 4, crossCy - s * 2, s * 8, s * 2);
+
+      // --- Small crosses on sides ---
+      const drawSmallCross = (bx, by, scale) => {
+        this.gfx.fillStyle(GB.LIGHT, 0.5);
+        // Vertical
+        this.gfx.fillRect(bx - scale, by - scale * 4, scale * 2, scale * 8);
+        // Horizontal
+        this.gfx.fillRect(bx - scale * 3, by - scale, scale * 6, scale * 2);
+      };
+      drawSmallCross(cx - s * 24, groundY - s * 8, Math.max(2, s - 1));
+      drawSmallCross(cx + s * 24, groundY - s * 10, Math.max(2, s - 1));
+      drawSmallCross(cx - s * 36, groundY - s * 5, Math.max(1, s - 2));
+      drawSmallCross(cx + s * 38, groundY - s * 6, Math.max(1, s - 2));
+
+      // --- Coffin in front of stone ---
+      const coffinW = s * 20;
+      const coffinH = s * 6;
+      const coffinX = cx - coffinW / 2;
+      const coffinY = groundY + s * 3;
+      // Coffin body (trapezoidal shape approximation)
+      this.gfx.fillStyle(GB.BLACK, 1);
+      this.gfx.fillRect(coffinX + s * 2, coffinY, coffinW - s * 4, coffinH);
+      this.gfx.fillRect(coffinX, coffinY + s, coffinW, coffinH - s * 2);
+      // Coffin lid highlight
+      this.gfx.fillStyle(GB.DARK, 1);
+      this.gfx.fillRect(coffinX + s * 3, coffinY + s, coffinW - s * 6, s);
+      // Cross on coffin
+      this.gfx.fillStyle(GB.LIGHT, 0.6);
+      this.gfx.fillRect(cx - s, coffinY + s, s * 2, coffinH - s * 2);
+      this.gfx.fillRect(cx - s * 3, coffinY + s * 2, s * 6, s);
+
+      // Dirt mound around coffin
+      this.gfx.fillStyle(GB.DARK, 0.7);
+      for (let i = 0; i < 5; i++) {
+        const dx = coffinX - s * 3 + i * s * 6;
+        const dy = groundY + s + Math.sin(i * 1.5) * s;
+        this.gfx.fillRect(dx, dy, s * 3, s);
+      }
     }
   }
 }
@@ -860,6 +963,7 @@ async function apiEpilogue(cause) {
       gender: state.gender,
       city: state.city,
       desire: state.desire,
+      stats: state.stats,
       relationships: state.relationships || [],
       history: state.history.slice(-30),
       cause,
@@ -1040,6 +1144,10 @@ async function handleDeath(cause) {
   updateScene();
   clearSave();
 
+  // Show RIP overlay
+  el.ripOverlay.style.display = 'block';
+  el.ripAgeText.textContent = `Age ${state.age}`;
+
   // Try to get an epitaph
   try {
     const epilogueData = await apiEpilogue(cause);
@@ -1072,6 +1180,7 @@ function resetGame() {
   el.btnB.style.display = '';
   setButtonsDisabled(true);
   el.playAgain.style.display = 'none';
+  el.ripOverlay.style.display = 'none';
   el.onboarding.style.display = 'flex';
   setError('');
   setLoading(false);
@@ -1094,6 +1203,8 @@ window.addEventListener('DOMContentLoaded', () => {
   el.btnA = document.getElementById('btn-a');
   el.btnB = document.getElementById('btn-b');
   el.playAgain = document.getElementById('play-again');
+  el.ripOverlay = document.getElementById('rip-overlay');
+  el.ripAgeText = document.getElementById('rip-age-text');
   el.statToggle = document.getElementById('stat-toggle');
   el.statOverlay = document.getElementById('stat-overlay');
   el.statBars = document.getElementById('stat-bars');
