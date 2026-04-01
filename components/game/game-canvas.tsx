@@ -9,18 +9,187 @@ interface GameCanvasProps {
   className?: string;
 }
 
+// Game Boy 4-color palette
+const GB = {
+  BLACK: "#0f380f",
+  DARK: "#306230",
+  LIGHT: "#8bac0f",
+  WHITE: "#9bbc0f",
+};
+
+// Sprite pixel art data - using numbers 0-3 for the 4 GB colors
+// 0=BLACK, 1=DARK, 2=LIGHT, 3=WHITE, .=transparent
+const SPRITES: Record<string, string> = {
+  male_young: `
+........000.........
+.......03330........
+......0333330.......
+.....033333330......
+.....033030330......
+.....033333330......
+......0333330.......
+.......03330........
+........000.........
+.......01110........
+......0111110.......
+.....011111110......
+.....011111110......
+......0111110.......
+.......01110........
+........010.........
+.......01110........
+......011.110.......
+.....011...110......
+.....01.....10......`,
+  female_young: `
+........000.........
+.......03330........
+......0333330.......
+.....033333330......
+....03333333330.....
+....03330303330.....
+....03333333330.....
+.....033333330......
+......0333330.......
+.......03330........
+........000.........
+.......02220........
+......0222220.......
+.....022222220......
+.....022222220......
+......0222220.......
+.......02220........
+........020.........
+.......02220........
+......022.220.......
+.....022...220......
+.....02.....20......`,
+  male_adult: `
+.......0000.........
+......033330........
+.....03333330.......
+....0333333330......
+....0333030330......
+....0333333330......
+.....03333330.......
+......033330........
+.......0000.........
+......011110........
+.....01111110.......
+....0111111110......
+....0111111110......
+....0111111110......
+.....01111110.......
+......011110........
+.......0110.........
+......011110........
+.....011..110.......
+....011....110......
+....01......10......
+...01........10.....`,
+  female_adult: `
+.......0000.........
+......033330........
+.....03333330.......
+....0333333330......
+...033333333330.....
+...033303033330.....
+...033333333330.....
+....0333333330......
+.....03333330.......
+......033330........
+.......0000.........
+......022220........
+.....02222220.......
+....0222222220......
+....0222222220......
+....0222222220......
+.....02222220.......
+......022220........
+.......0220.........
+......022220........
+.....022..220.......
+....022....220......
+....02......20......`,
+  male_old: `
+.......0000.........
+......022220........
+.....02222220.......
+....0222222220......
+....0222020220......
+....0222222220......
+.....02222220.......
+......022220........
+.......0220.........
+......011110........
+.....01111110.......
+....0111111110......
+....0111111110......
+....0111111110......
+.....01111110.......
+......011110........
+.......0110.........
+......011110........
+.....011..110.......
+....011....110......
+....01......10......
+...01........10.....`,
+  female_old: `
+.......0000.........
+......022220........
+.....02222220.......
+....0222222220......
+...022222222220.....
+...022202022220.....
+...022222222220.....
+....0222222220......
+.....02222220.......
+......022220........
+.......0000.........
+......022220........
+.....02222220.......
+....0222222220......
+....0222222220......
+....0222222220......
+.....02222220.......
+......022220........
+.......0220.........
+......022220........
+.....022..220.......
+....022....220......
+....02......20......`,
+};
+
 export function GameCanvas({ className }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentBg, setCurrentBg] = useState<string>("nursery");
-  const [transitioning, setTransitioning] = useState(false);
+  const [dimensions, setDimensions] = useState({ width: 960, height: 540 });
 
   const age = useGameStore((state) => state.age);
+  const gender = useGameStore((state) => state.gender);
   const location = useGameStore((state) => state.currentTurn?.location);
-  const mood = useGameStore((state) => state.mood);
+  const isDead = useGameStore((state) => state.gameState === "dead");
 
   // Load and cache background images
   const imagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+
+  // Handle resize
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setDimensions({ 
+          width: Math.max(480, rect.width), 
+          height: Math.max(320, rect.height) 
+        });
+      }
+    };
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
 
   useEffect(() => {
     const loadImages = async () => {
@@ -32,27 +201,20 @@ export function GameCanvas({ className }: GameCanvasProps) {
             imagesRef.current.set(key, img);
             resolve();
           };
-          img.onerror = () => {
-            console.warn(`Failed to load background: ${key}`);
-            resolve();
-          };
+          img.onerror = () => resolve();
           img.src = path;
         });
       });
-
       await Promise.all(loadPromises);
       setIsLoaded(true);
     };
-
     loadImages();
   }, []);
 
   // Determine background based on location or age
   useEffect(() => {
-    let targetBg = "park"; // Default fallback
-
+    let targetBg = "park";
     if (location) {
-      // Check if location matches any mapping keywords
       const lowerLocation = location.toLowerCase();
       for (const [keywords, bg] of Object.entries(BACKGROUND_MAPPING)) {
         const keywordList = keywords.split(",");
@@ -62,7 +224,6 @@ export function GameCanvas({ className }: GameCanvasProps) {
         }
       }
     } else {
-      // Age-based default backgrounds
       if (age <= 4) targetBg = "nursery";
       else if (age <= 12) targetBg = "classroom";
       else if (age <= 18) targetBg = "bedroom";
@@ -70,17 +231,12 @@ export function GameCanvas({ className }: GameCanvasProps) {
       else if (age <= 60) targetBg = "office";
       else targetBg = "nice_home";
     }
-
     if (targetBg !== currentBg) {
-      setTransitioning(true);
-      setTimeout(() => {
-        setCurrentBg(targetBg);
-        setTransitioning(false);
-      }, 200);
+      setCurrentBg(targetBg);
     }
   }, [location, age, currentBg]);
 
-  // Draw the canvas
+  // Draw the canvas with background AND sprite
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !isLoaded) return;
@@ -88,132 +244,175 @@ export function GameCanvas({ className }: GameCanvasProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const draw = () => {
-      // Clear canvas with Game Boy darkest color
-      ctx.fillStyle = "#0f380f";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const W = dimensions.width;
+    const H = dimensions.height;
 
-      // Draw background image
-      const bgImage = imagesRef.current.get(currentBg);
-      if (bgImage) {
-        // Calculate scaling to cover canvas while maintaining aspect ratio
-        const scale = Math.max(
-          canvas.width / bgImage.width,
-          canvas.height / bgImage.height
-        );
-        const x = (canvas.width - bgImage.width * scale) / 2;
-        const y = (canvas.height - bgImage.height * scale) / 2;
+    // Clear canvas
+    ctx.fillStyle = GB.WHITE;
+    ctx.fillRect(0, 0, W, H);
 
-        ctx.drawImage(bgImage, x, y, bgImage.width * scale, bgImage.height * scale);
-      }
+    // Draw background image
+    const bgImage = imagesRef.current.get(currentBg);
+    if (bgImage) {
+      const scale = Math.max(W / bgImage.width, H / bgImage.height);
+      const x = (W - bgImage.width * scale) / 2;
+      const y = (H - bgImage.height * scale) / 2;
+      ctx.drawImage(bgImage, x, y, bgImage.width * scale, bgImage.height * scale);
+    }
 
-      // Apply mood color overlay
-      if (mood !== "neutral") {
-        ctx.globalAlpha = 0.2;
-        switch (mood) {
-          case "danger":
-            ctx.fillStyle = "#ff4444";
-            break;
-          case "success":
-            ctx.fillStyle = "#44ff66";
-            break;
-          case "sad":
-            ctx.fillStyle = "#4466ff";
-            break;
-          case "happy":
-            ctx.fillStyle = "#ffff44";
-            break;
-        }
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.globalAlpha = 1;
-      }
-    };
+    // Draw character sprite ON the canvas (integrated into scene)
+    if (!isDead) {
+      drawCharacterSprite(ctx, W, H, age, gender || "male");
+    }
 
-    draw();
-  }, [isLoaded, currentBg, mood]);
+    // If dead, draw graveyard overlay
+    if (isDead) {
+      drawDeathOverlay(ctx, W, H);
+    }
+  }, [isLoaded, currentBg, dimensions, age, gender, isDead]);
 
   return (
-    <div className={cn("relative overflow-hidden", className)}>
-      {/* Main canvas */}
+    <div ref={containerRef} className={cn("relative w-full h-full overflow-hidden", className)}>
       <canvas
         ref={canvasRef}
-        width={480}
-        height={320}
-        className={cn(
-          "h-full w-full object-cover transition-all duration-300",
-          transitioning && "opacity-0 scale-105"
-        )}
-        style={{
-          imageRendering: "pixelated",
-        }}
+        width={dimensions.width}
+        height={dimensions.height}
+        className="w-full h-full"
+        style={{ imageRendering: "pixelated" }}
       />
 
-      {/* Ambient vignette overlay */}
+      {/* Top gradient for HUD readability */}
       <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: 'radial-gradient(ellipse at center, transparent 40%, rgba(15, 56, 15, 0.6) 100%)',
-        }}
+        className="absolute top-0 inset-x-0 h-12 pointer-events-none"
+        style={{ background: 'linear-gradient(180deg, rgba(15, 56, 15, 0.6) 0%, transparent 100%)' }}
       />
 
-      {/* Top gradient for UI readability */}
+      {/* Bottom gradient for dialogue readability */}
       <div 
-        className="absolute top-0 inset-x-0 h-16 pointer-events-none"
-        style={{
-          background: 'linear-gradient(180deg, rgba(15, 56, 15, 0.5) 0%, transparent 100%)',
-        }}
-      />
-
-      {/* Bottom gradient for UI readability */}
-      <div 
-        className="absolute bottom-0 inset-x-0 h-20 pointer-events-none"
-        style={{
-          background: 'linear-gradient(0deg, rgba(15, 56, 15, 0.7) 0%, transparent 100%)',
-        }}
-      />
-
-      {/* Corner decorations */}
-      <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-gb-light/30" />
-      <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-gb-light/30" />
-      <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-gb-light/30" />
-      <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-gb-light/30" />
-
-      {/* Subtle scanline effect */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-30"
-        style={{
-          background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px)',
-        }}
+        className="absolute bottom-0 inset-x-0 h-16 pointer-events-none"
+        style={{ background: 'linear-gradient(0deg, rgba(15, 56, 15, 0.7) 0%, transparent 100%)' }}
       />
 
       {/* Loading state */}
       {!isLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gb-darkest">
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex gap-2">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="w-3 h-3 bg-gb-light"
-                  style={{
-                    animation: 'float 0.6s ease-in-out infinite',
-                    animationDelay: `${i * 0.15}s`,
-                    boxShadow: '0 0 10px rgba(139, 172, 15, 0.6)',
-                  }}
-                />
-              ))}
-            </div>
-            <p className="font-pixel text-[10px] text-gb-light">Loading world...</p>
-          </div>
+          <p className="font-pixel text-xs text-gb-light animate-pulse">Loading...</p>
         </div>
       )}
-
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
-        }
-      `}</style>
     </div>
   );
+}
+
+function drawCharacterSprite(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  age: number,
+  gender: string
+) {
+  // Determine age group
+  let ageGroup = "young";
+  if (age > 55) ageGroup = "old";
+  else if (age > 12) ageGroup = "adult";
+
+  const spriteKey = `${gender}_${ageGroup}`;
+  const spriteData = SPRITES[spriteKey] || SPRITES.male_young;
+
+  // Calculate sprite scale based on canvas size
+  const baseScale = Math.max(4, Math.floor(W / 160));
+  const spriteScale = ageGroup === "young" ? baseScale : baseScale + 1;
+
+  // Position sprite on the left side, standing on the "floor" at ~64% height
+  const spriteX = Math.floor(W * 0.10);
+  const lines = spriteData.trim().split("\n");
+  const spriteH = lines.length * spriteScale;
+  const floorY = Math.floor(H * 0.68);
+  const spriteY = floorY - spriteH;
+
+  // Color map for sprite pixels
+  const colorMap: Record<string, string> = {
+    "0": GB.BLACK,
+    "1": GB.DARK,
+    "2": GB.LIGHT,
+    "3": GB.WHITE,
+  };
+
+  // Draw each pixel of the sprite
+  lines.forEach((line, y) => {
+    for (let x = 0; x < line.length; x++) {
+      const char = line[x];
+      if (char !== "." && colorMap[char]) {
+        ctx.fillStyle = colorMap[char];
+        ctx.fillRect(
+          spriteX + x * spriteScale,
+          spriteY + y * spriteScale,
+          spriteScale,
+          spriteScale
+        );
+      }
+    }
+  });
+}
+
+function drawDeathOverlay(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  // Darken the background
+  ctx.fillStyle = "rgba(15, 56, 15, 0.85)";
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = Math.floor(W / 2);
+  const groundY = Math.floor(H * 0.62);
+  const s = Math.max(3, Math.floor(W / 200));
+
+  // Ground
+  ctx.fillStyle = GB.DARK;
+  ctx.fillRect(0, groundY, W, H - groundY);
+  ctx.fillStyle = GB.LIGHT;
+  ctx.fillRect(0, groundY, W, s);
+
+  // Central gravestone
+  const stoneW = s * 14;
+  const stoneH = s * 22;
+  const stoneX = cx - stoneW / 2;
+  const stoneY = groundY - stoneH;
+
+  ctx.fillStyle = GB.DARK;
+  ctx.fillRect(stoneX, stoneY + s * 4, stoneW, stoneH - s * 4);
+  ctx.fillRect(stoneX + s * 2, stoneY, stoneW - s * 4, s * 4);
+  ctx.fillRect(stoneX + s, stoneY + s, stoneW - s * 2, s * 3);
+
+  ctx.fillStyle = GB.LIGHT;
+  ctx.fillRect(stoneX + s * 2, stoneY + s * 3, stoneW - s * 4, stoneH - s * 6);
+
+  // Cross on stone
+  ctx.fillStyle = GB.DARK;
+  const crossCy = stoneY + s * 9;
+  ctx.fillRect(cx - s, crossCy - s * 5, s * 2, s * 10);
+  ctx.fillRect(cx - s * 4, crossCy - s * 2, s * 8, s * 2);
+
+  // Small crosses on sides
+  ctx.fillStyle = "rgba(139, 172, 15, 0.5)";
+  // Left cross
+  ctx.fillRect(cx - s * 25, groundY - s * 12, s * 2, s * 8);
+  ctx.fillRect(cx - s * 28, groundY - s * 9, s * 8, s * 2);
+  // Right cross
+  ctx.fillRect(cx + s * 23, groundY - s * 14, s * 2, s * 8);
+  ctx.fillRect(cx + s * 20, groundY - s * 11, s * 8, s * 2);
+
+  // Coffin
+  const coffinW = s * 20;
+  const coffinH = s * 6;
+  const coffinX = cx - coffinW / 2;
+  const coffinY = groundY + s * 3;
+
+  ctx.fillStyle = GB.BLACK;
+  ctx.fillRect(coffinX + s * 2, coffinY, coffinW - s * 4, coffinH);
+  ctx.fillRect(coffinX, coffinY + s, coffinW, coffinH - s * 2);
+
+  ctx.fillStyle = GB.DARK;
+  ctx.fillRect(coffinX + s * 3, coffinY + s, coffinW - s * 6, s);
+
+  // Cross on coffin
+  ctx.fillStyle = "rgba(139, 172, 15, 0.6)";
+  ctx.fillRect(cx - s, coffinY + s, s * 2, coffinH - s * 2);
+  ctx.fillRect(cx - s * 3, coffinY + s * 2, s * 6, s);
 }

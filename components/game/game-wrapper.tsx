@@ -7,16 +7,12 @@ import { useAudioStore } from "@/lib/audio";
 import { TitleScreen } from "./title-screen";
 import { OnboardingForm } from "./onboarding-form";
 import { GameCanvas } from "./game-canvas";
-import { GameHUD } from "./game-hud";
-import { StatsPanel } from "./stats-panel";
-import { RelationshipsPanel } from "./relationships-panel";
 import { TurnDisplay } from "./turn-display";
 import { DeathScreen } from "./death-screen";
 import { CloseCallOverlay } from "./close-call-overlay";
-import { CharacterDisplay } from "./character-display";
 import { IntroSequence } from "./intro-sequence";
 import { MilestonePopup, isMilestoneAge, getMilestoneMessage } from "./milestone-popup";
-import { SceneAtmosphere } from "@/components/effects/scene-atmosphere";
+import { StatsPanel } from "./stats-panel";
 import { cn } from "@/lib/utils";
 
 type ScreenState = "title" | "onboarding" | "intro" | "playing" | "dead" | "loading";
@@ -27,8 +23,8 @@ export function GameWrapper() {
   const age = useGameStore((state) => state.age);
   const gender = useGameStore((state) => state.gender);
   const city = useGameStore((state) => state.city);
-  const location = useGameStore((state) => state.currentTurn?.location);
   const dream = useGameStore((state) => state.dream);
+  const relationships = useGameStore((state) => state.relationships);
   const closeCallMessage = useGameStore((state) => state.closeCallMessage);
   const clearCloseCallMessage = useGameStore((state) => state.clearCloseCallMessage);
   const setGameState = useGameStore((state) => state.setGameState);
@@ -41,18 +37,14 @@ export function GameWrapper() {
   const [prevAge, setPrevAge] = useState(age);
   const [showMilestone, setShowMilestone] = useState(false);
   const [milestoneAge, setMilestoneAge] = useState(0);
+  const [showStats, setShowStats] = useState(false);
 
   // Sync screen state with game state
   useEffect(() => {
-    if (gameState === "onboarding") {
-      setScreenState("onboarding");
-    } else if (gameState === "playing") {
-      setScreenState("playing");
-    } else if (gameState === "dead") {
-      setScreenState("dead");
-    } else if (gameState === "loading") {
-      setScreenState("loading");
-    }
+    if (gameState === "onboarding") setScreenState("onboarding");
+    else if (gameState === "playing") setScreenState("playing");
+    else if (gameState === "dead") setScreenState("dead");
+    else if (gameState === "loading") setScreenState("loading");
   }, [gameState]);
 
   // Initialize audio on mount
@@ -62,16 +54,12 @@ export function GameWrapper() {
 
   // Update music based on age
   useEffect(() => {
-    if (screenState === "playing") {
-      updateMusicForAge(age);
-    }
+    if (screenState === "playing") updateMusicForAge(age);
   }, [age, screenState, updateMusicForAge]);
 
   // Handle close call messages
   useEffect(() => {
-    if (closeCallMessage) {
-      setShowCloseCall(true);
-    }
+    if (closeCallMessage) setShowCloseCall(true);
   }, [closeCallMessage]);
 
   const handleCloseCallComplete = () => {
@@ -83,13 +71,10 @@ export function GameWrapper() {
   useEffect(() => {
     if (age !== prevAge && screenState === "playing") {
       setIsTransitioning(true);
-      
-      // Check for milestone ages
       if (isMilestoneAge(age) && age > 1) {
         setMilestoneAge(age);
         setShowMilestone(true);
       }
-      
       setTimeout(() => {
         setIsTransitioning(false);
         setPrevAge(age);
@@ -97,13 +82,11 @@ export function GameWrapper() {
     }
   }, [age, prevAge, screenState]);
 
-  // Handle milestone dismissal
   const handleMilestoneDismiss = () => {
     setShowMilestone(false);
     setMilestoneAge(0);
   };
 
-  // Title screen handlers
   const handleStartGame = () => {
     setIsTransitioning(true);
     setTimeout(() => {
@@ -113,12 +96,10 @@ export function GameWrapper() {
     }, 500);
   };
 
-  // When game starts, show intro sequence
   const handleGameStarted = () => {
     setScreenState("intro");
   };
 
-  // After intro completes, go to playing
   const handleIntroComplete = () => {
     setScreenState("playing");
   };
@@ -127,17 +108,18 @@ export function GameWrapper() {
     router.push("/leaderboard");
   };
 
-  // Determine mood based on game state
-  const getMood = (): "neutral" | "danger" | "success" | "sad" | "happy" => {
-    if (screenState === "dead") return "sad";
-    if (showCloseCall) return "danger";
-    return "neutral";
-  };
-
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gb-darkest">
-      {/* Global CRT scanlines */}
-      <div className="fixed inset-0 pointer-events-none z-[100] crt-scanlines opacity-60" />
+    <div 
+      className="relative w-full h-screen overflow-hidden"
+      style={{ backgroundColor: "#0f380f" }}
+    >
+      {/* CRT scanlines */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-[100]"
+        style={{
+          background: "repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.08) 1px, rgba(0,0,0,0.08) 2px)",
+        }}
+      />
 
       {/* Close call overlay */}
       {showCloseCall && closeCallMessage && (
@@ -171,176 +153,169 @@ export function GameWrapper() {
         />
       )}
 
-      {/* Main Game */}
+      {/* Main Game - Matches old HTML layout exactly */}
       {screenState === "playing" && (
-        <div className="flex min-h-screen flex-col bg-gb-darkest">
-          {/* Top HUD with glow */}
-          <header 
-            className="relative z-20 border-b-2 border-gb-dark p-2"
-            style={{
-              background: 'linear-gradient(180deg, rgba(48, 98, 48, 0.8) 0%, rgba(15, 56, 15, 0.9) 100%)',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(139, 172, 15, 0.2)',
-            }}
+        <div className="relative w-full h-full flex flex-col">
+          {/* Game canvas fills the screen - sprite is rendered INSIDE */}
+          <div 
+            className={cn(
+              "relative flex-1 transition-opacity duration-500",
+              isTransitioning && "opacity-80"
+            )}
           >
-            <GameHUD />
-          </header>
+            <GameCanvas className="absolute inset-0" />
 
-          {/* Main game area */}
-          <div className="flex flex-1 flex-col lg:flex-row">
-            {/* Left sidebar - Stats and Character (desktop) */}
-            <aside 
-              className="hidden w-72 flex-col gap-4 border-r-2 border-gb-dark p-4 lg:flex"
-              style={{
-                background: 'linear-gradient(90deg, rgba(15, 56, 15, 0.95) 0%, rgba(15, 56, 15, 0.8) 100%)',
-              }}
-            >
-              {/* Character display */}
-              {gender && (
+            {/* UI OVERLAY - on top of canvas */}
+            <div className="absolute inset-0 pointer-events-none">
+              {/* TOP HUD - Age on left, location/dream on right */}
+              <div className="pointer-events-auto flex items-start justify-between p-2 sm:p-3">
+                {/* Age badge */}
                 <div 
-                  className="flex justify-center pb-4 mb-2 border-b border-gb-dark/50"
+                  className="px-2 py-1 border-2"
+                  style={{
+                    backgroundColor: "rgba(15, 56, 15, 0.9)",
+                    borderColor: "#306230"
+                  }}
                 >
-                  <CharacterDisplay
-                    gender={gender as "male" | "female"}
-                    age={age}
-                    size="lg"
-                    showLabel
-                  />
+                  <span 
+                    className="text-xs sm:text-sm"
+                    style={{ 
+                      fontFamily: '"Press Start 2P", monospace',
+                      color: "#9bbc0f" 
+                    }}
+                  >
+                    AGE {age}
+                  </span>
+                </div>
+
+                {/* Right side - city + dream */}
+                <div 
+                  className="text-right px-2 py-1"
+                  style={{
+                    backgroundColor: "rgba(15, 56, 15, 0.9)",
+                  }}
+                >
+                  <span 
+                    className="text-[8px] sm:text-[10px] uppercase tracking-wider"
+                    style={{ 
+                      fontFamily: '"Press Start 2P", monospace',
+                      color: "#8bac0f" 
+                    }}
+                  >
+                    {city?.toUpperCase()} · {dream && dream.length > 15 ? dream.slice(0, 15) + "..." : dream}
+                  </span>
+                </div>
+              </div>
+
+              {/* LEFT SIDE - Relationships panel */}
+              {relationships && relationships.length > 0 && (
+                <div 
+                  className="pointer-events-auto absolute left-2 top-12 sm:top-14 max-w-[180px] sm:max-w-[220px]"
+                >
+                  <div 
+                    className="p-2 border-2 space-y-1 max-h-[30vh] overflow-y-auto"
+                    style={{
+                      backgroundColor: "rgba(15, 56, 15, 0.95)",
+                      borderColor: "#306230"
+                    }}
+                  >
+                    {relationships.slice(0, 5).map((rel, i) => {
+                      const isDeceased = rel.role?.toLowerCase().includes("deceased") || 
+                                         rel.display?.toLowerCase().includes("deceased");
+                      return (
+                        <div 
+                          key={i}
+                          className="px-2 py-1 border"
+                          style={{
+                            backgroundColor: isDeceased ? "rgba(48, 98, 48, 0.5)" : "#306230",
+                            borderColor: "#8bac0f"
+                          }}
+                        >
+                          <div 
+                            className="text-[6px] sm:text-[8px] uppercase truncate"
+                            style={{ 
+                              fontFamily: '"Press Start 2P", monospace',
+                              color: "#8bac0f" 
+                            }}
+                          >
+                            {rel.relation || rel.role}
+                          </div>
+                          <div 
+                            className="text-[8px] sm:text-[10px] truncate"
+                            style={{ 
+                              fontFamily: '"Press Start 2P", monospace',
+                              color: "#9bbc0f" 
+                            }}
+                          >
+                            {rel.name}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
-              
-              <StatsPanel />
-              
-              <div className="mt-auto">
-                <RelationshipsPanel />
-              </div>
-            </aside>
 
-            {/* Center - Game canvas and narrative */}
-            <main className="flex flex-1 flex-col relative">
-              {/* Game canvas with atmosphere */}
-              <div 
-                className={cn(
-                  "relative aspect-[3/2] w-full border-b-2 border-gb-dark overflow-hidden transition-all duration-500",
-                  isTransitioning && "opacity-80 scale-[1.02]"
-                )}
-              >
-                <GameCanvas className="absolute inset-0" />
-                
-                {/* Scene atmosphere overlay */}
-                <SceneAtmosphere 
-                  location={location || "bedroom"} 
-                  mood={getMood()}
-                  intensity={1}
-                />
-
-                {/* Mobile character display */}
-                {gender && (
-                  <div className="absolute bottom-3 right-3 lg:hidden">
-                    <CharacterDisplay
-                      gender={gender as "male" | "female"}
-                      age={age}
-                      size="sm"
-                    />
-                  </div>
-                )}
-
-                {/* Mobile stats overlay */}
-                <div className="absolute bottom-3 left-3 right-20 lg:hidden">
-                  <StatsPanel compact />
-                </div>
-              </div>
-
-              {/* Narrative and choices */}
-              <div 
-                className="flex-1 p-4 lg:p-6"
+              {/* RIGHT SIDE - Stats toggle button */}
+              <button
+                onClick={() => setShowStats(true)}
+                className="pointer-events-auto absolute right-2 top-12 sm:top-14 px-3 py-2 border-2 transition-all hover:border-gb-light"
                 style={{
-                  background: 'linear-gradient(180deg, rgba(15, 56, 15, 0.95) 0%, rgba(7, 31, 7, 0.98) 100%)',
+                  backgroundColor: "#306230",
+                  borderColor: "#8bac0f",
+                  fontFamily: '"Press Start 2P", monospace',
+                  fontSize: "10px",
+                  color: "#9bbc0f"
                 }}
               >
-                <TurnDisplay />
-              </div>
-            </main>
-
-            {/* Right sidebar - Dream display (desktop) */}
-            <aside 
-              className="hidden w-64 border-l-2 border-gb-dark p-4 xl:flex xl:flex-col"
-              style={{
-                background: 'linear-gradient(270deg, rgba(15, 56, 15, 0.95) 0%, rgba(15, 56, 15, 0.8) 100%)',
-              }}
-            >
-              <div className="sticky top-4">
-                {/* Dream card */}
-                <div className="glow-border p-4 mb-6">
-                  <h3 className="mb-3 font-pixel text-[9px] uppercase tracking-wider text-gb-light border-b border-gb-dark/50 pb-2">
-                    Your Dream
-                  </h3>
-                  <p className="font-pixel text-[10px] italic leading-relaxed text-gb-lightest">
-                    &quot;{dream}&quot;
-                  </p>
-                </div>
-                
-                {/* Life progress indicator */}
-                <div className="panel-inset p-3">
-                  <h3 className="mb-3 font-pixel text-[9px] uppercase tracking-wider text-gb-light">
-                    Life Journey
-                  </h3>
-                  
-                  {/* Progress bar */}
-                  <div className="relative h-4 w-full overflow-hidden border-2 border-gb-dark bg-gb-shadow">
-                    <div 
-                      className="h-full transition-all duration-700 ease-out"
-                      style={{ 
-                        width: `${Math.min((age / 100) * 100, 100)}%`,
-                        background: 'linear-gradient(90deg, #306230, #8bac0f, #9bbc0f)',
-                        boxShadow: '0 0 10px rgba(139, 172, 15, 0.5)',
-                      }}
-                    />
-                    {/* Milestone markers */}
-                    <div className="absolute inset-0 flex">
-                      {[18, 40, 65, 100].map((milestone) => (
-                        <div 
-                          key={milestone}
-                          className="absolute top-0 bottom-0 w-px bg-gb-dark/50"
-                          style={{ left: `${milestone}%` }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="mt-2 flex justify-between">
-                    <span className="font-pixel text-[8px] text-gb-dark">0</span>
-                    <span 
-                      className="font-pixel text-[10px] text-gb-light"
-                      style={{ textShadow: '0 0 8px rgba(139, 172, 15, 0.6)' }}
-                    >
-                      Age {age}
-                    </span>
-                    <span className="font-pixel text-[8px] text-gb-dark">100+</span>
-                  </div>
-                  
-                  {/* Life stage label */}
-                  <div className="mt-3 text-center">
-                    <span className="font-pixel text-[8px] uppercase tracking-wider text-gb-dark">
-                      {age < 13 ? "Childhood" : 
-                       age < 20 ? "Adolescence" : 
-                       age < 40 ? "Young Adult" : 
-                       age < 65 ? "Midlife" : "Elder Years"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </aside>
+                STATS
+              </button>
+            </div>
           </div>
 
-          {/* Mobile relationships bar */}
-          <footer 
-            className="border-t-2 border-gb-dark p-2 lg:hidden"
+          {/* BOTTOM - Dialogue and choices */}
+          <div 
+            className="relative z-10 border-t-2"
             style={{
-              background: 'linear-gradient(0deg, rgba(48, 98, 48, 0.8) 0%, rgba(15, 56, 15, 0.9) 100%)',
+              backgroundColor: "#0f380f",
+              borderColor: "#306230"
             }}
           >
-            <RelationshipsPanel compact />
-          </footer>
+            <TurnDisplay />
+          </div>
+        </div>
+      )}
+
+      {/* Stats overlay panel */}
+      {showStats && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(15, 56, 15, 0.95)" }}
+          onClick={() => setShowStats(false)}
+        >
+          <div 
+            className="w-full max-w-md p-4 border-4"
+            style={{
+              backgroundColor: "#0f380f",
+              borderColor: "#8bac0f"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <StatsPanel />
+            <button
+              onClick={() => setShowStats(false)}
+              className="mt-4 w-full py-2 border-2 transition-all hover:bg-gb-dark"
+              style={{
+                backgroundColor: "#306230",
+                borderColor: "#8bac0f",
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: "10px",
+                color: "#9bbc0f"
+              }}
+            >
+              CLOSE
+            </button>
+          </div>
         </div>
       )}
 
@@ -351,47 +326,36 @@ export function GameWrapper() {
 
       {/* Loading overlay */}
       {screenState === "loading" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gb-darkest">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: "#0f380f" }}
+        >
           <div className="text-center">
             <div className="mb-4 flex justify-center gap-2">
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="size-4 bg-gb-light"
+                  className="size-3"
                   style={{
+                    backgroundColor: "#8bac0f",
                     animation: 'bounce 0.6s ease-in-out infinite',
                     animationDelay: `${i * 0.15}s`,
-                    boxShadow: '0 0 15px rgba(139, 172, 15, 0.6)',
                   }}
                 />
               ))}
             </div>
             <p 
-              className="font-pixel text-sm text-gb-light"
-              style={{ textShadow: '0 0 10px rgba(139, 172, 15, 0.5)' }}
+              className="text-[10px] animate-pulse"
+              style={{ 
+                fontFamily: '"Press Start 2P", monospace',
+                color: "#8bac0f" 
+              }}
             >
-              Generating your story...
+              Loading your story...
             </p>
           </div>
         </div>
       )}
-
-      {/* Transition overlay */}
-      <div
-        className={cn(
-          "fixed inset-0 z-40 bg-gb-darkest pointer-events-none transition-opacity duration-500",
-          isTransitioning ? "opacity-100" : "opacity-0"
-        )}
-      />
-
-      <style jsx>{`
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
-        }
-      `}</style>
     </div>
   );
 }
-
-export default GameWrapper;
