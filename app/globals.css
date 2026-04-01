@@ -1,0 +1,380 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════
+   DREAMLAND - Game Boy Color Palette & Theming
+   ═══════════════════════════════════════════════ */
+
+@theme inline {
+  /* Game Boy Color Palette - Original DMG-01 */
+  --color-gb-black: #0f380f;
+  --color-gb-dark: #306230;
+  --color-gb-light: #8bac0f;
+  --color-gb-white: #9bbc0f;
+  
+  /* Semantic colors mapped to Game Boy palette */
+  --color-background: var(--color-gb-black);
+  --color-foreground: var(--color-gb-white);
+  --color-muted: var(--color-gb-dark);
+  --color-muted-foreground: var(--color-gb-light);
+  --color-primary: var(--color-gb-light);
+  --color-primary-foreground: var(--color-gb-black);
+  --color-secondary: var(--color-gb-dark);
+  --color-secondary-foreground: var(--color-gb-white);
+  --color-accent: var(--color-gb-light);
+  --color-accent-foreground: var(--color-gb-black);
+  --color-border: var(--color-gb-dark);
+  --color-ring: var(--color-gb-light);
+  
+  /* Mood overlays for dynamic atmosphere */
+  --color-danger: #EF5350;
+  --color-success: #66BB6A;
+  --color-warning: #FF9800;
+  
+  /* Stat colors */
+  --color-stat-money: #FFD700;
+  --color-stat-stability: #4FC3F7;
+  --color-stat-status: #E040FB;
+  --color-stat-health: #66BB6A;
+  --color-stat-stress: #EF5350;
+  --color-stat-freedom: #FF9800;
+  --color-stat-exposure: #BDBDBD;
+  
+  /* Typography */
+  --font-sans: "Press Start 2P", monospace;
+  --font-mono: "Press Start 2P", monospace;
+  
+  /* Spacing and sizing */
+  --radius: 0px;
+}
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+}
+
+body {
+  background: #0a0a0a;
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════
+   CRT SHADER EFFECTS
+   ═══════════════════════════════════════════════ */
+
+/* Scanlines overlay */
+.crt-scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+/* Screen curvature and glow */
+.crt-screen {
+  border-radius: 8px;
+  box-shadow: 
+    0 0 60px rgba(155, 188, 15, 0.08),
+    inset 0 0 80px rgba(0, 0, 0, 0.4),
+    0 0 2px rgba(155, 188, 15, 0.1);
+}
+
+/* Subtle flicker effect */
+@keyframes crt-flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.98; }
+  94% { opacity: 1; }
+}
+
+.crt-flicker {
+  animation: crt-flicker 8s infinite;
+}
+
+/* ═══════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════ */
+
+/* Blinking cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor-blink {
+  display: inline-block;
+  width: 8px;
+  height: 2px;
+  background: var(--color-gb-white);
+  margin-left: 2px;
+  animation: blink 0.6s step-end infinite;
+}
+
+/* Stat button pulse */
+@keyframes stat-pulse {
+  0%, 100% {
+    background: var(--color-gb-black);
+    color: var(--color-gb-white);
+    border-color: var(--color-gb-light);
+    box-shadow: 0 0 4px rgba(139, 172, 15, 0.2);
+  }
+  50% {
+    background: var(--color-gb-dark);
+    color: var(--color-gb-white);
+    border-color: var(--color-gb-white);
+    box-shadow: 0 0 12px rgba(155, 188, 15, 0.5);
+  }
+}
+
+.stat-pulse {
+  animation: stat-pulse 2s ease-in-out infinite;
+}
+
+/* Close call flash */
+@keyframes close-call-flash {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.close-call-flash {
+  animation: close-call-flash 2s ease-out forwards;
+}
+
+/* RIP fade in */
+@keyframes rip-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rip-fade-in {
+  animation: rip-fade-in 1.5s ease-out forwards;
+  opacity: 0;
+}
+
+/* Loader spin */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loader-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════
+   TRANSITION EFFECTS
+   ═══════════════════════════════════════════════ */
+
+/* Pixel dissolve effect using clip-path */
+@keyframes pixel-dissolve-in {
+  0% {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+@keyframes pixel-dissolve-out {
+  0% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+  100% {
+    clip-path: inset(0 0 0 100%);
+    opacity: 0;
+  }
+}
+
+.pixel-dissolve-in {
+  animation: pixel-dissolve-in 0.5s ease-out forwards;
+}
+
+.pixel-dissolve-out {
+  animation: pixel-dissolve-out 0.5s ease-in forwards;
+}
+
+/* Screen transition fade */
+@keyframes screen-fade {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.screen-fade {
+  animation: screen-fade 1s ease-in-out forwards;
+}
+
+/* ═══════════════════════════════════════════════
+   PARTICLE EFFECTS (CSS-based)
+   ═══════════════════════════════════════════════ */
+
+/* Death particles - ethereal rising */
+@keyframes death-particle {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-100px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+.death-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--color-gb-white);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: death-particle 3s ease-out infinite;
+}
+
+/* Close call warning particles */
+@keyframes warning-particle {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.warning-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--color-danger);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: warning-particle 1s ease-out;
+}
+
+/* ═══════════════════════════════════════════════
+   DYNAMIC MOOD COLORS
+   ═══════════════════════════════════════════════ */
+
+/* Danger mood - high stress/exposure */
+.mood-danger {
+  --color-foreground: #ff9999;
+  --color-border: #8B0000;
+}
+
+/* Success mood - positive events */
+.mood-success {
+  --color-gb-white: #b5e853;
+  --color-gb-light: #a3d94f;
+}
+
+/* Melancholy mood - death screen */
+.mood-melancholy {
+  filter: saturate(0.6) brightness(0.9);
+}
+
+/* ═══════════════════════════════════════════════
+   STAT BAR ANIMATIONS
+   ═══════════════════════════════════════════════ */
+
+.stat-bar-fill {
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Stat change flash */
+@keyframes stat-increase {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.5); }
+}
+
+@keyframes stat-decrease {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(0.7) hue-rotate(-30deg); }
+}
+
+.stat-increase {
+  animation: stat-increase 0.3s ease-out;
+}
+
+.stat-decrease {
+  animation: stat-decrease 0.3s ease-out;
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE STYLES
+   ═══════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .game-wrapper {
+    border-width: 2px;
+    aspect-ratio: auto;
+    height: 100vh;
+    max-height: 100vh;
+  }
+}
+
+@media (max-height: 500px) {
+  .dialogue-box {
+    min-height: 60px;
+    max-height: 90px;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-gb-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-gb-dark);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gb-light);
+}
