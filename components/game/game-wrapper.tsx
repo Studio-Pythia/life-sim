@@ -14,16 +14,19 @@ import { TurnDisplay } from "./turn-display";
 import { DeathScreen } from "./death-screen";
 import { CloseCallOverlay } from "./close-call-overlay";
 import { CharacterDisplay } from "./character-display";
+import { IntroSequence } from "./intro-sequence";
+import { MilestonePopup, isMilestoneAge, getMilestoneMessage } from "./milestone-popup";
 import { SceneAtmosphere } from "@/components/effects/scene-atmosphere";
 import { cn } from "@/lib/utils";
 
-type ScreenState = "title" | "onboarding" | "playing" | "dead" | "loading";
+type ScreenState = "title" | "onboarding" | "intro" | "playing" | "dead" | "loading";
 
 export function GameWrapper() {
   const router = useRouter();
   const gameState = useGameStore((state) => state.gameState);
   const age = useGameStore((state) => state.age);
   const gender = useGameStore((state) => state.gender);
+  const city = useGameStore((state) => state.city);
   const location = useGameStore((state) => state.currentTurn?.location);
   const dream = useGameStore((state) => state.dream);
   const closeCallMessage = useGameStore((state) => state.closeCallMessage);
@@ -36,6 +39,8 @@ export function GameWrapper() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showCloseCall, setShowCloseCall] = useState(false);
   const [prevAge, setPrevAge] = useState(age);
+  const [showMilestone, setShowMilestone] = useState(false);
+  const [milestoneAge, setMilestoneAge] = useState(0);
 
   // Sync screen state with game state
   useEffect(() => {
@@ -78,12 +83,25 @@ export function GameWrapper() {
   useEffect(() => {
     if (age !== prevAge && screenState === "playing") {
       setIsTransitioning(true);
+      
+      // Check for milestone ages
+      if (isMilestoneAge(age) && age > 1) {
+        setMilestoneAge(age);
+        setShowMilestone(true);
+      }
+      
       setTimeout(() => {
         setIsTransitioning(false);
         setPrevAge(age);
       }, 600);
     }
   }, [age, prevAge, screenState]);
+
+  // Handle milestone dismissal
+  const handleMilestoneDismiss = () => {
+    setShowMilestone(false);
+    setMilestoneAge(0);
+  };
 
   // Title screen handlers
   const handleStartGame = () => {
@@ -93,6 +111,16 @@ export function GameWrapper() {
       setGameState("onboarding");
       setIsTransitioning(false);
     }, 500);
+  };
+
+  // When game starts, show intro sequence
+  const handleGameStarted = () => {
+    setScreenState("intro");
+  };
+
+  // After intro completes, go to playing
+  const handleIntroComplete = () => {
+    setScreenState("playing");
   };
 
   const handleLeaderboard = () => {
@@ -116,13 +144,32 @@ export function GameWrapper() {
         <CloseCallOverlay message={closeCallMessage} onComplete={handleCloseCallComplete} />
       )}
 
+      {/* Milestone celebration */}
+      {showMilestone && milestoneAge > 0 && (
+        <MilestonePopup 
+          age={milestoneAge} 
+          message={getMilestoneMessage(milestoneAge)} 
+          onDismiss={handleMilestoneDismiss} 
+        />
+      )}
+
       {/* Title Screen */}
       {screenState === "title" && (
         <TitleScreen onStart={handleStartGame} onLeaderboard={handleLeaderboard} />
       )}
 
       {/* Onboarding */}
-      {screenState === "onboarding" && <OnboardingForm />}
+      {screenState === "onboarding" && <OnboardingForm onGameStarted={handleGameStarted} />}
+
+      {/* Intro Sequence */}
+      {screenState === "intro" && city && dream && gender && (
+        <IntroSequence 
+          city={city}
+          dream={dream}
+          gender={gender as "male" | "female"}
+          onComplete={handleIntroComplete}
+        />
+      )}
 
       {/* Main Game */}
       {screenState === "playing" && (

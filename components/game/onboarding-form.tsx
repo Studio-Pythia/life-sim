@@ -8,7 +8,11 @@ import { CITIES } from "@/lib/constants";
 
 type OnboardingStep = "intro" | "gender" | "city" | "dream" | "confirm";
 
-export function OnboardingForm() {
+interface OnboardingFormProps {
+  onGameStarted?: () => void;
+}
+
+export function OnboardingForm({ onGameStarted }: OnboardingFormProps) {
   const [step, setStep] = useState<OnboardingStep>("intro");
   const [gender, setGender] = useState<"male" | "female" | null>(null);
   const [city, setCity] = useState<string>("");
@@ -23,13 +27,14 @@ export function OnboardingForm() {
     setStep(nextStep);
   };
 
-  const handleStart = () => {
+  const handleStart = async () => {
     const finalCity = city === "custom" ? customCity : city;
     if (!gender || !finalCity || !dream) return;
 
     playSound("select");
     setMusicEnabled(true);
-    startGame(gender, finalCity, dream);
+    await startGame(gender, finalCity, dream);
+    onGameStarted?.();
   };
 
   return (

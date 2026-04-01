@@ -246,7 +246,17 @@ export function DeathScreen({ onPlayAgain }: DeathScreenProps) {
             onClick={handleViewLeaderboard}
             className="w-full p-3 font-pixel text-[10px] uppercase tracking-wider text-gb-light border-2 border-gb-dark bg-gb-darkest transition-all duration-200 hover:border-gb-light hover:bg-gb-dark hover:shadow-[0_0_20px_rgba(139,172,15,0.3)]"
           >
-            Hall of Lives
+            View Leaderboard
+          </button>
+
+          <button
+            onClick={() => {
+              playSound("select");
+              router.push("/lives");
+            }}
+            className="w-full p-3 font-pixel text-[10px] uppercase tracking-wider text-gb-dark border-2 border-gb-dark/50 bg-transparent transition-all duration-200 hover:border-gb-dark hover:text-gb-light"
+          >
+            Browse All Lives
           </button>
         </div>
 

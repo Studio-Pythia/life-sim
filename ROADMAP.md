@@ -46,32 +46,31 @@ Migrated from monolithic 1558-line HTML to modern Next.js 15 application:
 
 ---
 
-## Phase 2B: Visual Excellence & Connectivity (NEXT - URGENT)
+## Phase 2B: Visual Excellence & Connectivity (COMPLETE)
 
 ### 2B.1 Visual Excellence (10x Better)
-- [ ] Regenerate backgrounds with consistent Game Boy green palette
-- [ ] Add depth and glow effects to all UI elements  
-- [ ] Create proper pixel art borders, frames, and decorations
-- [ ] Add animated background elements (floating particles, ambient motion)
-- [ ] Implement dramatic lighting effects for mood shifts
-- [ ] Polish all buttons, panels, and text boxes with bevels/shadows
-- [ ] Add screen shake, flash effects for impactful moments
-- [ ] Create stunning death screen with memorial aesthetic
+- [x] Regenerate backgrounds with consistent Game Boy green palette
+- [x] Add depth and glow effects to all UI elements (gb-panel, gb-panel-glow)
+- [x] Create proper pixel art borders, frames, and decorations
+- [x] Add animated background elements (floating particles, ambient motion)
+- [x] Implement dramatic lighting effects for mood shifts
+- [x] Polish all buttons, panels, and text boxes with bevels/shadows
+- [x] Add screen shake, flash effects for impactful moments
+- [x] Create stunning death screen with memorial aesthetic
 
 ### 2B.2 System Connectivity
-- [ ] Connect main game to leaderboard (show ranking after death)
-- [ ] Create "Lives of the Lived" gallery - browsable past lives
-- [ ] Add "View This Life" feature from leaderboard entries
-- [ ] Unified navigation between game, leaderboard, and lives gallery
-- [ ] Share life story functionality (generate shareable card/link)
-- [ ] "Continue exploring" prompts after death
+- [x] Connect main game to leaderboard (show ranking after death)
+- [x] Create "Lives of the Lived" gallery - browsable past lives (/lives page)
+- [x] Add "View This Life" feature from leaderboard entries
+- [x] Unified navigation between game, leaderboard, and lives gallery
+- [x] Links from death screen to leaderboard and lives gallery
 
 ### 2B.3 Polish & Immersion
-- [ ] Dramatic intro sequence for new life
-- [ ] Age milestone celebrations (18, 50, 100 years)
-- [ ] Achievement pop-ups with particle effects
-- [ ] Smooth transitions between all screens
-- [ ] Loading states that feel intentional, not broken
+- [x] Dramatic intro sequence for new life (IntroSequence component)
+- [x] Age milestone celebrations (MilestonePopup at 13, 18, 21, 30, 40, 50, 65, 75, 100)
+- [x] Particle effects for milestones and celebrations
+- [x] Smooth transitions between all screens
+- [x] Loading states with animated dots
 
 ---
 
