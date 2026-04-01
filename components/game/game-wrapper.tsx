@@ -10,9 +10,9 @@ import { GameCanvas } from "./game-canvas";
 import { TurnDisplay } from "./turn-display";
 import { DeathScreen } from "./death-screen";
 import { CloseCallOverlay } from "./close-call-overlay";
-import { CharacterDisplay } from "./character-display";
 import { IntroSequence } from "./intro-sequence";
 import { MilestonePopup, isMilestoneAge, getMilestoneMessage } from "./milestone-popup";
+import { StatsPanel } from "./stats-panel";
 import { cn } from "@/lib/utils";
 
 type ScreenState = "title" | "onboarding" | "intro" | "playing" | "dead" | "loading";
@@ -23,8 +23,8 @@ export function GameWrapper() {
   const age = useGameStore((state) => state.age);
   const gender = useGameStore((state) => state.gender);
   const city = useGameStore((state) => state.city);
-  const location = useGameStore((state) => state.currentTurn?.location);
   const dream = useGameStore((state) => state.dream);
+  const relationships = useGameStore((state) => state.relationships);
   const closeCallMessage = useGameStore((state) => state.closeCallMessage);
   const clearCloseCallMessage = useGameStore((state) => state.clearCloseCallMessage);
   const setGameState = useGameStore((state) => state.setGameState);
@@ -37,18 +37,14 @@ export function GameWrapper() {
   const [prevAge, setPrevAge] = useState(age);
   const [showMilestone, setShowMilestone] = useState(false);
   const [milestoneAge, setMilestoneAge] = useState(0);
+  const [showStats, setShowStats] = useState(false);
 
   // Sync screen state with game state
   useEffect(() => {
-    if (gameState === "onboarding") {
-      setScreenState("onboarding");
-    } else if (gameState === "playing") {
-      setScreenState("playing");
-    } else if (gameState === "dead") {
-      setScreenState("dead");
-    } else if (gameState === "loading") {
-      setScreenState("loading");
-    }
+    if (gameState === "onboarding") setScreenState("onboarding");
+    else if (gameState === "playing") setScreenState("playing");
+    else if (gameState === "dead") setScreenState("dead");
+    else if (gameState === "loading") setScreenState("loading");
   }, [gameState]);
 
   // Initialize audio on mount
@@ -58,16 +54,12 @@ export function GameWrapper() {
 
   // Update music based on age
   useEffect(() => {
-    if (screenState === "playing") {
-      updateMusicForAge(age);
-    }
+    if (screenState === "playing") updateMusicForAge(age);
   }, [age, screenState, updateMusicForAge]);
 
   // Handle close call messages
   useEffect(() => {
-    if (closeCallMessage) {
-      setShowCloseCall(true);
-    }
+    if (closeCallMessage) setShowCloseCall(true);
   }, [closeCallMessage]);
 
   const handleCloseCallComplete = () => {
@@ -79,13 +71,10 @@ export function GameWrapper() {
   useEffect(() => {
     if (age !== prevAge && screenState === "playing") {
       setIsTransitioning(true);
-      
-      // Check for milestone ages
       if (isMilestoneAge(age) && age > 1) {
         setMilestoneAge(age);
         setShowMilestone(true);
       }
-      
       setTimeout(() => {
         setIsTransitioning(false);
         setPrevAge(age);
@@ -93,13 +82,11 @@ export function GameWrapper() {
     }
   }, [age, prevAge, screenState]);
 
-  // Handle milestone dismissal
   const handleMilestoneDismiss = () => {
     setShowMilestone(false);
     setMilestoneAge(0);
   };
 
-  // Title screen handlers
   const handleStartGame = () => {
     setIsTransitioning(true);
     setTimeout(() => {
@@ -109,12 +96,10 @@ export function GameWrapper() {
     }, 500);
   };
 
-  // When game starts, show intro sequence
   const handleGameStarted = () => {
     setScreenState("intro");
   };
 
-  // After intro completes, go to playing
   const handleIntroComplete = () => {
     setScreenState("playing");
   };
@@ -123,27 +108,16 @@ export function GameWrapper() {
     router.push("/leaderboard");
   };
 
-  // Get life stage label
-  const getLifeStage = () => {
-    if (age < 4) return "Baby";
-    if (age < 13) return "Child";
-    if (age < 20) return "Teen";
-    if (age < 40) return "Adult";
-    if (age < 65) return "Middle Age";
-    return "Elder";
-  };
-
   return (
     <div 
-      className="relative min-h-screen overflow-hidden"
+      className="relative w-full h-screen overflow-hidden"
       style={{ backgroundColor: "#0f380f" }}
     >
-      {/* Global CRT scanlines */}
+      {/* CRT scanlines */}
       <div 
         className="fixed inset-0 pointer-events-none z-[100]"
         style={{
-          background: "repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px)",
-          opacity: 0.5
+          background: "repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.08) 1px, rgba(0,0,0,0.08) 2px)",
         }}
       />
 
@@ -179,127 +153,168 @@ export function GameWrapper() {
         />
       )}
 
-      {/* Main Game - Clean mobile-first layout */}
+      {/* Main Game - Matches old HTML layout exactly */}
       {screenState === "playing" && (
-        <div className="flex min-h-screen flex-col">
-          {/* Minimal top bar - just age and dream */}
-          <header 
-            className="relative z-20 flex items-center justify-between p-2 sm:p-3 border-b-2"
+        <div className="relative w-full h-full flex flex-col">
+          {/* Game canvas fills the screen - sprite is rendered INSIDE */}
+          <div 
+            className={cn(
+              "relative flex-1 transition-opacity duration-500",
+              isTransitioning && "opacity-80"
+            )}
+          >
+            <GameCanvas className="absolute inset-0" />
+
+            {/* UI OVERLAY - on top of canvas */}
+            <div className="absolute inset-0 pointer-events-none">
+              {/* TOP HUD - Age on left, location/dream on right */}
+              <div className="pointer-events-auto flex items-start justify-between p-2 sm:p-3">
+                {/* Age badge */}
+                <div 
+                  className="px-2 py-1 border-2"
+                  style={{
+                    backgroundColor: "rgba(15, 56, 15, 0.9)",
+                    borderColor: "#306230"
+                  }}
+                >
+                  <span 
+                    className="text-xs sm:text-sm"
+                    style={{ 
+                      fontFamily: '"Press Start 2P", monospace',
+                      color: "#9bbc0f" 
+                    }}
+                  >
+                    AGE {age}
+                  </span>
+                </div>
+
+                {/* Right side - city + dream */}
+                <div 
+                  className="text-right px-2 py-1"
+                  style={{
+                    backgroundColor: "rgba(15, 56, 15, 0.9)",
+                  }}
+                >
+                  <span 
+                    className="text-[8px] sm:text-[10px] uppercase tracking-wider"
+                    style={{ 
+                      fontFamily: '"Press Start 2P", monospace',
+                      color: "#8bac0f" 
+                    }}
+                  >
+                    {city?.toUpperCase()} · {dream && dream.length > 15 ? dream.slice(0, 15) + "..." : dream}
+                  </span>
+                </div>
+              </div>
+
+              {/* LEFT SIDE - Relationships panel */}
+              {relationships && relationships.length > 0 && (
+                <div 
+                  className="pointer-events-auto absolute left-2 top-12 sm:top-14 max-w-[180px] sm:max-w-[220px]"
+                >
+                  <div 
+                    className="p-2 border-2 space-y-1 max-h-[30vh] overflow-y-auto"
+                    style={{
+                      backgroundColor: "rgba(15, 56, 15, 0.95)",
+                      borderColor: "#306230"
+                    }}
+                  >
+                    {relationships.slice(0, 5).map((rel, i) => {
+                      const isDeceased = rel.role?.toLowerCase().includes("deceased") || 
+                                         rel.display?.toLowerCase().includes("deceased");
+                      return (
+                        <div 
+                          key={i}
+                          className="px-2 py-1 border"
+                          style={{
+                            backgroundColor: isDeceased ? "rgba(48, 98, 48, 0.5)" : "#306230",
+                            borderColor: "#8bac0f"
+                          }}
+                        >
+                          <div 
+                            className="text-[6px] sm:text-[8px] uppercase truncate"
+                            style={{ 
+                              fontFamily: '"Press Start 2P", monospace',
+                              color: "#8bac0f" 
+                            }}
+                          >
+                            {rel.relation || rel.role}
+                          </div>
+                          <div 
+                            className="text-[8px] sm:text-[10px] truncate"
+                            style={{ 
+                              fontFamily: '"Press Start 2P", monospace',
+                              color: "#9bbc0f" 
+                            }}
+                          >
+                            {rel.name}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* RIGHT SIDE - Stats toggle button */}
+              <button
+                onClick={() => setShowStats(true)}
+                className="pointer-events-auto absolute right-2 top-12 sm:top-14 px-3 py-2 border-2 transition-all hover:border-gb-light"
+                style={{
+                  backgroundColor: "#306230",
+                  borderColor: "#8bac0f",
+                  fontFamily: '"Press Start 2P", monospace',
+                  fontSize: "10px",
+                  color: "#9bbc0f"
+                }}
+              >
+                STATS
+              </button>
+            </div>
+          </div>
+
+          {/* BOTTOM - Dialogue and choices */}
+          <div 
+            className="relative z-10 border-t-2"
             style={{
               backgroundColor: "#0f380f",
               borderColor: "#306230"
             }}
           >
-            {/* Age badge */}
-            <div 
-              className="flex items-center gap-2 px-3 py-1 border-2"
+            <TurnDisplay />
+          </div>
+        </div>
+      )}
+
+      {/* Stats overlay panel */}
+      {showStats && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(15, 56, 15, 0.95)" }}
+          onClick={() => setShowStats(false)}
+        >
+          <div 
+            className="w-full max-w-md p-4 border-4"
+            style={{
+              backgroundColor: "#0f380f",
+              borderColor: "#8bac0f"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <StatsPanel />
+            <button
+              onClick={() => setShowStats(false)}
+              className="mt-4 w-full py-2 border-2 transition-all hover:bg-gb-dark"
               style={{
                 backgroundColor: "#306230",
-                borderColor: "#8bac0f"
+                borderColor: "#8bac0f",
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: "10px",
+                color: "#9bbc0f"
               }}
             >
-              <span 
-                className="text-[10px] sm:text-xs"
-                style={{ 
-                  fontFamily: '"Press Start 2P", monospace',
-                  color: "#9bbc0f" 
-                }}
-              >
-                AGE
-              </span>
-              <span 
-                className="text-sm sm:text-lg"
-                style={{ 
-                  fontFamily: '"Press Start 2P", monospace',
-                  color: "#9bbc0f",
-                  textShadow: "0 0 10px rgba(155, 188, 15, 0.5)"
-                }}
-              >
-                {age}
-              </span>
-            </div>
-
-            {/* Dream reminder - truncated on mobile */}
-            <div 
-              className="flex-1 mx-2 sm:mx-4 text-right truncate"
-              title={`Dream: ${dream}`}
-            >
-              <span 
-                className="text-[8px] sm:text-[10px] uppercase tracking-wider"
-                style={{ 
-                  fontFamily: '"Press Start 2P", monospace',
-                  color: "#306230" 
-                }}
-              >
-                Dream:{" "}
-              </span>
-              <span 
-                className="text-[8px] sm:text-[10px] italic"
-                style={{ 
-                  fontFamily: '"Press Start 2P", monospace',
-                  color: "#8bac0f" 
-                }}
-              >
-                {dream && dream.length > 20 ? dream.slice(0, 20) + "..." : dream}
-              </span>
-            </div>
-          </header>
-
-          {/* Main game area - Scene with character */}
-          <div className="flex-1 flex flex-col">
-            {/* Game canvas with character overlay */}
-            <div 
-              className={cn(
-                "relative w-full transition-all duration-500",
-                isTransitioning && "opacity-80"
-              )}
-              style={{ 
-                aspectRatio: "16/10",
-                maxHeight: "50vh"
-              }}
-            >
-              <GameCanvas className="absolute inset-0" />
-              
-              {/* Character sprite positioned on the scene */}
-              {gender && (
-                <div 
-                  className="absolute left-1/2 -translate-x-1/2"
-                  style={{ 
-                    bottom: "15%",
-                  }}
-                >
-                  <CharacterDisplay
-                    gender={gender as "male" | "female"}
-                    age={age}
-                    size="lg"
-                  />
-                  {/* Life stage label below character */}
-                  <div className="text-center mt-1">
-                    <span 
-                      className="text-[8px] px-2 py-0.5 border"
-                      style={{ 
-                        fontFamily: '"Press Start 2P", monospace',
-                        backgroundColor: "rgba(15, 56, 15, 0.85)",
-                        borderColor: "#306230",
-                        color: "#8bac0f" 
-                      }}
-                    >
-                      {getLifeStage()}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Narrative and choices area */}
-            <div 
-              className="flex-1 p-3 sm:p-4 overflow-y-auto"
-              style={{
-                backgroundColor: "#0f380f"
-              }}
-            >
-              <TurnDisplay />
-            </div>
+              CLOSE
+            </button>
           </div>
         </div>
       )}
@@ -320,18 +335,17 @@ export function GameWrapper() {
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="size-3 sm:size-4"
+                  className="size-3"
                   style={{
                     backgroundColor: "#8bac0f",
                     animation: 'bounce 0.6s ease-in-out infinite',
                     animationDelay: `${i * 0.15}s`,
-                    boxShadow: '0 0 15px rgba(139, 172, 15, 0.6)',
                   }}
                 />
               ))}
             </div>
             <p 
-              className="text-[10px] sm:text-xs animate-pulse"
+              className="text-[10px] animate-pulse"
               style={{ 
                 fontFamily: '"Press Start 2P", monospace',
                 color: "#8bac0f" 
