@@ -27,20 +27,44 @@ export function StatsPanel({ compact = false, className }: StatsPanelProps) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-1 border-2 border-gb-dark bg-gb-lightest/80 p-2",
-        compact && "gap-0.5 p-1",
+        "relative",
+        compact 
+          ? "panel-inset flex flex-col gap-0.5 p-2" 
+          : "glow-border flex flex-col gap-2 p-3",
         className
       )}
     >
-      {STAT_ORDER.map((stat) => (
-        <StatBar
-          key={stat}
-          stat={stat}
-          value={stats[stat]}
-          previousValue={previousStats?.[stat]}
-          compact={compact}
-        />
-      ))}
+      {/* Header (non-compact only) */}
+      {!compact && (
+        <div className="mb-1 border-b border-gb-dark/50 pb-2">
+          <h3 className="font-pixel text-[9px] uppercase tracking-wider text-gb-light">
+            Life Stats
+          </h3>
+        </div>
+      )}
+      
+      {/* Stats list */}
+      <div className={cn("flex flex-col", compact ? "gap-1" : "gap-2")}>
+        {STAT_ORDER.map((stat) => (
+          <StatBar
+            key={stat}
+            stat={stat}
+            value={stats[stat]}
+            previousValue={previousStats?.[stat]}
+            compact={compact}
+          />
+        ))}
+      </div>
+
+      {/* Decorative corner accents (non-compact only) */}
+      {!compact && (
+        <>
+          <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-gb-glow/30" />
+          <div className="absolute top-1 right-1 w-2 h-2 border-r border-t border-gb-glow/30" />
+          <div className="absolute bottom-1 left-1 w-2 h-2 border-l border-b border-gb-glow/30" />
+          <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-gb-glow/30" />
+        </>
+      )}
     </div>
   );
 }
