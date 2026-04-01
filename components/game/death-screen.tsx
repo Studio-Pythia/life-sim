@@ -6,7 +6,11 @@ import { useAudioStore } from "@/lib/audio";
 import { Particles } from "@/components/effects/particles";
 import { cn } from "@/lib/utils";
 
-export function DeathScreen() {
+interface DeathScreenProps {
+  onPlayAgain?: () => void;
+}
+
+export function DeathScreen({ onPlayAgain }: DeathScreenProps) {
   const epilogue = useGameStore((state) => state.epilogue);
   const age = useGameStore((state) => state.age);
   const dream = useGameStore((state) => state.dream);
@@ -30,6 +34,7 @@ export function DeathScreen() {
   const handlePlayAgain = () => {
     playSound("select");
     resetGame();
+    onPlayAgain?.();
   };
 
   if (!epilogue) return null;
