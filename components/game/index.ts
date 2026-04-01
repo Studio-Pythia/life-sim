@@ -1,3 +1,4 @@
+export { CharacterDisplay } from "./character-display";
 export { ChoiceButton } from "./choice-button";
 export { CloseCallOverlay } from "./close-call-overlay";
 export { DeathScreen } from "./death-screen";
@@ -10,4 +11,5 @@ export { RelationshipChip } from "./relationship-chip";
 export { RelationshipsPanel } from "./relationships-panel";
 export { StatBar } from "./stat-bar";
 export { StatsPanel } from "./stats-panel";
+export { TitleScreen } from "./title-screen";
 export { TurnDisplay } from "./turn-display";
