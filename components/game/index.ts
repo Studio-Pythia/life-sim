@@ -6,6 +6,8 @@ export { DialogueBox } from "./dialogue-box";
 export { GameCanvas } from "./game-canvas";
 export { GameHUD } from "./game-hud";
 export { GameWrapper } from "./game-wrapper";
+export { IntroSequence } from "./intro-sequence";
+export { MilestonePopup, isMilestoneAge, getMilestoneMessage } from "./milestone-popup";
 export { OnboardingForm } from "./onboarding-form";
 export { RelationshipChip } from "./relationship-chip";
 export { RelationshipsPanel } from "./relationships-panel";
