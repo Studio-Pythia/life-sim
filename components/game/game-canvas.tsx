@@ -89,8 +89,8 @@ export function GameCanvas({ className }: GameCanvasProps) {
     if (!ctx) return;
 
     const draw = () => {
-      // Clear canvas
-      ctx.fillStyle = "#9bbc0f";
+      // Clear canvas with Game Boy darkest color
+      ctx.fillStyle = "#0f380f";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Draw background image
@@ -109,27 +109,24 @@ export function GameCanvas({ className }: GameCanvasProps) {
 
       // Apply mood color overlay
       if (mood !== "neutral") {
-        ctx.globalAlpha = 0.15;
+        ctx.globalAlpha = 0.2;
         switch (mood) {
           case "danger":
-            ctx.fillStyle = "#8b0000";
+            ctx.fillStyle = "#ff4444";
             break;
           case "success":
-            ctx.fillStyle = "#9bbc0f";
+            ctx.fillStyle = "#44ff66";
             break;
           case "sad":
-            ctx.fillStyle = "#0f380f";
+            ctx.fillStyle = "#4466ff";
             break;
           case "happy":
-            ctx.fillStyle = "#8bac0f";
+            ctx.fillStyle = "#ffff44";
             break;
         }
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1;
       }
-
-      // Pixelate effect (optional, for extra retro feel)
-      // This is a subtle effect that makes the scene feel more Game Boy-like
     };
 
     draw();
@@ -137,25 +134,86 @@ export function GameCanvas({ className }: GameCanvasProps) {
 
   return (
     <div className={cn("relative overflow-hidden", className)}>
+      {/* Main canvas */}
       <canvas
         ref={canvasRef}
         width={480}
         height={320}
         className={cn(
-          "h-full w-full object-cover transition-opacity duration-200",
-          transitioning && "opacity-50"
+          "h-full w-full object-cover transition-all duration-300",
+          transitioning && "opacity-0 scale-105"
         )}
         style={{
           imageRendering: "pixelated",
         }}
       />
 
+      {/* Ambient vignette overlay */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse at center, transparent 40%, rgba(15, 56, 15, 0.6) 100%)',
+        }}
+      />
+
+      {/* Top gradient for UI readability */}
+      <div 
+        className="absolute top-0 inset-x-0 h-16 pointer-events-none"
+        style={{
+          background: 'linear-gradient(180deg, rgba(15, 56, 15, 0.5) 0%, transparent 100%)',
+        }}
+      />
+
+      {/* Bottom gradient for UI readability */}
+      <div 
+        className="absolute bottom-0 inset-x-0 h-20 pointer-events-none"
+        style={{
+          background: 'linear-gradient(0deg, rgba(15, 56, 15, 0.7) 0%, transparent 100%)',
+        }}
+      />
+
+      {/* Corner decorations */}
+      <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-gb-light/30" />
+      <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-gb-light/30" />
+      <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-gb-light/30" />
+      <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-gb-light/30" />
+
+      {/* Subtle scanline effect */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-30"
+        style={{
+          background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px)',
+        }}
+      />
+
       {/* Loading state */}
       {!isLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gb-lightest">
-          <div className="animate-pulse font-mono text-sm text-gb-dark">Loading...</div>
+        <div className="absolute inset-0 flex items-center justify-center bg-gb-darkest">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex gap-2">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-3 h-3 bg-gb-light"
+                  style={{
+                    animation: 'float 0.6s ease-in-out infinite',
+                    animationDelay: `${i * 0.15}s`,
+                    boxShadow: '0 0 10px rgba(139, 172, 15, 0.6)',
+                  }}
+                />
+              ))}
+            </div>
+            <p className="font-pixel text-[10px] text-gb-light">Loading world...</p>
+          </div>
         </div>
       )}
+
+      <style jsx>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+      `}</style>
     </div>
   );
 }

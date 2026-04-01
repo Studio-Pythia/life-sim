@@ -1,63 +1,92 @@
 @import "tailwindcss";
 
-/* ═══════════════════════════════════════════════
-   DREAMLAND - Game Boy Color Palette & Theming
-   ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   DREAMLAND - MUSEUM QUALITY VISUAL SYSTEM
+   A premium Game Boy aesthetic with depth, glow, and cinematic polish
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 @theme inline {
-  /* Game Boy Color Palette - Original DMG-01 */
+  /* ─────────────────────────────────────────────
+     GAME BOY DMG-01 PALETTE (Sacred Colors)
+     ───────────────────────────────────────────── */
   --color-gb-darkest: #0f380f;
   --color-gb-dark: #306230;
   --color-gb-light: #8bac0f;
   --color-gb-lightest: #9bbc0f;
   
+  /* Extended palette for effects */
+  --color-gb-glow: #c5e063;
+  --color-gb-shadow: #071f07;
+  --color-gb-highlight: #d4f06f;
+  
   /* Legacy aliases */
   --color-gb-black: #0f380f;
   --color-gb-white: #9bbc0f;
   
-  /* Animations */
-  --animate-blink: blink 0.6s step-end infinite;
-  --animate-fade-in: fade-in 0.3s ease-out forwards;
-  --animate-crt-flicker: crt-flicker 8s infinite;
-  
-  /* Semantic colors mapped to Game Boy palette */
-  --color-background: var(--color-gb-black);
-  --color-foreground: var(--color-gb-white);
+  /* ─────────────────────────────────────────────
+     SEMANTIC DESIGN TOKENS
+     ───────────────────────────────────────────── */
+  --color-background: var(--color-gb-darkest);
+  --color-foreground: var(--color-gb-lightest);
   --color-muted: var(--color-gb-dark);
   --color-muted-foreground: var(--color-gb-light);
   --color-primary: var(--color-gb-light);
-  --color-primary-foreground: var(--color-gb-black);
+  --color-primary-foreground: var(--color-gb-darkest);
   --color-secondary: var(--color-gb-dark);
-  --color-secondary-foreground: var(--color-gb-white);
-  --color-accent: var(--color-gb-light);
-  --color-accent-foreground: var(--color-gb-black);
+  --color-secondary-foreground: var(--color-gb-lightest);
+  --color-accent: var(--color-gb-glow);
+  --color-accent-foreground: var(--color-gb-darkest);
   --color-border: var(--color-gb-dark);
   --color-ring: var(--color-gb-light);
   
-  /* Mood overlays for dynamic atmosphere */
-  --color-danger: #EF5350;
-  --color-success: #66BB6A;
-  --color-warning: #FF9800;
+  /* Mood overlay colors */
+  --color-danger: #ff4444;
+  --color-danger-glow: #ff666644;
+  --color-success: #44ff66;
+  --color-success-glow: #44ff6644;
+  --color-warning: #ffaa00;
+  --color-sad: #4466ff;
   
-  /* Stat colors */
-  --color-stat-money: #FFD700;
-  --color-stat-stability: #4FC3F7;
-  --color-stat-status: #E040FB;
-  --color-stat-health: #66BB6A;
-  --color-stat-stress: #EF5350;
-  --color-stat-freedom: #FF9800;
-  --color-stat-exposure: #BDBDBD;
+  /* Stat colors with glow variants */
+  --color-stat-money: #ffd700;
+  --color-stat-money-glow: #ffd70066;
+  --color-stat-stability: #4fc3f7;
+  --color-stat-stability-glow: #4fc3f766;
+  --color-stat-status: #e040fb;
+  --color-stat-status-glow: #e040fb66;
+  --color-stat-health: #66bb6a;
+  --color-stat-health-glow: #66bb6a66;
+  --color-stat-stress: #ef5350;
+  --color-stat-stress-glow: #ef535066;
+  --color-stat-freedom: #ff9800;
+  --color-stat-freedom-glow: #ff980066;
+  --color-stat-exposure: #9e9e9e;
+  --color-stat-exposure-glow: #9e9e9e66;
   
-  /* Typography - use CSS variable from next/font */
+  /* ─────────────────────────────────────────────
+     TYPOGRAPHY
+     ───────────────────────────────────────────── */
   --font-sans: var(--font-press-start, "Press Start 2P"), monospace;
   --font-mono: var(--font-press-start, "Press Start 2P"), monospace;
   --font-pixel: var(--font-press-start, "Press Start 2P"), monospace;
   
-  /* Spacing and sizing */
+  /* ─────────────────────────────────────────────
+     ANIMATIONS
+     ───────────────────────────────────────────── */
+  --animate-blink: blink 0.6s step-end infinite;
+  --animate-fade-in: fade-in 0.5s ease-out forwards;
+  --animate-glow-pulse: glow-pulse 2s ease-in-out infinite;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-shake: shake 0.5s ease-in-out;
+  
+  /* Spacing */
   --radius: 0px;
 }
 
-/* Base styles */
+/* ═══════════════════════════════════════════════════════════════════════════
+   BASE STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -66,6 +95,7 @@
 
 html {
   image-rendering: pixelated;
+  image-rendering: crisp-edges;
   -webkit-font-smoothing: none;
   -moz-osx-font-smoothing: unset;
 }
@@ -76,14 +106,18 @@ body {
   font-family: var(--font-sans);
   min-height: 100vh;
   overflow-x: hidden;
-  justify-content: center;
 }
 
-/* ═══════════════════════════════════════════════
-   CRT SHADER EFFECTS
-   ═══════════════════════════════════════════════ */
+/* Font utility */
+.font-pixel {
+  font-family: var(--font-pixel);
+}
 
-/* Scanlines overlay */
+/* ═══════════════════════════════════════════════════════════════════════════
+   CRT DISPLAY EFFECTS - Premium Retro Feel
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Scanlines with subtle visibility */
 .crt-scanlines::after {
   content: '';
   position: absolute;
@@ -94,127 +128,397 @@ body {
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 0, 0, 0.03) 2px,
-    rgba(0, 0, 0, 0.03) 4px
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
   );
+  mix-blend-mode: multiply;
 }
 
-/* Screen curvature and glow */
+/* Screen with depth and glow */
 .crt-screen {
   border-radius: 8px;
   box-shadow: 
-    0 0 60px rgba(155, 188, 15, 0.08),
-    inset 0 0 80px rgba(0, 0, 0, 0.4),
-    0 0 2px rgba(155, 188, 15, 0.1);
+    /* Outer glow */
+    0 0 80px rgba(155, 188, 15, 0.15),
+    0 0 40px rgba(155, 188, 15, 0.1),
+    /* Inner shadow for depth */
+    inset 0 0 100px rgba(0, 0, 0, 0.5),
+    inset 0 0 30px rgba(0, 0, 0, 0.3),
+    /* Highlight edge */
+    inset 0 1px 0 rgba(155, 188, 15, 0.1);
 }
 
-/* Subtle flicker effect */
+/* Subtle flicker */
 @keyframes crt-flicker {
   0%, 100% { opacity: 1; }
   92% { opacity: 1; }
-  93% { opacity: 0.98; }
+  93% { opacity: 0.97; }
   94% { opacity: 1; }
+  96% { opacity: 0.98; }
+  97% { opacity: 1; }
 }
 
 .crt-flicker {
   animation: crt-flicker 8s infinite;
 }
 
-/* ═══════════════════════════════════════════════
-   ANIMATIONS
-   ═══════════════════════════════════════════════ */
+/* Vignette overlay */
+.crt-vignette::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 0%,
+    transparent 60%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+}
 
-/* Blinking cursor */
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLOWING UI ELEMENTS - Premium Depth
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Pixel-perfect glowing border */
+.glow-border {
+  position: relative;
+  border: 3px solid var(--color-gb-light);
+  background: var(--color-gb-darkest);
+  box-shadow:
+    /* Outer glow */
+    0 0 20px rgba(139, 172, 15, 0.4),
+    0 0 40px rgba(139, 172, 15, 0.2),
+    /* Inner highlight */
+    inset 0 0 20px rgba(139, 172, 15, 0.1),
+    /* Sharp pixel shadow */
+    4px 4px 0 var(--color-gb-shadow);
+}
+
+.glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--color-gb-glow);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Elevated panel with depth */
+.panel-elevated {
+  background: linear-gradient(
+    180deg,
+    var(--color-gb-dark) 0%,
+    var(--color-gb-darkest) 100%
+  );
+  border: 3px solid var(--color-gb-light);
+  box-shadow:
+    inset 0 1px 0 var(--color-gb-light),
+    inset 0 -2px 0 var(--color-gb-shadow),
+    4px 4px 0 var(--color-gb-shadow),
+    0 0 30px rgba(139, 172, 15, 0.2);
+}
+
+/* Inset panel (for content areas) */
+.panel-inset {
+  background: var(--color-gb-darkest);
+  border: 3px solid var(--color-gb-dark);
+  box-shadow:
+    inset 2px 2px 0 var(--color-gb-shadow),
+    inset -1px -1px 0 var(--color-gb-dark);
+}
+
+/* Button with premium feel */
+.btn-pixel {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    var(--color-gb-light) 0%,
+    var(--color-gb-dark) 100%
+  );
+  border: 3px solid var(--color-gb-lightest);
+  color: var(--color-gb-darkest);
+  padding: 12px 24px;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  box-shadow:
+    inset 0 1px 0 var(--color-gb-glow),
+    inset 0 -2px 0 var(--color-gb-shadow),
+    4px 4px 0 var(--color-gb-shadow),
+    0 0 20px rgba(139, 172, 15, 0.3);
+}
+
+.btn-pixel:hover {
+  background: linear-gradient(
+    180deg,
+    var(--color-gb-lightest) 0%,
+    var(--color-gb-light) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 var(--color-gb-highlight),
+    inset 0 -2px 0 var(--color-gb-dark),
+    4px 4px 0 var(--color-gb-shadow),
+    0 0 40px rgba(155, 188, 15, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-pixel:active {
+  transform: translate(2px, 2px);
+  box-shadow:
+    inset 0 1px 0 var(--color-gb-dark),
+    inset 0 -1px 0 var(--color-gb-light),
+    2px 2px 0 var(--color-gb-shadow);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DIALOGUE BOX - Cinematic Text Display
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dialogue-box {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 56, 15, 0.98) 0%,
+    rgba(15, 56, 15, 0.95) 100%
+  );
+  border: 4px solid var(--color-gb-light);
+  padding: 20px;
+  box-shadow:
+    /* Multiple glow layers */
+    0 0 0 1px var(--color-gb-glow),
+    0 0 30px rgba(139, 172, 15, 0.4),
+    0 0 60px rgba(139, 172, 15, 0.2),
+    /* Depth shadow */
+    8px 8px 0 var(--color-gb-shadow),
+    /* Inner lighting */
+    inset 0 0 40px rgba(139, 172, 15, 0.1);
+}
+
+.dialogue-box::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-gb-glow),
+    transparent
+  );
+  opacity: 0.6;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STAT BARS - Dynamic and Impactful
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.stat-bar-container {
+  position: relative;
+  height: 16px;
+  background: var(--color-gb-shadow);
+  border: 2px solid var(--color-gb-dark);
+  overflow: hidden;
+  box-shadow:
+    inset 2px 2px 0 rgba(0, 0, 0, 0.5),
+    inset -1px -1px 0 var(--color-gb-dark);
+}
+
+.stat-bar-fill {
+  height: 100%;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.stat-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.3) 0%,
+    transparent 100%
+  );
+}
+
+/* Stat-specific colors with glow */
+.stat-money .stat-bar-fill {
+  background: linear-gradient(90deg, #b8860b, #ffd700);
+  box-shadow: 0 0 10px var(--color-stat-money-glow);
+}
+
+.stat-stability .stat-bar-fill {
+  background: linear-gradient(90deg, #2196f3, #4fc3f7);
+  box-shadow: 0 0 10px var(--color-stat-stability-glow);
+}
+
+.stat-status .stat-bar-fill {
+  background: linear-gradient(90deg, #9c27b0, #e040fb);
+  box-shadow: 0 0 10px var(--color-stat-status-glow);
+}
+
+.stat-health .stat-bar-fill {
+  background: linear-gradient(90deg, #2e7d32, #66bb6a);
+  box-shadow: 0 0 10px var(--color-stat-health-glow);
+}
+
+.stat-stress .stat-bar-fill {
+  background: linear-gradient(90deg, #c62828, #ef5350);
+  box-shadow: 0 0 10px var(--color-stat-stress-glow);
+}
+
+.stat-freedom .stat-bar-fill {
+  background: linear-gradient(90deg, #e65100, #ff9800);
+  box-shadow: 0 0 10px var(--color-stat-freedom-glow);
+}
+
+.stat-exposure .stat-bar-fill {
+  background: linear-gradient(90deg, #616161, #9e9e9e);
+  box-shadow: 0 0 10px var(--color-stat-exposure-glow);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATIONS - Cinematic & Impactful
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Blink cursor */
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
 
-/* Fade in */
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 .cursor-blink {
   display: inline-block;
-  width: 8px;
-  height: 2px;
-  background: var(--color-gb-white);
-  margin-left: 2px;
+  width: 10px;
+  height: 3px;
+  background: var(--color-gb-lightest);
+  margin-left: 4px;
   animation: blink 0.6s step-end infinite;
+  box-shadow: 0 0 10px var(--color-gb-glow);
 }
 
-/* Stat button pulse */
-@keyframes stat-pulse {
-  0%, 100% {
-    background: var(--color-gb-black);
-    color: var(--color-gb-white);
-    border-color: var(--color-gb-light);
-    box-shadow: 0 0 4px rgba(139, 172, 15, 0.2);
+/* Fade in with slide */
+@keyframes fade-in {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px);
   }
-  50% {
-    background: var(--color-gb-dark);
-    color: var(--color-gb-white);
-    border-color: var(--color-gb-white);
-    box-shadow: 0 0 12px rgba(155, 188, 15, 0.5);
-  }
-}
-
-.stat-pulse {
-  animation: stat-pulse 2s ease-in-out infinite;
-}
-
-/* Close call flash */
-@keyframes close-call-flash {
-  0% { opacity: 0; }
-  15% { opacity: 1; }
-  70% { opacity: 1; }
-  100% { opacity: 0; }
-}
-
-.close-call-flash {
-  animation: close-call-flash 2s ease-out forwards;
-}
-
-/* RIP fade in */
-@keyframes rip-fade-in {
-  0% {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  100% {
-    opacity: 1;
+  to { 
+    opacity: 1; 
     transform: translateY(0);
   }
 }
 
-.rip-fade-in {
-  animation: rip-fade-in 1.5s ease-out forwards;
-  opacity: 0;
+.fade-in {
+  animation: fade-in 0.5s ease-out forwards;
 }
 
-/* Loader spin */
-@keyframes spin {
-  to { transform: rotate(360deg); }
+/* Glow pulse for emphasis */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(139, 172, 15, 0.4);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(155, 188, 15, 0.8);
+    filter: brightness(1.1);
+  }
 }
 
-.loader-spin {
-  animation: spin 0.8s linear infinite;
+.glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
 }
 
-/* ═══════════════════════════════════════════════
+/* Float animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Screen shake */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Flash effect for impacts */
+@keyframes flash {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.flash {
+  animation: flash 0.3s ease-out;
+}
+
+/* Dramatic reveal */
+@keyframes dramatic-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(30px);
+    filter: blur(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+.dramatic-reveal {
+  animation: dramatic-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Typewriter cursor */
+@keyframes typewriter-cursor {
+  0%, 100% { border-color: var(--color-gb-lightest); }
+  50% { border-color: transparent; }
+}
+
+/* Star twinkle */
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.5);
+  }
+}
+
+.twinkle {
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    TRANSITION EFFECTS
-   ═══════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Pixel dissolve effect using clip-path */
+/* Pixel dissolve */
 @keyframes pixel-dissolve-in {
   0% {
     clip-path: inset(0 100% 0 0);
     opacity: 0;
-  }
-  50% {
-    opacity: 1;
   }
   100% {
     clip-path: inset(0 0 0 0);
@@ -234,37 +538,39 @@ body {
 }
 
 .pixel-dissolve-in {
-  animation: pixel-dissolve-in 0.5s ease-out forwards;
+  animation: pixel-dissolve-in 0.6s ease-out forwards;
 }
 
 .pixel-dissolve-out {
-  animation: pixel-dissolve-out 0.5s ease-in forwards;
+  animation: pixel-dissolve-out 0.6s ease-in forwards;
 }
 
-/* Screen transition fade */
-@keyframes screen-fade {
-  0% { opacity: 0; }
-  20% { opacity: 1; }
-  80% { opacity: 1; }
-  100% { opacity: 0; }
+/* Wipe transition */
+@keyframes wipe-in {
+  0% {
+    clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+  }
+  100% {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
 }
 
-.screen-fade {
-  animation: screen-fade 1s ease-in-out forwards;
+.wipe-in {
+  animation: wipe-in 0.8s ease-out forwards;
 }
 
-/* ═══════════════════════════════════════════════
-   PARTICLE EFFECTS (CSS-based)
-   ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   PARTICLE EFFECTS
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Death particles - ethereal rising */
+/* Death particles - ethereal */
 @keyframes death-particle {
   0% {
     transform: translateY(0) scale(1);
     opacity: 0.8;
   }
   100% {
-    transform: translateY(-100px) scale(0.5);
+    transform: translateY(-150px) scale(0.3);
     opacity: 0;
   }
 }
@@ -273,126 +579,172 @@ body {
   position: absolute;
   width: 4px;
   height: 4px;
-  background: var(--color-gb-white);
-  border-radius: 50%;
+  background: var(--color-gb-lightest);
   pointer-events: none;
-  animation: death-particle 3s ease-out infinite;
+  animation: death-particle 4s ease-out infinite;
+  box-shadow: 0 0 6px var(--color-gb-glow);
 }
 
-/* Close call warning particles */
-@keyframes warning-particle {
-  0% {
-    transform: scale(0);
-    opacity: 1;
+/* Close call warning */
+@keyframes warning-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7);
   }
   50% {
-    transform: scale(1.5);
-    opacity: 0.5;
+    box-shadow: 0 0 0 20px rgba(255, 68, 68, 0);
+  }
+}
+
+.warning-pulse {
+  animation: warning-pulse 1s ease-out infinite;
+}
+
+/* Achievement sparkle */
+@keyframes sparkle {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 1;
   }
   100% {
-    transform: scale(2);
+    transform: scale(1.5) rotate(180deg);
     opacity: 0;
   }
 }
 
-.warning-particle {
+.sparkle {
   position: absolute;
   width: 8px;
   height: 8px;
-  background: var(--color-danger);
-  border-radius: 50%;
-  pointer-events: none;
-  animation: warning-particle 1s ease-out;
+  background: var(--color-gb-glow);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  animation: sparkle 0.6s ease-out forwards;
 }
 
-/* ═══════════════════════════════════════════════
-   DYNAMIC MOOD COLORS
-   ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOOD OVERLAYS
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Danger mood - high stress/exposure */
 .mood-danger {
-  --color-foreground: #ff9999;
-  --color-border: #8B0000;
+  position: relative;
 }
 
-/* Success mood - positive events */
-.mood-success {
-  --color-gb-white: #b5e853;
-  --color-gb-light: #a3d94f;
+.mood-danger::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    transparent 30%,
+    rgba(255, 68, 68, 0.3) 100%
+  );
+  pointer-events: none;
+  animation: warning-pulse 2s ease-in-out infinite;
 }
 
-/* Melancholy mood - death screen */
-.mood-melancholy {
-  filter: saturate(0.6) brightness(0.9);
+.mood-success::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(102, 255, 102, 0.1) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
 }
 
-/* ═══════════════════════════════════════════════
-   STAT BAR ANIMATIONS
-   ═══════════════════════════════════════════════ */
-
-.stat-bar-fill {
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+.mood-sad {
+  filter: saturate(0.5) brightness(0.8);
 }
 
-/* Stat change flash */
-@keyframes stat-increase {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.5); }
+/* ═══════════════════════════════════════════════════════════════════════════
+   SPECIAL SCREENS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Death screen memorial */
+.memorial-card {
+  background: linear-gradient(
+    180deg,
+    var(--color-gb-darkest) 0%,
+    var(--color-gb-shadow) 100%
+  );
+  border: 4px double var(--color-gb-light);
+  box-shadow:
+    0 0 60px rgba(139, 172, 15, 0.3),
+    inset 0 0 60px rgba(0, 0, 0, 0.5);
 }
 
-@keyframes stat-decrease {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(0.7) hue-rotate(-30deg); }
+/* Title screen gradient */
+.title-gradient {
+  background: linear-gradient(
+    180deg,
+    var(--color-gb-darkest) 0%,
+    var(--color-gb-shadow) 30%,
+    var(--color-gb-darkest) 70%,
+    var(--color-gb-shadow) 100%
+  );
 }
 
-.stat-increase {
-  animation: stat-increase 0.3s ease-out;
+/* Age badge */
+.age-badge {
+  background: var(--color-gb-darkest);
+  border: 2px solid var(--color-gb-light);
+  padding: 4px 8px;
+  font-size: 8px;
+  box-shadow:
+    0 0 10px rgba(139, 172, 15, 0.4),
+    inset 0 0 10px rgba(139, 172, 15, 0.1);
 }
 
-.stat-decrease {
-  animation: stat-decrease 0.3s ease-out;
-}
-
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════
    RESPONSIVE STYLES
-   ═══════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 @media (max-width: 640px) {
-  .game-wrapper {
-    border-width: 2px;
-    aspect-ratio: auto;
-    height: 100vh;
-    max-height: 100vh;
-  }
-}
-
-@media (max-height: 500px) {
   .dialogue-box {
-    min-height: 60px;
-    max-height: 90px;
+    padding: 12px;
+    border-width: 3px;
+  }
+  
+  .btn-pixel {
+    padding: 8px 16px;
+    font-size: 8px;
   }
 }
 
-/* Scrollbar styling */
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-gb-black);
+  background: var(--color-gb-shadow);
+  border: 1px solid var(--color-gb-dark);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-gb-dark);
-  border-radius: 0;
+  background: linear-gradient(
+    180deg,
+    var(--color-gb-dark) 0%,
+    var(--color-gb-darkest) 100%
+  );
+  border: 1px solid var(--color-gb-light);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gb-light);
+  background: var(--color-gb-dark);
+  box-shadow: 0 0 10px var(--color-gb-glow);
 }
 
-/* Font utility class */
-.font-pixel {
-  font-family: var(--font-pixel);
+/* ═══════════════════════════════════════════════════════════════════════════
+   SELECTION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+::selection {
+  background: var(--color-gb-light);
+  color: var(--color-gb-darkest);
 }

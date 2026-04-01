@@ -13,6 +13,37 @@ interface StatBarProps {
   compact?: boolean;
 }
 
+const STAT_COLORS: Record<StatType, { gradient: string; glow: string }> = {
+  money: { 
+    gradient: "linear-gradient(90deg, #b8860b, #ffd700, #ffe44d)", 
+    glow: "0 0 12px rgba(255, 215, 0, 0.6)" 
+  },
+  stability: { 
+    gradient: "linear-gradient(90deg, #1976d2, #4fc3f7, #81d4fa)", 
+    glow: "0 0 12px rgba(79, 195, 247, 0.6)" 
+  },
+  status: { 
+    gradient: "linear-gradient(90deg, #7b1fa2, #e040fb, #ea80fc)", 
+    glow: "0 0 12px rgba(224, 64, 251, 0.6)" 
+  },
+  health: { 
+    gradient: "linear-gradient(90deg, #2e7d32, #66bb6a, #81c784)", 
+    glow: "0 0 12px rgba(102, 187, 106, 0.6)" 
+  },
+  stress: { 
+    gradient: "linear-gradient(90deg, #c62828, #ef5350, #e57373)", 
+    glow: "0 0 12px rgba(239, 83, 80, 0.6)" 
+  },
+  freedom: { 
+    gradient: "linear-gradient(90deg, #e65100, #ff9800, #ffb74d)", 
+    glow: "0 0 12px rgba(255, 152, 0, 0.6)" 
+  },
+  exposure: { 
+    gradient: "linear-gradient(90deg, #424242, #9e9e9e, #bdbdbd)", 
+    glow: "0 0 12px rgba(158, 158, 158, 0.4)" 
+  },
+};
+
 export function StatBar({
   stat,
   value,
@@ -23,25 +54,28 @@ export function StatBar({
   const [displayValue, setDisplayValue] = useState(value);
   const [isAnimating, setIsAnimating] = useState(false);
   const [changeDirection, setChangeDirection] = useState<"up" | "down" | null>(null);
+  const [showFlash, setShowFlash] = useState(false);
 
   const config = STAT_CONFIG[stat];
+  const colors = STAT_COLORS[stat];
   const clampedValue = Math.max(0, Math.min(100, displayValue));
 
   useEffect(() => {
     if (previousValue !== undefined && previousValue !== value) {
       setIsAnimating(true);
       setChangeDirection(value > previousValue ? "up" : "down");
+      setShowFlash(true);
 
       // Animate the value change
       const startValue = previousValue;
       const endValue = value;
-      const duration = 500;
+      const duration = 600;
       const startTime = Date.now();
 
       const animate = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
 
         setDisplayValue(startValue + (endValue - startValue) * eased);
 
@@ -49,7 +83,10 @@ export function StatBar({
           requestAnimationFrame(animate);
         } else {
           setIsAnimating(false);
-          setTimeout(() => setChangeDirection(null), 300);
+          setTimeout(() => {
+            setChangeDirection(null);
+            setShowFlash(false);
+          }, 400);
         }
       };
 
@@ -59,83 +96,98 @@ export function StatBar({
     }
   }, [value, previousValue]);
 
-  // Determine bar color based on stat type and value
-  const getBarColor = () => {
-    // High exposure or stress is bad
-    if (stat === "exposure" || stat === "stress") {
-      if (clampedValue >= 70) return "bg-gb-darkest";
-      if (clampedValue >= 40) return "bg-gb-dark";
-      return "bg-gb-light";
-    }
-    // Low health is bad
-    if (stat === "health") {
-      if (clampedValue <= 30) return "bg-gb-darkest";
-      if (clampedValue <= 60) return "bg-gb-dark";
-      return "bg-gb-light";
-    }
-    // Default: higher is better
-    if (clampedValue >= 70) return "bg-gb-light";
-    if (clampedValue >= 40) return "bg-gb-dark";
-    return "bg-gb-darkest";
-  };
+  // Warning state for dangerous values
+  const isWarning = 
+    (stat === "stress" && clampedValue >= 70) ||
+    (stat === "exposure" && clampedValue >= 70) ||
+    (stat === "health" && clampedValue <= 30);
 
   return (
     <div
       className={cn(
-        "flex items-center gap-2",
-        compact ? "gap-1" : "gap-2"
+        "flex items-center gap-2 transition-all duration-200",
+        compact ? "gap-1" : "gap-2",
+        showFlash && changeDirection === "up" && "translate-x-0.5",
+        showFlash && changeDirection === "down" && "-translate-x-0.5"
       )}
     >
       {showLabel && (
         <div
           className={cn(
-            "flex items-center gap-1 font-mono uppercase",
-            compact ? "w-16 text-[8px]" : "w-20 text-[10px]"
+            "flex items-center gap-1 font-pixel uppercase",
+            compact ? "w-14 text-[7px]" : "w-16 text-[8px]"
           )}
         >
-          <span className="text-base leading-none">{config.icon}</span>
-          <span className="truncate text-gb-dark">{config.label}</span>
+          <span 
+            className={cn(
+              "text-sm leading-none transition-transform duration-200",
+              showFlash && "scale-125"
+            )}
+            style={{
+              filter: isWarning ? 'drop-shadow(0 0 4px rgba(239, 83, 80, 0.8))' : undefined
+            }}
+          >
+            {config.icon}
+          </span>
+          <span className="truncate text-gb-light/80">{config.label}</span>
         </div>
       )}
 
       <div className="relative flex-1">
-        {/* Background track */}
+        {/* Background track with depth */}
         <div
           className={cn(
-            "w-full border-2 border-gb-dark bg-gb-lightest",
-            compact ? "h-2" : "h-3"
+            "stat-bar-container w-full",
+            compact ? "h-3" : "h-4",
+            isWarning && "warning-pulse"
           )}
         >
-          {/* Filled portion */}
+          {/* Filled portion with gradient */}
           <div
             className={cn(
-              "h-full transition-all duration-300",
-              getBarColor(),
+              "stat-bar-fill h-full transition-all duration-300",
               isAnimating && "animate-pulse"
             )}
-            style={{ width: `${clampedValue}%` }}
+            style={{ 
+              width: `${clampedValue}%`,
+              background: colors.gradient,
+              boxShadow: clampedValue > 10 ? colors.glow : 'none'
+            }}
           />
         </div>
 
-        {/* Change indicator */}
+        {/* Change indicator with animation */}
         {changeDirection && (
           <div
             className={cn(
-              "absolute -right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold transition-opacity",
-              changeDirection === "up" ? "text-gb-light" : "text-gb-darkest"
+              "absolute -right-5 top-1/2 -translate-y-1/2 font-pixel text-[10px] font-bold",
+              "transition-all duration-200",
+              changeDirection === "up" 
+                ? "text-green-400 animate-bounce" 
+                : "text-red-400 animate-bounce"
             )}
+            style={{
+              textShadow: changeDirection === "up" 
+                ? '0 0 8px rgba(74, 222, 128, 0.8)'
+                : '0 0 8px rgba(248, 113, 113, 0.8)'
+            }}
           >
-            {changeDirection === "up" ? "▲" : "▼"}
+            {changeDirection === "up" ? "+" : "-"}
           </div>
         )}
       </div>
 
-      {/* Value display */}
+      {/* Value display with glow on change */}
       <div
         className={cn(
-          "w-8 text-right font-mono text-gb-dark",
-          compact ? "text-[8px]" : "text-[10px]"
+          "w-7 text-right font-pixel text-gb-light",
+          compact ? "text-[7px]" : "text-[8px]",
+          showFlash && "brightness-150"
         )}
+        style={{
+          textShadow: showFlash ? '0 0 8px rgba(155, 188, 15, 0.8)' : undefined,
+          transition: 'all 0.2s ease'
+        }}
       >
         {Math.round(clampedValue)}
       </div>

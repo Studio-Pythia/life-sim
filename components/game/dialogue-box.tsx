@@ -35,7 +35,6 @@ export function DialogueBox({
   // Play typing sound effect
   useEffect(() => {
     if (displayedText.length > lastLength.current && !instant) {
-      // Play sound every few characters to not be annoying
       if (displayedText.length % 3 === 0) {
         playSound("text");
       }
@@ -46,8 +45,8 @@ export function DialogueBox({
   return (
     <div
       className={cn(
-        "relative border-4 border-gb-dark bg-gb-lightest p-4",
-        "font-mono text-sm leading-relaxed text-gb-darkest",
+        "dialogue-box relative",
+        "font-pixel text-sm leading-relaxed text-gb-lightest",
         "cursor-pointer select-none",
         className
       )}
@@ -60,26 +59,38 @@ export function DialogueBox({
         }
       }}
     >
-      {/* Corner decorations */}
-      <div className="absolute -left-1 -top-1 size-2 bg-gb-dark" />
-      <div className="absolute -right-1 -top-1 size-2 bg-gb-dark" />
-      <div className="absolute -bottom-1 -left-1 size-2 bg-gb-dark" />
-      <div className="absolute -bottom-1 -right-1 size-2 bg-gb-dark" />
+      {/* Decorative corner pieces */}
+      <div className="absolute -left-1 -top-1 w-3 h-3 border-l-2 border-t-2 border-gb-glow opacity-60" />
+      <div className="absolute -right-1 -top-1 w-3 h-3 border-r-2 border-t-2 border-gb-glow opacity-60" />
+      <div className="absolute -bottom-1 -left-1 w-3 h-3 border-l-2 border-b-2 border-gb-glow opacity-60" />
+      <div className="absolute -bottom-1 -right-1 w-3 h-3 border-r-2 border-b-2 border-gb-glow opacity-60" />
 
       {/* Text content */}
-      <p className="min-h-[3em]">
+      <p className="min-h-[4em] relative z-10">
         {displayedText}
         {showCursor && !isComplete && (
-          <span className="animate-blink ml-0.5 inline-block h-4 w-2 bg-gb-darkest" />
+          <span 
+            className="cursor-blink ml-1"
+            style={{ verticalAlign: 'middle' }}
+          />
         )}
       </p>
 
       {/* Click to continue indicator */}
       {isComplete && (
-        <div className="absolute bottom-2 right-4 animate-bounce text-xs text-gb-dark">
-          ▼
+        <div 
+          className="absolute bottom-3 right-4 text-gb-light"
+          style={{
+            animation: 'float 1s ease-in-out infinite',
+            textShadow: '0 0 10px rgba(139, 172, 15, 0.6)'
+          }}
+        >
+          <span className="font-pixel text-xs">▼</span>
         </div>
       )}
+
+      {/* Subtle inner glow */}
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-gb-light/5 via-transparent to-transparent" />
     </div>
   );
 }

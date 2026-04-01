@@ -46,7 +46,36 @@ Migrated from monolithic 1558-line HTML to modern Next.js 15 application:
 
 ---
 
-## Phase 3: Aging Mechanics & Backend Fixes (NEXT)
+## Phase 2B: Visual Excellence & Connectivity (NEXT - URGENT)
+
+### 2B.1 Visual Excellence (10x Better)
+- [ ] Regenerate backgrounds with consistent Game Boy green palette
+- [ ] Add depth and glow effects to all UI elements  
+- [ ] Create proper pixel art borders, frames, and decorations
+- [ ] Add animated background elements (floating particles, ambient motion)
+- [ ] Implement dramatic lighting effects for mood shifts
+- [ ] Polish all buttons, panels, and text boxes with bevels/shadows
+- [ ] Add screen shake, flash effects for impactful moments
+- [ ] Create stunning death screen with memorial aesthetic
+
+### 2B.2 System Connectivity
+- [ ] Connect main game to leaderboard (show ranking after death)
+- [ ] Create "Lives of the Lived" gallery - browsable past lives
+- [ ] Add "View This Life" feature from leaderboard entries
+- [ ] Unified navigation between game, leaderboard, and lives gallery
+- [ ] Share life story functionality (generate shareable card/link)
+- [ ] "Continue exploring" prompts after death
+
+### 2B.3 Polish & Immersion
+- [ ] Dramatic intro sequence for new life
+- [ ] Age milestone celebrations (18, 50, 100 years)
+- [ ] Achievement pop-ups with particle effects
+- [ ] Smooth transitions between all screens
+- [ ] Loading states that feel intentional, not broken
+
+---
+
+## Phase 3: Aging Mechanics & Backend Fixes
 
 ### 3.1 Age Jump System
 - [ ] Review and fix age jump distribution (currently too aggressive in early years)

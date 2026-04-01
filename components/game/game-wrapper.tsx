@@ -14,8 +14,6 @@ import { TurnDisplay } from "./turn-display";
 import { DeathScreen } from "./death-screen";
 import { CloseCallOverlay } from "./close-call-overlay";
 import { CharacterDisplay } from "./character-display";
-import { CRTEffect } from "@/components/effects/crt-effect";
-import { PixelTransition } from "@/components/effects/pixel-transition";
 import { SceneAtmosphere } from "@/components/effects/scene-atmosphere";
 import { cn } from "@/lib/utils";
 
@@ -110,11 +108,8 @@ export function GameWrapper() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gb-darkest">
-      {/* CRT Effect overlay - always present */}
-      <CRTEffect intensity={screenState === "title" ? 0.4 : 0.3} />
-
-      {/* Pixel transition effect */}
-      <PixelTransition isTransitioning={isTransitioning} type="dissolve" />
+      {/* Global CRT scanlines */}
+      <div className="fixed inset-0 pointer-events-none z-[100] crt-scanlines opacity-60" />
 
       {/* Close call overlay */}
       {showCloseCall && closeCallMessage && (
@@ -131,19 +126,32 @@ export function GameWrapper() {
 
       {/* Main Game */}
       {screenState === "playing" && (
-        <div className="flex min-h-screen flex-col bg-gb-lightest">
-          {/* Top HUD */}
-          <header className="border-b-2 border-gb-dark bg-gb-lightest p-2">
+        <div className="flex min-h-screen flex-col bg-gb-darkest">
+          {/* Top HUD with glow */}
+          <header 
+            className="relative z-20 border-b-2 border-gb-dark p-2"
+            style={{
+              background: 'linear-gradient(180deg, rgba(48, 98, 48, 0.8) 0%, rgba(15, 56, 15, 0.9) 100%)',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(139, 172, 15, 0.2)',
+            }}
+          >
             <GameHUD />
           </header>
 
           {/* Main game area */}
           <div className="flex flex-1 flex-col lg:flex-row">
             {/* Left sidebar - Stats and Character (desktop) */}
-            <aside className="hidden w-64 flex-col gap-4 border-r-2 border-gb-dark bg-gb-lightest/50 p-4 lg:flex">
+            <aside 
+              className="hidden w-72 flex-col gap-4 border-r-2 border-gb-dark p-4 lg:flex"
+              style={{
+                background: 'linear-gradient(90deg, rgba(15, 56, 15, 0.95) 0%, rgba(15, 56, 15, 0.8) 100%)',
+              }}
+            >
               {/* Character display */}
               {gender && (
-                <div className="flex justify-center border-b-2 border-gb-dark pb-4">
+                <div 
+                  className="flex justify-center pb-4 mb-2 border-b border-gb-dark/50"
+                >
                   <CharacterDisplay
                     gender={gender as "male" | "female"}
                     age={age}
@@ -152,14 +160,23 @@ export function GameWrapper() {
                   />
                 </div>
               )}
+              
               <StatsPanel />
-              <RelationshipsPanel />
+              
+              <div className="mt-auto">
+                <RelationshipsPanel />
+              </div>
             </aside>
 
             {/* Center - Game canvas and narrative */}
-            <main className="flex flex-1 flex-col">
+            <main className="flex flex-1 flex-col relative">
               {/* Game canvas with atmosphere */}
-              <div className="relative aspect-[3/2] w-full border-b-2 border-gb-dark">
+              <div 
+                className={cn(
+                  "relative aspect-[3/2] w-full border-b-2 border-gb-dark overflow-hidden transition-all duration-500",
+                  isTransitioning && "opacity-80 scale-[1.02]"
+                )}
+              >
                 <GameCanvas className="absolute inset-0" />
                 
                 {/* Scene atmosphere overlay */}
@@ -171,7 +188,7 @@ export function GameWrapper() {
 
                 {/* Mobile character display */}
                 {gender && (
-                  <div className="absolute bottom-2 right-2 lg:hidden">
+                  <div className="absolute bottom-3 right-3 lg:hidden">
                     <CharacterDisplay
                       gender={gender as "male" | "female"}
                       age={age}
@@ -181,50 +198,100 @@ export function GameWrapper() {
                 )}
 
                 {/* Mobile stats overlay */}
-                <div className="absolute bottom-2 left-2 right-16 lg:hidden">
+                <div className="absolute bottom-3 left-3 right-20 lg:hidden">
                   <StatsPanel compact />
                 </div>
               </div>
 
               {/* Narrative and choices */}
-              <div className="flex-1 bg-gb-lightest p-4">
+              <div 
+                className="flex-1 p-4 lg:p-6"
+                style={{
+                  background: 'linear-gradient(180deg, rgba(15, 56, 15, 0.95) 0%, rgba(7, 31, 7, 0.98) 100%)',
+                }}
+              >
                 <TurnDisplay />
               </div>
             </main>
 
             {/* Right sidebar - Dream display (desktop) */}
-            <aside className="hidden w-64 border-l-2 border-gb-dark bg-gb-lightest/50 p-4 xl:flex xl:flex-col">
+            <aside 
+              className="hidden w-64 border-l-2 border-gb-dark p-4 xl:flex xl:flex-col"
+              style={{
+                background: 'linear-gradient(270deg, rgba(15, 56, 15, 0.95) 0%, rgba(15, 56, 15, 0.8) 100%)',
+              }}
+            >
               <div className="sticky top-4">
-                <h3 className="mb-2 font-pixel text-[10px] uppercase tracking-wider text-gb-dark">
-                  Your Dream
-                </h3>
-                <div className="border-2 border-gb-dark bg-gb-darkest p-3">
-                  <p className="font-pixel text-xs italic leading-relaxed text-gb-light">
+                {/* Dream card */}
+                <div className="glow-border p-4 mb-6">
+                  <h3 className="mb-3 font-pixel text-[9px] uppercase tracking-wider text-gb-light border-b border-gb-dark/50 pb-2">
+                    Your Dream
+                  </h3>
+                  <p className="font-pixel text-[10px] italic leading-relaxed text-gb-lightest">
                     &quot;{dream}&quot;
                   </p>
                 </div>
                 
                 {/* Life progress indicator */}
-                <div className="mt-4">
-                  <h3 className="mb-2 font-pixel text-[10px] uppercase tracking-wider text-gb-dark">
+                <div className="panel-inset p-3">
+                  <h3 className="mb-3 font-pixel text-[9px] uppercase tracking-wider text-gb-light">
                     Life Journey
                   </h3>
-                  <div className="h-2 w-full overflow-hidden rounded-full border border-gb-dark bg-gb-darkest">
+                  
+                  {/* Progress bar */}
+                  <div className="relative h-4 w-full overflow-hidden border-2 border-gb-dark bg-gb-shadow">
                     <div 
-                      className="h-full bg-gb-light transition-all duration-500"
-                      style={{ width: `${Math.min((age / 100) * 100, 100)}%` }}
+                      className="h-full transition-all duration-700 ease-out"
+                      style={{ 
+                        width: `${Math.min((age / 100) * 100, 100)}%`,
+                        background: 'linear-gradient(90deg, #306230, #8bac0f, #9bbc0f)',
+                        boxShadow: '0 0 10px rgba(139, 172, 15, 0.5)',
+                      }}
                     />
+                    {/* Milestone markers */}
+                    <div className="absolute inset-0 flex">
+                      {[18, 40, 65, 100].map((milestone) => (
+                        <div 
+                          key={milestone}
+                          className="absolute top-0 bottom-0 w-px bg-gb-dark/50"
+                          style={{ left: `${milestone}%` }}
+                        />
+                      ))}
+                    </div>
                   </div>
-                  <p className="mt-1 text-center font-pixel text-[8px] text-gb-dark">
-                    {age} / 100+ years
-                  </p>
+                  
+                  <div className="mt-2 flex justify-between">
+                    <span className="font-pixel text-[8px] text-gb-dark">0</span>
+                    <span 
+                      className="font-pixel text-[10px] text-gb-light"
+                      style={{ textShadow: '0 0 8px rgba(139, 172, 15, 0.6)' }}
+                    >
+                      Age {age}
+                    </span>
+                    <span className="font-pixel text-[8px] text-gb-dark">100+</span>
+                  </div>
+                  
+                  {/* Life stage label */}
+                  <div className="mt-3 text-center">
+                    <span className="font-pixel text-[8px] uppercase tracking-wider text-gb-dark">
+                      {age < 13 ? "Childhood" : 
+                       age < 20 ? "Adolescence" : 
+                       age < 40 ? "Young Adult" : 
+                       age < 65 ? "Midlife" : "Elder Years"}
+                    </span>
+                  </div>
                 </div>
               </div>
             </aside>
           </div>
 
           {/* Mobile relationships bar */}
-          <footer className="border-t-2 border-gb-dark bg-gb-lightest p-2 lg:hidden">
+          <footer 
+            className="border-t-2 border-gb-dark p-2 lg:hidden"
+            style={{
+              background: 'linear-gradient(0deg, rgba(48, 98, 48, 0.8) 0%, rgba(15, 56, 15, 0.9) 100%)',
+            }}
+          >
             <RelationshipsPanel compact />
           </footer>
         </div>
@@ -243,15 +310,39 @@ export function GameWrapper() {
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="size-3 animate-bounce bg-gb-light"
-                  style={{ animationDelay: `${i * 150}ms` }}
+                  className="size-4 bg-gb-light"
+                  style={{
+                    animation: 'bounce 0.6s ease-in-out infinite',
+                    animationDelay: `${i * 0.15}s`,
+                    boxShadow: '0 0 15px rgba(139, 172, 15, 0.6)',
+                  }}
                 />
               ))}
             </div>
-            <p className="font-pixel text-sm text-gb-light">Generating your story...</p>
+            <p 
+              className="font-pixel text-sm text-gb-light"
+              style={{ textShadow: '0 0 10px rgba(139, 172, 15, 0.5)' }}
+            >
+              Generating your story...
+            </p>
           </div>
         </div>
       )}
+
+      {/* Transition overlay */}
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-gb-darkest pointer-events-none transition-opacity duration-500",
+          isTransitioning ? "opacity-100" : "opacity-0"
+        )}
+      />
+
+      <style jsx>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+      `}</style>
     </div>
   );
 }
