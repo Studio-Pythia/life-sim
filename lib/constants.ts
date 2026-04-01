@@ -120,3 +120,78 @@ export const LOADING_MESSAGES = [
   "Calculating destiny...",
   "Simulating choices...",
 ];
+
+// ═══════════════════════════════════════════════
+// BACKGROUND IMAGES
+// ═══════════════════════════════════════════════
+
+export const BACKGROUNDS: Record<string, string> = {
+  nursery: "/backgrounds/nursery.jpg",
+  kitchen: "/backgrounds/kitchen.jpg",
+  classroom: "/backgrounds/classroom.jpg",
+  bedroom: "/backgrounds/bedroom.jpg",
+  dorm: "/backgrounds/dorm.jpg",
+  office: "/backgrounds/office.jpg",
+  nice_home: "/backgrounds/nice_home.jpg",
+  rundown: "/backgrounds/rundown.jpg",
+  prison: "/backgrounds/prison.jpg",
+  hospital: "/backgrounds/hospital.jpg",
+  bar: "/backgrounds/bar.jpg",
+  park: "/backgrounds/park.jpg",
+};
+
+// Location keywords to background mapping
+export const BACKGROUND_MAPPING: Record<string, string> = {
+  "nursery,crib,baby room": "nursery",
+  "kitchen,cooking,dinner": "kitchen",
+  "school,classroom,class,education,learning": "classroom",
+  "bedroom,bed,sleep,room": "bedroom",
+  "dorm,college,university,campus": "dorm",
+  "office,work,job,career,business,meeting": "office",
+  "mansion,nice home,wealthy,luxury,estate": "nice_home",
+  "apartment,rundown,poor,shabby,small": "rundown",
+  "jail,prison,cell,arrested,crime": "prison",
+  "hospital,doctor,medical,clinic,emergency": "hospital",
+  "bar,pub,club,party,drink,nightclub": "bar",
+  "park,outside,outdoor,nature,garden,walk": "park",
+};
+
+// ═══════════════════════════════════════════════
+// CITIES
+// ═══════════════════════════════════════════════
+
+export const CITIES = [
+  "New York",
+  "Los Angeles",
+  "Chicago",
+  "Houston",
+  "Miami",
+  "Seattle",
+  "Denver",
+  "Boston",
+  "Atlanta",
+  "San Francisco",
+  "Detroit",
+  "Phoenix",
+];
+
+// ═══════════════════════════════════════════════
+// STAT CONFIGURATION
+// ═══════════════════════════════════════════════
+
+export const STAT_CONFIG = {
+  money: { label: "Money", icon: "💰", color: "#FFD700" },
+  stability: { label: "Stability", icon: "🏠", color: "#4FC3F7" },
+  status: { label: "Status", icon: "⭐", color: "#E040FB" },
+  health: { label: "Health", icon: "❤️", color: "#66BB6A" },
+  stress: { label: "Stress", icon: "😰", color: "#EF5350" },
+  freedom: { label: "Freedom", icon: "🕊️", color: "#FF9800" },
+  exposure: { label: "Exposure", icon: "⚠️", color: "#BDBDBD" },
+} as const;
+
+// ═══════════════════════════════════════════════
+// API URL
+// ═══════════════════════════════════════════════
+
+export const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://life-sim-production.up.railway.app";

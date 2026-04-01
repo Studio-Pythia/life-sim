@@ -6,10 +6,19 @@
 
 @theme inline {
   /* Game Boy Color Palette - Original DMG-01 */
-  --color-gb-black: #0f380f;
+  --color-gb-darkest: #0f380f;
   --color-gb-dark: #306230;
   --color-gb-light: #8bac0f;
+  --color-gb-lightest: #9bbc0f;
+  
+  /* Legacy aliases */
+  --color-gb-black: #0f380f;
   --color-gb-white: #9bbc0f;
+  
+  /* Animations */
+  --animate-blink: blink 0.6s step-end infinite;
+  --animate-fade-in: fade-in 0.3s ease-out forwards;
+  --animate-crt-flicker: crt-flicker 8s infinite;
   
   /* Semantic colors mapped to Game Boy palette */
   --color-background: var(--color-gb-black);
@@ -39,9 +48,10 @@
   --color-stat-freedom: #FF9800;
   --color-stat-exposure: #BDBDBD;
   
-  /* Typography */
-  --font-sans: "Press Start 2P", monospace;
-  --font-mono: "Press Start 2P", monospace;
+  /* Typography - use CSS variable from next/font */
+  --font-sans: var(--font-press-start, "Press Start 2P"), monospace;
+  --font-mono: var(--font-press-start, "Press Start 2P"), monospace;
+  --font-pixel: var(--font-press-start, "Press Start 2P"), monospace;
   
   /* Spacing and sizing */
   --radius: 0px;
@@ -61,14 +71,11 @@ html {
 }
 
 body {
-  background: #0a0a0a;
+  background: var(--color-gb-darkest);
   color: var(--color-foreground);
   font-family: var(--font-sans);
-  overflow: hidden;
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  align-items: center;
+  min-height: 100vh;
+  overflow-x: hidden;
   justify-content: center;
 }
 
@@ -121,6 +128,12 @@ body {
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
+}
+
+/* Fade in */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .cursor-blink {

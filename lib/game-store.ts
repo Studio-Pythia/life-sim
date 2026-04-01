@@ -1,395 +1,444 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { generateId } from "./utils";
-import { INITIAL_STATS } from "./constants";
-import { apiTurn, apiApply, apiEpilogue, logAnalytics } from "./api";
-import type {
-  Stats,
-  Relationship,
-  Scenario,
-  StatSnapshot,
-  GameConfig,
-  GamePhase,
-} from "./types";
+import type { Stats, Relationship, TurnData, Epilogue, MoodType, GameState as GameStateType } from "./types";
+import { API_URL } from "./constants";
 
-interface GameState {
-  // Player configuration
-  gender: "male" | "female";
-  city: string;
-  desire: string;
+// ═══════════════════════════════════════════════
+// INITIAL STATS
+// ═══════════════════════════════════════════════
 
+const INITIAL_STATS: Stats = {
+  money: 50,
+  stability: 50,
+  status: 50,
+  health: 50,
+  stress: 50,
+  freedom: 50,
+  exposure: 50,
+};
+
+// ═══════════════════════════════════════════════
+// STORE INTERFACE
+// ═══════════════════════════════════════════════
+
+interface GameStore {
   // Game state
+  gameState: GameStateType;
+  sessionId: string | null;
+  runId: string | null;
+
+  // Player config
+  gender: "male" | "female" | null;
+  city: string;
+  dream: string;
+
+  // Game data
   age: number;
   stats: Stats;
+  previousStats: Stats | null;
   relationships: Relationship[];
-  history: string[];
-  statHistory: StatSnapshot[];
-  location: string;
+  closeCalls: number;
+  closeCallMessage: string | null;
 
-  // Session tracking
-  sessionId: string;
-  runId: string;
-
-  // UI state
-  phase: GamePhase;
-  currentScenario: Scenario | null;
+  // Current turn
+  currentTurn: TurnData | null;
   isLoading: boolean;
   error: string | null;
-  showStats: boolean;
-  closeCallCount: number;
-  showCloseCall: boolean;
-  deathCause: string;
-  epilogueText: string;
 
-  // Audio state
-  isMuted: boolean;
-  volume: number;
+  // Death/epilogue
+  epilogue: Epilogue | null;
+
+  // UI state
+  mood: MoodType;
+  crtEnabled: boolean;
 
   // Actions
-  startGame: (config: GameConfig) => Promise<void>;
-  makeChoice: (index: number) => Promise<void>;
+  startGame: (gender: "male" | "female", city: string, dream: string) => Promise<void>;
+  makeChoice: (choiceIndex: number) => Promise<void>;
   resetGame: () => void;
-  setShowStats: (show: boolean) => void;
-  setMuted: (muted: boolean) => void;
-  setVolume: (volume: number) => void;
-  clearError: () => void;
-  retryLastAction: () => void;
+  clearCloseCallMessage: () => void;
+  toggleCRT: () => void;
+  setMood: (mood: MoodType) => void;
 }
 
-// Store last failed action for retry
-let lastFailedAction: (() => Promise<void>) | null = null;
+// ═══════════════════════════════════════════════
+// HELPER FUNCTIONS
+// ═══════════════════════════════════════════════
 
-export const useGameStore = create<GameState>()(
+function generateId(): string {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+// ═══════════════════════════════════════════════
+// GAME STORE
+// ═══════════════════════════════════════════════
+
+export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
       // Initial state
-      gender: "female",
+      gameState: "onboarding",
+      sessionId: null,
+      runId: null,
+      gender: null,
       city: "",
-      desire: "",
+      dream: "",
       age: 0,
       stats: { ...INITIAL_STATS },
+      previousStats: null,
       relationships: [],
-      history: [],
-      statHistory: [],
-      location: "",
-      sessionId: "",
-      runId: "",
-      phase: "onboarding",
-      currentScenario: null,
+      closeCalls: 0,
+      closeCallMessage: null,
+      currentTurn: null,
       isLoading: false,
       error: null,
-      showStats: false,
-      closeCallCount: 0,
-      showCloseCall: false,
-      deathCause: "",
-      epilogueText: "",
-      isMuted: false,
-      volume: 0.5,
+      epilogue: null,
+      mood: "neutral",
+      crtEnabled: true,
 
-      startGame: async (config: GameConfig) => {
-        const runId = generateId();
+      // ─────────────────────────────────────────
+      // START GAME
+      // ─────────────────────────────────────────
+      startGame: async (gender, city, dream) => {
         const sessionId = generateId();
+        const runId = generateId();
 
         set({
-          gender: config.gender,
-          city: config.city || "New York",
-          desire: config.desire || "a happy life",
-          location: config.city || "New York",
+          gameState: "loading",
+          sessionId,
+          runId,
+          gender,
+          city,
+          dream,
           age: 0,
           stats: { ...INITIAL_STATS },
+          previousStats: null,
           relationships: [],
-          history: [],
-          statHistory: [],
-          runId,
-          sessionId,
-          phase: "playing",
-          currentScenario: null,
+          closeCalls: 0,
+          closeCallMessage: null,
+          currentTurn: null,
           isLoading: true,
           error: null,
-          closeCallCount: 0,
-          showCloseCall: false,
-          deathCause: "",
-          epilogueText: "",
+          epilogue: null,
+          mood: "neutral",
         });
 
-        logAnalytics({
-          type: "game_start",
-          session_id: sessionId,
-          run_id: runId,
-          data: { gender: config.gender, city: config.city, desire: config.desire },
-        });
+        try {
+          // Start a new game session with the backend
+          const response = await fetch(`${API_URL}/api/start`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              gender,
+              city,
+              desire: dream,
+              session_id: sessionId,
+              run_id: runId,
+            }),
+          });
 
-        await get().doTurn();
+          if (!response.ok) {
+            throw new Error("Failed to start game");
+          }
+
+          const data = await response.json();
+
+          // Get first turn
+          await get().fetchNextTurn(data);
+        } catch (error) {
+          console.error("Start game error:", error);
+          set({
+            gameState: "onboarding",
+            isLoading: false,
+            error: "Failed to start game. Please try again.",
+          });
+        }
       },
 
-      doTurn: async () => {
+      // ─────────────────────────────────────────
+      // FETCH NEXT TURN (internal)
+      // ─────────────────────────────────────────
+      fetchNextTurn: async (startData?: { age?: number; stats?: Stats; relationships?: Relationship[] }) => {
         const state = get();
+
         set({ isLoading: true, error: null });
 
         try {
-          const turnData = await apiTurn({
-            state: {
-              gender: state.gender,
-              city: state.city,
-              desire: state.desire,
-              location: state.location,
-              age: state.age,
-              stats: state.stats,
-              relationships: state.relationships,
-              history: state.history,
-              session_id: state.sessionId,
-              run_id: state.runId,
-            },
+          const response = await fetch(`${API_URL}/api/turn`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              state: {
+                gender: state.gender,
+                city: state.city,
+                desire: state.dream,
+                location: state.city,
+                age: startData?.age ?? state.age,
+                stats: startData?.stats ?? state.stats,
+                relationships: startData?.relationships ?? state.relationships,
+                session_id: state.sessionId,
+                run_id: state.runId,
+              },
+            }),
           });
 
-          if (turnData.error) {
-            throw new Error(turnData.error);
+          if (!response.ok) {
+            throw new Error("Failed to get next turn");
           }
 
-          const newAge = turnData.age_to ?? turnData.age ?? state.age;
-          const newStats = turnData.birth_stats
-            ? { ...state.stats, ...turnData.birth_stats }
+          const data = await response.json();
+
+          // Parse turn data
+          const turnData: TurnData = {
+            narrative: data.scenario?.text || data.text || "Something happened...",
+            choices: data.scenario?.options?.map((o: { label: string }) => o.label) || data.options?.map((o: { label: string }) => o.label) || [],
+            location: data.scenario?.location || data.location || state.city,
+            rawOptions: data.scenario?.options || data.options || [],
+          };
+
+          // Update age if provided
+          const newAge = data.age_to ?? data.age ?? state.age;
+
+          // Update relationships if provided
+          const newRelationships = data.relationships ?? state.relationships;
+
+          // Update stats if birth stats provided
+          const newStats = data.birth_stats
+            ? { ...state.stats, ...normalizeStats(data.birth_stats) }
             : state.stats;
-          const newRelationships = turnData.relationships ?? state.relationships;
-
-          // Record stat snapshot
-          const snapshot: StatSnapshot = {
-            age: newAge,
-            ...newStats,
-          };
-
-          const scenario: Scenario = turnData.scenario ?? {
-            text: turnData.text || "Something happened...",
-            location: turnData.location || state.location,
-            options: turnData.options || [],
-          };
 
           set({
+            gameState: "playing",
             age: newAge,
             stats: newStats,
             relationships: newRelationships,
-            statHistory: [...state.statHistory, snapshot],
-            location: scenario.location || state.location,
-            currentScenario: scenario,
+            currentTurn: turnData,
             isLoading: false,
           });
         } catch (error) {
-          console.error("Turn error:", error);
-          lastFailedAction = () => get().doTurn();
+          console.error("Fetch turn error:", error);
           set({
             isLoading: false,
-            error: "Connection error. Please retry.",
+            error: "Connection error. Please try again.",
           });
         }
       },
 
-      makeChoice: async (index: number) => {
+      // ─────────────────────────────────────────
+      // MAKE CHOICE
+      // ─────────────────────────────────────────
+      makeChoice: async (choiceIndex) => {
         const state = get();
-        if (state.isLoading || !state.currentScenario?.options?.[index]) return;
+        if (state.isLoading || !state.currentTurn) return;
 
-        const option = state.currentScenario.options[index];
-        set({ isLoading: true, error: null });
+        const option = state.currentTurn.rawOptions?.[choiceIndex];
+        if (!option) return;
 
-        // Record choice in history
-        const newHistory = [...state.history, option.label];
-        set({ history: newHistory });
-
-        logAnalytics({
-          type: "choice",
-          session_id: state.sessionId,
-          run_id: state.runId,
-          data: { age: state.age, choice: option.label },
+        set({
+          isLoading: true,
+          error: null,
+          previousStats: { ...state.stats },
         });
 
         try {
-          const applyData = await apiApply({
-            age: state.age,
-            stats: state.stats,
-            effects: option.effects || {},
-            session_id: state.sessionId,
-            run_id: state.runId,
-            death_cause_hint: state.currentScenario.death_cause_hint || "",
-          });
-
-          if (applyData.error) {
-            throw new Error(applyData.error);
-          }
-
-          // Update stats
-          const newStats = applyData.next_stats
-            ? { ...state.stats, ...applyData.next_stats }
-            : state.stats;
-          set({ stats: newStats });
-
-          // Check for death
-          if (applyData.died) {
-            // Record final snapshot
-            const finalSnapshot: StatSnapshot = {
+          // Apply choice effects
+          const response = await fetch(`${API_URL}/api/apply`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
               age: state.age,
-              ...newStats,
-            };
-            set({
-              statHistory: [...get().statHistory, finalSnapshot],
-            });
-
-            logAnalytics({
-              type: "death",
+              stats: state.stats,
+              effects: option.effects || {},
               session_id: state.sessionId,
               run_id: state.runId,
-              data: { age: state.age, cause: applyData.death_cause || "unknown" },
-            });
+              death_cause_hint: "",
+            }),
+          });
 
-            await get().handleDeath(applyData.death_cause || "");
+          if (!response.ok) {
+            throw new Error("Failed to apply choice");
+          }
+
+          const data = await response.json();
+
+          // Update stats
+          const newStats = data.next_stats
+            ? normalizeStats(data.next_stats)
+            : state.stats;
+
+          // Check for death
+          if (data.died) {
+            set({ stats: newStats, mood: "danger" });
+            await get().handleDeath(data.death_cause || "unknown causes");
             return;
           }
 
-          // Handle close call
-          if (applyData.close_call) {
-            logAnalytics({
-              type: "close_call",
-              session_id: state.sessionId,
-              run_id: state.runId,
-              data: { age: state.age, count: applyData.close_call_count },
-            });
+          // Check for close call
+          if (data.close_call) {
             set({
-              closeCallCount: applyData.close_call_count || 0,
-              showCloseCall: true,
+              stats: newStats,
+              closeCalls: data.close_call_count || state.closeCalls + 1,
+              closeCallMessage: data.close_call_message || "You narrowly escaped death!",
+              mood: "danger",
             });
-            // Hide after animation
-            setTimeout(() => set({ showCloseCall: false }), 2200);
+          } else {
+            // Determine mood based on stat changes
+            const statDiff = Object.keys(newStats).reduce((acc, key) => {
+              const k = key as keyof Stats;
+              return acc + (newStats[k] - state.stats[k]);
+            }, 0);
+
+            set({
+              stats: newStats,
+              mood: statDiff > 10 ? "success" : statDiff < -10 ? "sad" : "neutral",
+            });
           }
 
-          // Handle relationship changes
-          if (state.currentScenario.relationship_changes) {
-            const rc = state.currentScenario.relationship_changes;
-            if (rc.replace_index !== null && rc.replace_index !== undefined) {
-              const relationships = [...get().relationships];
-              const i = Number(rc.replace_index);
-              if (i >= 0 && i < relationships.length) {
-                if (rc.new_person === null) {
-                  const old = relationships[i];
-                  relationships[i] = {
-                    name: old.name,
-                    role: `${old.role || ""}, deceased`,
-                    display: `${old.name} (deceased)`,
-                  };
-                } else if (rc.new_person) {
-                  relationships[i] = {
-                    name: rc.new_person.name || "",
-                    role: rc.new_person.role || "",
-                    display: `${rc.new_person.name} (${rc.new_person.role})`,
-                  };
-                }
-                set({ relationships });
-              }
-            }
-          }
-
-          set({ isLoading: false });
-
-          // Next turn
-          await get().doTurn();
+          // Fetch next turn
+          await get().fetchNextTurn();
         } catch (error) {
-          console.error("Apply error:", error);
-          lastFailedAction = () => get().makeChoice(index);
+          console.error("Make choice error:", error);
           set({
             isLoading: false,
-            error: "Connection error. Please retry.",
+            error: "Connection error. Please try again.",
           });
         }
       },
 
+      // ─────────────────────────────────────────
+      // HANDLE DEATH (internal)
+      // ─────────────────────────────────────────
       handleDeath: async (cause: string) => {
         const state = get();
-        set({
-          phase: "dead",
-          deathCause: cause,
-          isLoading: true,
-        });
+
+        set({ gameState: "loading", isLoading: true });
 
         try {
-          const epilogueData = await apiEpilogue({
-            age: state.age,
-            gender: state.gender,
-            city: state.city,
-            desire: state.desire,
-            stats: state.stats,
-            relationships: state.relationships,
-            history: state.history.slice(-30),
-            cause,
+          const response = await fetch(`${API_URL}/api/epilogue`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              age: state.age,
+              gender: state.gender,
+              city: state.city,
+              desire: state.dream,
+              stats: state.stats,
+              relationships: state.relationships,
+              history: [],
+              cause,
+            }),
           });
 
+          let epilogueData: Epilogue;
+
+          if (response.ok) {
+            const data = await response.json();
+            epilogueData = {
+              death_cause: cause,
+              achievements: data.achievements || [],
+              stat_arcs: data.stat_arcs || {},
+              verdict: data.verdict || data.text || `Lived ${state.age} years.`,
+            };
+          } else {
+            epilogueData = {
+              death_cause: cause,
+              achievements: [],
+              stat_arcs: {},
+              verdict: `Lived ${state.age} years. Rest in peace.`,
+            };
+          }
+
           set({
-            epilogueText: epilogueData.text || `You lived to age ${state.age}. Rest in peace.`,
+            gameState: "dead",
+            epilogue: epilogueData,
             isLoading: false,
           });
         } catch (error) {
           console.error("Epilogue error:", error);
           set({
-            epilogueText: `You lived to age ${state.age}. Rest in peace.`,
+            gameState: "dead",
+            epilogue: {
+              death_cause: cause,
+              achievements: [],
+              stat_arcs: {},
+              verdict: `Lived ${state.age} years. Rest in peace.`,
+            },
             isLoading: false,
           });
         }
       },
 
+      // ─────────────────────────────────────────
+      // RESET GAME
+      // ─────────────────────────────────────────
       resetGame: () => {
-        lastFailedAction = null;
         set({
-          gender: "female",
+          gameState: "onboarding",
+          sessionId: null,
+          runId: null,
+          gender: null,
           city: "",
-          desire: "",
+          dream: "",
           age: 0,
           stats: { ...INITIAL_STATS },
+          previousStats: null,
           relationships: [],
-          history: [],
-          statHistory: [],
-          location: "",
-          sessionId: "",
-          runId: "",
-          phase: "onboarding",
-          currentScenario: null,
+          closeCalls: 0,
+          closeCallMessage: null,
+          currentTurn: null,
           isLoading: false,
           error: null,
-          showStats: false,
-          closeCallCount: 0,
-          showCloseCall: false,
-          deathCause: "",
-          epilogueText: "",
+          epilogue: null,
+          mood: "neutral",
         });
       },
 
-      setShowStats: (show: boolean) => set({ showStats: show }),
-      setMuted: (muted: boolean) => set({ isMuted: muted }),
-      setVolume: (volume: number) => set({ volume }),
-      clearError: () => set({ error: null }),
-
-      retryLastAction: () => {
-        if (lastFailedAction) {
-          const action = lastFailedAction;
-          lastFailedAction = null;
-          action();
-        }
-      },
+      // ─────────────────────────────────────────
+      // UI ACTIONS
+      // ─────────────────────────────────────────
+      clearCloseCallMessage: () => set({ closeCallMessage: null }),
+      toggleCRT: () => set((s) => ({ crtEnabled: !s.crtEnabled })),
+      setMood: (mood) => set({ mood }),
     }),
     {
-      name: "dreamland-game",
+      name: "dreamland-game-v2",
       partialize: (state) => ({
-        isMuted: state.isMuted,
-        volume: state.volume,
+        crtEnabled: state.crtEnabled,
       }),
     }
   )
 );
 
-// Extend the store with the doTurn and handleDeath methods
-type GameStateWithMethods = GameState & {
-  doTurn: () => Promise<void>;
-  handleDeath: (cause: string) => Promise<void>;
-};
+// ═══════════════════════════════════════════════
+// HELPER: Normalize stats (handle 0-1 or 0-100)
+// ═══════════════════════════════════════════════
 
-// Augment the store type
+function normalizeStats(stats: Partial<Stats>): Stats {
+  const normalized: Stats = { ...INITIAL_STATS };
+
+  for (const key of Object.keys(stats) as (keyof Stats)[]) {
+    const value = stats[key];
+    if (typeof value === "number") {
+      // If value is between 0 and 1, scale to 0-100
+      normalized[key] = value <= 1 ? value * 100 : value;
+    }
+  }
+
+  return normalized;
+}
+
+// Add internal methods to the store type
 declare module "zustand" {
-  interface StoreApi<T> {
-    getState: () => T & GameStateWithMethods;
+  interface StoreMutatorIdentifier {
+    "dreamland-game-v2": never;
   }
 }
+
+// Extend the store interface for internal methods
+interface GameStoreInternal extends GameStore {
+  fetchNextTurn: (startData?: { age?: number; stats?: Stats; relationships?: Relationship[] }) => Promise<void>;
+  handleDeath: (cause: string) => Promise<void>;
+}
+
+// Type assertion for internal use
+export const useGameStoreInternal = useGameStore as unknown as () => GameStoreInternal;

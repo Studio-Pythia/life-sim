@@ -14,7 +14,8 @@ export interface Stats {
 
 export interface Relationship {
   name: string;
-  role: string;
+  relation: string;
+  role?: string;
   display?: string;
 }
 
@@ -83,3 +84,27 @@ export interface GameConfig {
 }
 
 export type GamePhase = "onboarding" | "playing" | "dead";
+
+// ═══════════════════════════════════════════════
+// EXTENDED TYPES FOR NEW FRONTEND
+// ═══════════════════════════════════════════════
+
+export type GameState = "onboarding" | "loading" | "playing" | "dead";
+
+export type MoodType = "neutral" | "danger" | "success" | "sad" | "happy";
+
+export type StatType = "money" | "stability" | "status" | "health" | "stress" | "freedom" | "exposure";
+
+export interface TurnData {
+  narrative: string;
+  choices: string[];
+  location: string;
+  rawOptions?: ChoiceOption[];
+}
+
+export interface Epilogue {
+  death_cause: string;
+  achievements: string[];
+  stat_arcs: Record<string, string>;
+  verdict: string;
+}

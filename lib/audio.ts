@@ -1,284 +1,252 @@
 "use client";
 
-import { Howl, Howler } from "howler";
-import type { MusicTrack, SFXType } from "./constants";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
-// Audio manager singleton
-class AudioManager {
-  private static instance: AudioManager;
-  private bgMusic: Howl | null = null;
-  private sfxCache: Map<SFXType, Howl> = new Map();
-  private currentTrack: MusicTrack | null = null;
-  private _isMuted: boolean = false;
-  private _volume: number = 0.5;
-  private initialized: boolean = false;
+// ═══════════════════════════════════════════════
+// TYPES
+// ═══════════════════════════════════════════════
 
-  private constructor() {
-    // Load saved preferences
-    if (typeof window !== "undefined") {
-      const savedMuted = localStorage.getItem("dreamland_muted");
-      const savedVolume = localStorage.getItem("dreamland_volume");
-      if (savedMuted) this._isMuted = savedMuted === "true";
-      if (savedVolume) this._volume = parseFloat(savedVolume);
-      Howler.mute(this._isMuted);
-      Howler.volume(this._volume);
-    }
+type SoundType = "select" | "hover" | "text" | "closeCall" | "death" | "statUp" | "statDown" | "transition";
+type MusicTrack = "childhood" | "adult" | "elder" | "death";
+
+interface AudioState {
+  // Settings
+  musicEnabled: boolean;
+  soundEnabled: boolean;
+  volume: number;
+
+  // Internal state
+  initialized: boolean;
+  currentTrack: MusicTrack | null;
+
+  // Actions
+  initAudio: () => void;
+  playSound: (sound: SoundType) => void;
+  playMusic: (track: MusicTrack) => void;
+  stopMusic: () => void;
+  updateMusicForAge: (age: number) => void;
+  setMusicEnabled: (enabled: boolean) => void;
+  setSoundEnabled: (enabled: boolean) => void;
+  setVolume: (volume: number) => void;
+}
+
+// ═══════════════════════════════════════════════
+// WEB AUDIO HELPERS
+// ═══════════════════════════════════════════════
+
+let audioContext: AudioContext | null = null;
+let musicGainNode: GainNode | null = null;
+let currentMusicOscillator: OscillatorNode | null = null;
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    musicGainNode = audioContext.createGain();
+    musicGainNode.connect(audioContext.destination);
+  }
+  return audioContext;
+}
+
+function playBeep(frequency: number, duration: number, volume: number = 0.3): void {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  // Resume audio context if suspended (browser autoplay policy)
+  if (ctx.state === "suspended") {
+    ctx.resume();
   }
 
-  static getInstance(): AudioManager {
-    if (!AudioManager.instance) {
-      AudioManager.instance = new AudioManager();
-    }
-    return AudioManager.instance;
+  const oscillator = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+
+  oscillator.connect(gainNode);
+  gainNode.connect(ctx.destination);
+
+  oscillator.type = "square";
+  oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+
+  // Quick attack, exponential decay
+  gainNode.gain.setValueAtTime(volume, ctx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+  oscillator.start(ctx.currentTime);
+  oscillator.stop(ctx.currentTime + duration);
+}
+
+function startBackgroundMusic(track: MusicTrack, volume: number): void {
+  const ctx = getAudioContext();
+  if (!ctx || !musicGainNode) return;
+
+  // Stop existing music
+  if (currentMusicOscillator) {
+    currentMusicOscillator.stop();
+    currentMusicOscillator = null;
   }
 
-  // Initialize and preload audio
-  async init(): Promise<void> {
-    if (this.initialized) return;
-
-    // Preload sound effects with synthesized audio
-    this.preloadSFX();
-    this.initialized = true;
+  // Resume audio context if suspended
+  if (ctx.state === "suspended") {
+    ctx.resume();
   }
 
-  private preloadSFX(): void {
-    // Create simple synthesized sounds using Web Audio API via Howler
-    // These are placeholder sounds - in production, use actual audio files
+  // Create a simple ambient tone based on track
+  const frequencies: Record<MusicTrack, number> = {
+    childhood: 523.25, // C5
+    adult: 392.0, // G4
+    elder: 293.66, // D4
+    death: 196.0, // G3
+  };
 
-    // Click sound - short beep
-    this.sfxCache.set(
-      "click",
-      new Howl({
-        src: [this.createBeepDataUrl(440, 0.05)],
-        volume: 0.3,
-      })
-    );
+  const oscillator = ctx.createOscillator();
+  const lfo = ctx.createOscillator();
+  const lfoGain = ctx.createGain();
+  const mainGain = ctx.createGain();
 
-    // Stat up - rising tone
-    this.sfxCache.set(
-      "stat_up",
-      new Howl({
-        src: [this.createBeepDataUrl(523, 0.1)],
-        volume: 0.4,
-      })
-    );
+  // LFO for subtle tremolo
+  lfo.type = "sine";
+  lfo.frequency.setValueAtTime(0.5, ctx.currentTime);
+  lfoGain.gain.setValueAtTime(10, ctx.currentTime);
+  lfo.connect(lfoGain);
+  lfoGain.connect(oscillator.frequency);
 
-    // Stat down - falling tone
-    this.sfxCache.set(
-      "stat_down",
-      new Howl({
-        src: [this.createBeepDataUrl(262, 0.1)],
-        volume: 0.4,
-      })
-    );
+  // Main oscillator
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(frequencies[track], ctx.currentTime);
+  oscillator.connect(mainGain);
 
-    // Close call - alarm
-    this.sfxCache.set(
-      "close_call",
-      new Howl({
-        src: [this.createBeepDataUrl(880, 0.3)],
-        volume: 0.6,
-      })
-    );
+  // Set volume low for ambient music
+  mainGain.gain.setValueAtTime(volume * 0.1, ctx.currentTime);
+  mainGain.connect(musicGainNode);
 
-    // Death - low tone
-    this.sfxCache.set(
-      "death",
-      new Howl({
-        src: [this.createBeepDataUrl(196, 0.5)],
-        volume: 0.5,
-      })
-    );
+  lfo.start();
+  oscillator.start();
 
-    // Transition - sweep
-    this.sfxCache.set(
-      "transition",
-      new Howl({
-        src: [this.createBeepDataUrl(392, 0.15)],
-        volume: 0.3,
-      })
-    );
+  currentMusicOscillator = oscillator;
+}
 
-    // Typewriter - tiny click
-    this.sfxCache.set(
-      "typewriter",
-      new Howl({
-        src: [this.createBeepDataUrl(1000, 0.02)],
-        volume: 0.1,
-      })
-    );
-
-    // Choice hover
-    this.sfxCache.set(
-      "choice_hover",
-      new Howl({
-        src: [this.createBeepDataUrl(600, 0.03)],
-        volume: 0.2,
-      })
-    );
-  }
-
-  // Create a simple beep sound as a data URL
-  private createBeepDataUrl(frequency: number, duration: number): string {
-    const sampleRate = 44100;
-    const samples = Math.floor(sampleRate * duration);
-    const buffer = new Float32Array(samples);
-
-    for (let i = 0; i < samples; i++) {
-      const t = i / sampleRate;
-      // Simple square wave with decay
-      const envelope = Math.exp(-t * 10);
-      buffer[i] = Math.sign(Math.sin(2 * Math.PI * frequency * t)) * envelope * 0.3;
-    }
-
-    // Convert to WAV format
-    const wavBuffer = this.encodeWAV(buffer, sampleRate);
-    const blob = new Blob([wavBuffer], { type: "audio/wav" });
-    return URL.createObjectURL(blob);
-  }
-
-  private encodeWAV(samples: Float32Array, sampleRate: number): ArrayBuffer {
-    const buffer = new ArrayBuffer(44 + samples.length * 2);
-    const view = new DataView(buffer);
-
-    // WAV header
-    const writeString = (offset: number, string: string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
-      }
-    };
-
-    writeString(0, "RIFF");
-    view.setUint32(4, 36 + samples.length * 2, true);
-    writeString(8, "WAVE");
-    writeString(12, "fmt ");
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeString(36, "data");
-    view.setUint32(40, samples.length * 2, true);
-
-    // Write samples
-    let offset = 44;
-    for (let i = 0; i < samples.length; i++) {
-      const s = Math.max(-1, Math.min(1, samples[i]));
-      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-      offset += 2;
-    }
-
-    return buffer;
-  }
-
-  playMusic(track: MusicTrack): void {
-    if (track === this.currentTrack && this.bgMusic?.playing()) {
-      return;
-    }
-
-    // Fade out current music
-    if (this.bgMusic) {
-      this.bgMusic.fade(this._volume, 0, 1000);
-      const oldMusic = this.bgMusic;
-      setTimeout(() => oldMusic.stop(), 1000);
-    }
-
-    // Create simple looping tone for background music
-    // In production, use actual music files
-    const frequencies: Record<MusicTrack, number> = {
-      childhood: 523, // C5 - bright
-      adult: 392, // G4 - neutral
-      elder: 294, // D4 - mellow
-      death: 196, // G3 - somber
-    };
-
-    this.bgMusic = new Howl({
-      src: [this.createMusicDataUrl(frequencies[track])],
-      loop: true,
-      volume: 0,
-    });
-
-    this.currentTrack = track;
-    this.bgMusic.play();
-    this.bgMusic.fade(0, this._volume * 0.3, 2000);
-  }
-
-  private createMusicDataUrl(baseFreq: number): string {
-    const sampleRate = 44100;
-    const duration = 4; // 4 second loop
-    const samples = Math.floor(sampleRate * duration);
-    const buffer = new Float32Array(samples);
-
-    for (let i = 0; i < samples; i++) {
-      const t = i / sampleRate;
-      // Simple ambient tone with slight modulation
-      const mod = Math.sin(2 * Math.PI * 0.5 * t) * 0.1;
-      buffer[i] =
-        Math.sin(2 * Math.PI * baseFreq * (1 + mod) * t) * 0.1 +
-        Math.sin(2 * Math.PI * (baseFreq * 1.5) * t) * 0.05;
-    }
-
-    const wavBuffer = this.encodeWAV(buffer, sampleRate);
-    const blob = new Blob([wavBuffer], { type: "audio/wav" });
-    return URL.createObjectURL(blob);
-  }
-
-  stopMusic(): void {
-    if (this.bgMusic) {
-      this.bgMusic.fade(this._volume, 0, 500);
-      setTimeout(() => {
-        this.bgMusic?.stop();
-        this.bgMusic = null;
-        this.currentTrack = null;
-      }, 500);
-    }
-  }
-
-  playSFX(type: SFXType): void {
-    if (this._isMuted) return;
-    const sound = this.sfxCache.get(type);
-    if (sound) {
-      sound.play();
-    }
-  }
-
-  get isMuted(): boolean {
-    return this._isMuted;
-  }
-
-  set isMuted(value: boolean) {
-    this._isMuted = value;
-    Howler.mute(value);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("dreamland_muted", String(value));
-    }
-  }
-
-  get volume(): number {
-    return this._volume;
-  }
-
-  set volume(value: number) {
-    this._volume = Math.max(0, Math.min(1, value));
-    Howler.volume(this._volume);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("dreamland_volume", String(this._volume));
-    }
-  }
-
-  fadeToTrack(track: MusicTrack, duration: number = 2000): void {
-    this.playMusic(track);
+function stopBackgroundMusic(): void {
+  if (currentMusicOscillator) {
+    currentMusicOscillator.stop();
+    currentMusicOscillator = null;
   }
 }
 
-// Export singleton
-export const audioManager = typeof window !== "undefined" ? AudioManager.getInstance() : null;
+// ═══════════════════════════════════════════════
+// SOUND CONFIGS
+// ═══════════════════════════════════════════════
 
-// Helper function to get the appropriate music track for an age
-export function getMusicTrackForAge(age: number): MusicTrack {
-  if (age <= 12) return "childhood";
-  if (age <= 64) return "adult";
-  return "elder";
-}
+const SOUND_CONFIG: Record<SoundType, { freq: number; duration: number; volume: number }> = {
+  select: { freq: 440, duration: 0.08, volume: 0.3 },
+  hover: { freq: 600, duration: 0.03, volume: 0.15 },
+  text: { freq: 1000, duration: 0.015, volume: 0.08 },
+  closeCall: { freq: 880, duration: 0.3, volume: 0.5 },
+  death: { freq: 196, duration: 0.8, volume: 0.4 },
+  statUp: { freq: 523, duration: 0.1, volume: 0.3 },
+  statDown: { freq: 262, duration: 0.1, volume: 0.3 },
+  transition: { freq: 392, duration: 0.15, volume: 0.25 },
+};
+
+// ═══════════════════════════════════════════════
+// AUDIO STORE
+// ═══════════════════════════════════════════════
+
+export const useAudioStore = create<AudioState>()(
+  persist(
+    (set, get) => ({
+      // Initial state
+      musicEnabled: false,
+      soundEnabled: true,
+      volume: 0.5,
+      initialized: false,
+      currentTrack: null,
+
+      // Initialize audio
+      initAudio: () => {
+        if (get().initialized) return;
+
+        // Try to create audio context (will be suspended until user interaction)
+        getAudioContext();
+
+        set({ initialized: true });
+      },
+
+      // Play sound effect
+      playSound: (sound) => {
+        const state = get();
+        if (!state.soundEnabled || !state.initialized) return;
+
+        const config = SOUND_CONFIG[sound];
+        if (config) {
+          playBeep(config.freq, config.duration, config.volume * state.volume);
+        }
+      },
+
+      // Play music track
+      playMusic: (track) => {
+        const state = get();
+        if (!state.musicEnabled || !state.initialized) return;
+
+        if (track !== state.currentTrack) {
+          startBackgroundMusic(track, state.volume);
+          set({ currentTrack: track });
+        }
+      },
+
+      // Stop music
+      stopMusic: () => {
+        stopBackgroundMusic();
+        set({ currentTrack: null });
+      },
+
+      // Update music based on age
+      updateMusicForAge: (age) => {
+        const state = get();
+        if (!state.musicEnabled) return;
+
+        let track: MusicTrack;
+        if (age <= 12) {
+          track = "childhood";
+        } else if (age <= 64) {
+          track = "adult";
+        } else {
+          track = "elder";
+        }
+
+        if (track !== state.currentTrack) {
+          get().playMusic(track);
+        }
+      },
+
+      // Settings
+      setMusicEnabled: (enabled) => {
+        set({ musicEnabled: enabled });
+        if (!enabled) {
+          get().stopMusic();
+        }
+      },
+
+      setSoundEnabled: (enabled) => {
+        set({ soundEnabled: enabled });
+      },
+
+      setVolume: (volume) => {
+        const clampedVolume = Math.max(0, Math.min(1, volume));
+        set({ volume: clampedVolume });
+
+        // Update music volume if playing
+        if (musicGainNode) {
+          musicGainNode.gain.setValueAtTime(clampedVolume * 0.1, audioContext?.currentTime || 0);
+        }
+      },
+    }),
+    {
+      name: "dreamland-audio-v2",
+      partialize: (state) => ({
+        musicEnabled: state.musicEnabled,
+        soundEnabled: state.soundEnabled,
+        volume: state.volume,
+      }),
+    }
+  )
+);
