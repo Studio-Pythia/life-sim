@@ -391,3 +391,8 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-gb-light);
 }
+
+/* Font utility class */
+.font-pixel {
+  font-family: var(--font-pixel);
+}

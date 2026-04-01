@@ -26,7 +26,7 @@ export function GameWrapper() {
   const gameState = useGameStore((state) => state.gameState);
   const age = useGameStore((state) => state.age);
   const gender = useGameStore((state) => state.gender);
-  const location = useGameStore((state) => state.location);
+  const location = useGameStore((state) => state.currentTurn?.location);
   const dream = useGameStore((state) => state.dream);
   const closeCallMessage = useGameStore((state) => state.closeCallMessage);
   const clearCloseCallMessage = useGameStore((state) => state.clearCloseCallMessage);

@@ -59,6 +59,7 @@ interface GameStore {
   clearCloseCallMessage: () => void;
   toggleCRT: () => void;
   setMood: (mood: MoodType) => void;
+  setGameState: (state: GameStateType) => void;
 }
 
 // ═══════════════════════════════════════════════
@@ -399,6 +400,7 @@ export const useGameStore = create<GameStore>()(
       clearCloseCallMessage: () => set({ closeCallMessage: null }),
       toggleCRT: () => set((s) => ({ crtEnabled: !s.crtEnabled })),
       setMood: (mood) => set({ mood }),
+      setGameState: (gameState) => set({ gameState }),
     }),
     {
       name: "dreamland-game-v2",
