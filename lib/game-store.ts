@@ -55,6 +55,8 @@ interface GameStore {
   // Actions
   startGame: (gender: "male" | "female", city: string, dream: string) => Promise<void>;
   makeChoice: (choiceIndex: number) => Promise<void>;
+  fetchNextTurn: (startData?: { age?: number; stats?: Stats; relationships?: Relationship[] }) => Promise<void>;
+  handleDeath: (cause: string) => Promise<void>;
   resetGame: () => void;
   clearCloseCallMessage: () => void;
   toggleCRT: () => void;
@@ -428,19 +430,3 @@ function normalizeStats(stats: Partial<Stats>): Stats {
 
   return normalized;
 }
-
-// Add internal methods to the store type
-declare module "zustand" {
-  interface StoreMutatorIdentifier {
-    "dreamland-game-v2": never;
-  }
-}
-
-// Extend the store interface for internal methods
-interface GameStoreInternal extends GameStore {
-  fetchNextTurn: (startData?: { age?: number; stats?: Stats; relationships?: Relationship[] }) => Promise<void>;
-  handleDeath: (cause: string) => Promise<void>;
-}
-
-// Type assertion for internal use
-export const useGameStoreInternal = useGameStore as unknown as () => GameStoreInternal;
